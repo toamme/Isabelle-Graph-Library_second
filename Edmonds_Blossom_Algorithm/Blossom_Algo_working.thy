@@ -4388,8 +4388,271 @@ lemma examined_have_odd_verts_invar_props:
   unfolding examined_have_odd_verts_invar_def
   by auto
 
-(*Done: Invar 12*)
+definition "invar_unmatched_even flabel = (\<forall> v \<in> Vs G - Vs M. \<exists> r. flabel v = Some (r, Even))"
 
+lemma invar_unmatched_evenE:
+"invar_unmatched_even flabel \<Longrightarrow>
+   ((\<And> v. \<lbrakk>v \<in> Vs G; v \<notin>  Vs M\<rbrakk> \<Longrightarrow> \<exists> r. flabel v = Some (r, Even)) \<Longrightarrow> P) 
+  \<Longrightarrow> P"
+and invar_unmatched_evenI:
+"(\<And> v. \<lbrakk>v \<in> Vs G; v \<notin>  Vs M\<rbrakk> \<Longrightarrow> \<exists> r. flabel v = Some (r, Even)) \<Longrightarrow> invar_unmatched_even flabel"
+and invar_unmatched_evenD:
+"\<lbrakk>invar_unmatched_even flabel; v \<in> Vs G; v \<notin>  Vs M\<rbrakk> \<Longrightarrow> \<exists> r. flabel v = Some (r, Even)"
+  by(auto simp add: invar_unmatched_even_def)
+
+lemma invar_unmatched_even_pres:
+  assumes  "invar_unmatched_even flabel" "if1 flabel ex v1 v2 v3 r"
+  shows "invar_unmatched_even (flabel(v2 \<mapsto> (r, Odd), v3 \<mapsto> (r', Even)))"
+  using assms(1) if1_props[OF assms(2)]
+  by(auto simp add: invar_unmatched_even_def)
+
+text \<open>If the search terminates without finding two paths,
+the final program variables have some properties 
+(four invariants and both if-conditions false).
+Rather technical lemma.\<close>
+
+lemma what_if_search_fails:
+  assumes "compute_alt_path ex par flabel = None"
+   and     init: "finite ex" "ex \<subseteq> G"
+   and invars: "flabel_invar_2 flabel"
+       "examined_have_odd_verts_invar ex flabel"
+       "flabel_invar flabel"
+       "invar_unmatched_even flabel"
+ shows "\<exists> (flabel'::'a \<Rightarrow> ('a \<times> label) option) ex' par'.
+       \<not> if1_cond flabel' ex' \<and> \<not> if2_cond flabel' \<and>
+         flabel_invar_2 flabel' \<and> examined_have_odd_verts_invar ex' flabel' \<and> 
+         flabel_invar flabel' \<and> invar_unmatched_even flabel'"
+  using assms(1) invars
+proof(induction ex par flabel rule: compute_alt_path_pinduct_2)
+  case 1
+  then show ?case
+    by(intro compute_alt_path_dom init)
+next
+  case (2 ex par flabel)
+  note IH = this
+  show ?case
+  proof(cases "if1_cond flabel ex")
+    case True
+    obtain v1 v2 v3 r where  v123r: "(v1, v2, v3, r) = sel_if1 flabel ex" "if1 flabel ex v1 v2 v3 r"
+      using if1_cond_props''''[OF True] by auto
+    show ?thesis
+      by(intro IH(2)[OF True])
+        (force intro!: v123r(1)  flabel_invar_pres[OF IH(6) v123r(2)]
+                    compute_alt_path_if1[OF IH(1) True  v123r(1) refl refl refl, 
+                       simplified  IH(3), symmetric]
+                    invar_unmatched_even_pres[OF IH(7) v123r(2)]
+                    examined_have_odd_verts_invar_pres[OF IH(6,5) v123r(2)]
+                    flabel_invar_2_pres[OF IH(4) v123r(2)])+
+  next
+    case False
+    note false = this
+    show ?thesis
+    proof(cases "if2_cond flabel")
+      case True
+    obtain v1 v2 r r' where  v123r: "(v1, v2, r, r') = sel_if2 flabel" "if2 flabel v1 v2 r r'"
+      using if2_cond_props''''[OF True] by auto
+    obtain xx where "compute_alt_path ex par flabel = Some xx"
+      apply(subst (asm) compute_alt_path.psimps[OF IH(1)])
+      by(auto simp add: True v123r(1)[symmetric] false)
+    hence False
+      by (simp add: IH(3))
+    thus ?thesis by simp
+  next
+    case False
+    thus ?thesis
+      using false
+      by(auto intro!: exI[of _ flabel] exI[of _ ex] simp add: IH(4-))
+  qed
+qed
+qed
+
+text \<open>Central lemma for completeness proof:
+ On M-alternating paths with the first vertex being unmatched,
+labels alternate between Even and Odd, starting with Even.\<close>
+
+lemma termination_conditions_alt_paths_alternating_labels:
+  assumes  "\<not> if1_cond flabel ex" "\<not> if2_cond flabel"  "flabel_invar_2 flabel"
+       "examined_have_odd_verts_invar ex flabel" "invar_unmatched_even flabel"
+       "alt_path M (p1)" "length (p1) \<ge> 1" "hd (p1) \<notin> Vs M" 
+        "l = length p1" "set (p1) \<subseteq> Vs G" "set (edges_of_path p1) \<subseteq> G"
+  shows "alt_list (\<lambda> x. \<exists> r. flabel x = Some (r, Even)) (\<lambda> x. \<exists> r. flabel x = Some (r, Odd)) p1"
+  using assms(6-)
+proof(induction l arbitrary: p1 rule: less_induct)
+  case (less l)
+  show ?case
+  proof(cases l)
+    case 0
+    then show ?thesis
+      by (simp add: alt_list_empty less.prems(4))
+  next
+    case (Suc ll)
+    note suc = Suc
+    then obtain p11 x where p1_split_off_last:"p1 = p11@[x]"
+      using less.prems(4) by(cases p1 rule: rev_cases) auto
+    show ?thesis 
+    proof(cases ll)
+      case 0
+      hence p1_is:"p1 = [x]" and "x \<notin> Vs M"
+        using less.prems(3,4) p1_split_off_last suc by auto
+      hence "\<exists> r. flabel x = Some (r, Even)"
+        using assms(5) less(6) p1_is 
+        by(auto elim: invar_unmatched_evenE)
+      then show ?thesis 
+        by(auto simp add: p1_is intro!: alt_list.intros)
+    next
+      case (Suc nat)
+      then obtain p12 y where p11_split_off_last: "p11 = p12@[y]"
+        using less.prems(4) p1_split_off_last suc by(cases p11 rule: rev_cases) auto
+      hence p1_is: "p1 = p12@[y, x]"
+        by (simp add: p1_split_off_last)
+      have alt_path_p11:      "alt_path M p11"
+       and hd_p1_not_matched: "hd p11 \<notin> Vs M" 
+        using  alt_list_append_1 less.prems(1,3)  p11_split_off_last p1_split_off_last 
+              edges_of_path_append_3[of "p12@[y]" "[x]", simplified] hd_append2[of p11 "[x]"] 
+        by auto
+      have p11_length: "1 \<le> length p11"
+          using less.prems(3) p1_split_off_last 
+          by(simp add: p11_split_off_last)
+      have IH_applied:
+       "alt_list (\<lambda>x. \<exists>r. flabel x = Some (r, Even)) (\<lambda>x. \<exists>r. flabel x = Some (r, Odd)) p11"
+        using suc less.prems(4,5,6) p11_length edges_of_path_append_subset_2 p1_split_off_last 
+        by (intro less(1)[of ll p11, OF _ alt_path_p11, OF _ _  hd_p1_not_matched]) auto
+      hence either_odd_or_even:
+         "\<And> y . y \<in> set p11 \<Longrightarrow> 
+          (\<exists>r. flabel y = Some (r, Even)) = (\<nexists>r. flabel y = Some (r, Odd))"
+        using alt_list_or by fastforce
+      obtain r where y_label_or: "flabel y = Some (r, Even) \<or> flabel y = Some (r, Odd)"
+        using p11_split_off_last alt_list_or[OF IH_applied(1), of y] by auto
+      show ?thesis 
+      proof(cases "{y, x} \<in> M")
+        case True
+        note xy_in_M = this
+        show ?thesis
+        proof(cases rule: disjE[OF y_label_or], goal_cases)
+          case 1
+          hence x_Odd:"\<exists>r. flabel x = Some (r, Odd)"
+            using assms(3) xy_in_M by(auto simp add: flabel_invar_2_def)
+          show ?case
+            using IH_applied either_odd_or_even 1 x_Odd 
+            by(auto intro!: alt_list_last_known_append_one(1)[of _ _ "p12@[y]" x, simplified]
+                  simp add: p1_split_off_last p11_split_off_last)
+        next
+          case 2
+          hence x_Even:"\<exists>r. flabel x = Some (r, Even)"
+            using assms(3) xy_in_M by(auto simp add: flabel_invar_2_def insert_commute)
+          show ?case
+            using IH_applied either_odd_or_even 2 x_Even 
+            by(auto intro!: alt_list_last_known_append_one(2)[of _ _ "p12@[y]" x, simplified]
+                  simp add: p1_split_off_last p11_split_off_last)
+        qed
+        next
+          case False
+          note yx_not_matching = this
+          moreover have "alt_path M (p12@[y,x])"
+            using less.prems(1) p1_is by simp
+          ultimately have odd_edge_length: "odd (length (edges_of_path (p12@[y,x])))"
+            using alternating_list_even_last edges_of_path_snoc_2[of p12 y x]
+            by fastforce
+          hence even_edge_length:"even (length (p12@[y,x]))" "odd (length (p12@[y]))"
+                 "even (length p12)"
+            unfolding edges_of_path_length even_Suc[symmetric]
+            by auto
+           hence y_Even: "\<exists> r. flabel y = Some (r, Even)"
+             using last_odd_P2[OF IH_applied(1), simplified p11_split_off_last]
+             by auto
+           show ?thesis
+           proof(cases "{y, x} \<in> ex")
+             case True
+             hence x_Odd: "\<exists> r. flabel x = Some (r, Odd)"
+               using y_Even assms(4) by(auto simp add: examined_have_odd_verts_invar_def)        
+             show ?thesis 
+               using IH_applied either_odd_or_even y_Even x_Odd 
+               by(auto intro!: alt_list_last_known_append_one(1)[of _ _ "p12@[y]" x, simplified]
+                     simp add: p1_split_off_last p11_split_off_last)
+           next
+             case False
+             note false = False
+             have yx_in_G:"{x, y} \<in> G"
+               using  edges_of_path_append_2'[of "[y,x]" p12] less.prems(6) 
+               by (fastforce simp add:  p1_is)
+             show ?thesis 
+             proof(cases "\<exists> e \<in> M. x \<in> e")
+               case True
+               then obtain v1 v2 where v1v2:"{v1, v2} \<in> M" "x \<in> {v1, v2}"
+                 using matching(2) by blast
+               hence v1v2_neq_xy:"{v1, v2} \<noteq> {x, y}"
+                 using rev_pair_set yx_not_matching by force
+               have "flabel x = None \<Longrightarrow> if1_cond flabel ex"
+                 using v1v2 yx_not_matching false yx_in_G y_Even
+                 by(auto intro!: exI[of "\<lambda> y. \<exists> x. _ x y" y, OF exI[of _ x]] 
+                       simp add: insert_commute if1_cond_def)
+               hence "flabel x \<noteq> None"
+                 using  assms(1) by blast
+              then obtain r where y_label_or: "flabel x = Some (r, Even) \<or> flabel x = Some (r, Odd)"
+                by(auto intro: label.exhaust[of "snd (the (flabel x))"])
+              moreover have "flabel x \<noteq> Some (r, Even)"
+                using assms(2) y_Even yx_in_G by (auto simp add: if2_cond_def)
+              ultimately have x_Odd: "flabel x = Some (r, Odd)" by simp
+              show ?thesis 
+                using IH_applied either_odd_or_even y_Even x_Odd 
+                by(auto intro!: alt_list_last_known_append_one(1)[of _ _ "p12@[y]" x, simplified]
+                  simp add: p1_split_off_last p11_split_off_last)
+        next
+          case False
+          hence "x \<notin> Vs M"
+            by (simp add: vs_member)
+          moreover have "x \<in> Vs G" 
+            using yx_in_G by blast
+          ultimately obtain r where "flabel x = Some (r, Even)" 
+            using assms(5) by(auto simp add: invar_unmatched_even_def)
+          thus ?thesis
+            using assms(2) y_Even yx_in_G
+            by(auto simp add: if2_cond_def)
+        qed
+      qed
+    qed
+  qed
+ qed
+qed
+
+text \<open>We use the previous lemma to show:
+if the algorithm terminates without finding two paths 
+and if there were nevertheless an augmenting path,
+then the last vertex in this path should be Odd, 
+contradicting the fact that it is even, since unmatched.
+nota bene: This way, we could also show the absence of blossoms easily,
+ which is not necessary, however.\<close>
+
+lemma termination_conditions_no_augpath:
+  assumes "\<not> if1_cond flabel ex" "\<not> if2_cond flabel"  "flabel_invar_2 flabel"
+          "examined_have_odd_verts_invar ex flabel" "invar_unmatched_even flabel"
+          "graph_augmenting_path G M p"
+    shows False
+proof-
+  have p_simple_props: "length p \<ge> 2" "hd p \<notin> Vs M" "path G p" "hd p \<notin> Vs M" "last p \<notin> Vs M"
+    using assms(6)
+    by(auto elim: matching_augmenting_pathE)
+  have p_harder_props: "set p \<subseteq> Vs G" "set (edges_of_path p) \<subseteq> G" "last p \<in> Vs G"
+    using  mem_path_Vs[OF p_simple_props(3) last_in_set] p_simple_props(1) 
+    by  (simp add: p_simple_props(3) subset_path_Vs path_edges_subset | force)+
+  have path_looks_like:
+     "alt_list (\<lambda>x. \<exists>r. flabel x = Some (r, Even)) (\<lambda>x. \<exists>r. flabel x = Some (r, Odd)) p"
+    using termination_conditions_alt_paths_alternating_labels[OF assms(1-5), of p]
+           p_harder_props  p_simple_props 
+    by (auto simp add: assms(6) matching_augmenting_path_feats(2))
+  have length_p: "even (length p)"
+    using assms(6) aug_paths_are_even by auto
+  have last_in_p_Odd: "\<exists> r. flabel (last p) = Some (r, Odd)" 
+    using last_even_P2[OF path_looks_like(1) length_p] p_simple_props(1) by fastforce
+  moreover have "\<exists> r. flabel (last p) = Some (r, Even)"
+    using p_simple_props(3,5) assms(5) p_harder_props(3)
+    by(auto simp add: invar_unmatched_even_def)
+  ultimately show False by auto
+qed
+
+
+(*Done: Invar 12*)
+(*
 definition "unexamined_matched_unlabelled_invar ex flabel = (\<forall>e\<in>M - ex. \<forall>v\<in>e. flabel v = None)"
 
 lemma unexamined_matched_unlabelled_invar_props:
@@ -4853,21 +5116,37 @@ begin
 lemma finiteM: "finite M"
   using finite_E matching(2) finite_subset
   by blast
-
+*)
 lemma compute_alt_path_from_tree_2':
   assumes invars: 
     "flabel_invar flabel"
     "examined_have_odd_verts_invar ex flabel"
-    "unexamined_matched_unlabelled_invar ex flabel"
+    "flabel_invar_2 flabel" (*not before*)
+    "invar_unmatched_even flabel" (*note before*)
+   (* "unexamined_matched_unlabelled_invar ex flabel"
     "finite_odds_invar flabel"
     "odd_labelled_verts_num_invar ex flabel"
     "ulabelled_verts_matched_invar ex flabel"
-    "odd_then_matched_examined_invar ex flabel" and
+    "odd_then_matched_examined_invar ex flabel"*) and
     ret:
     "compute_alt_path ex par flabel = None" and
     init:       
     "finite ex" "ex \<subseteq> G"
   shows "\<nexists>p. matching_augmenting_path M p \<and> path G p \<and> distinct p"
+proof(rule ccontr, unfold not_not, goal_cases)
+  case 1
+  then obtain p where "matching_augmenting_path M p" "path G p" "distinct p" by auto
+  hence augpath: "graph_augmenting_path G M p" by simp
+  obtain flabel' ex'  where final:
+   "\<not> if1_cond (flabel'::'a \<Rightarrow> ('a \<times> label) option) ex'" "\<not> if2_cond flabel'"
+   "flabel_invar_2 flabel'" "examined_have_odd_verts_invar ex' flabel'" 
+   "invar_unmatched_even flabel'"
+    using what_if_search_fails[OF ret init assms(3,2,1,4)] by auto
+  show False
+    using termination_conditions_no_augpath[OF final(1-5)] augpath by auto
+qed
+
+(*
 proof-
   have "\<exists>OSC. odd_set_cover OSC G \<and> capacity2 OSC = card M"
     using assms
@@ -4944,9 +5223,9 @@ proof-
           by (simp add: inf_commute)
         then have "odd_set_cover lab_osc (es \<inter> G)"
           by(rule OSC_inter)
-      } note * = this
+      } note star = this
       have "odd_set_cover lab_osc (ex \<inter> G)"
-        apply(intro *)
+        apply(intro star)
         using \<open>examined_have_odd_verts_invar ex flabel\<close>
         using examined_have_odd_verts_invar_def
         by blast
@@ -4997,7 +5276,7 @@ proof-
           using all_verts_labelled that
           by blast
         then have "odd_set_cover lab_osc (G \<inter> G)"
-          apply(intro *)
+          apply(intro star)
           by simp
         then have "odd_set_cover lab_osc G"
           by simp
@@ -5445,16 +5724,18 @@ proof-
   then show ?thesis
     by (meson Berge_2(1) Berge_2(2) Berge_2(3) finiteM leD matching(1) matching(2))
 qed
-
+*)
 lemma compute_alt_path_from_tree_2:
   assumes invars: 
     "flabel_invar flabel"
     "examined_have_odd_verts_invar ex flabel"
-    "unexamined_matched_unlabelled_invar ex flabel"
+    "flabel_invar_2 flabel"
+    "invar_unmatched_even flabel"
+    (*"unexamined_matched_unlabelled_invar ex flabel"
     "finite_odds_invar flabel"
     "odd_labelled_verts_num_invar ex flabel"
     "ulabelled_verts_matched_invar ex flabel"
-    "odd_then_matched_examined_invar ex flabel" and
+    "odd_then_matched_examined_invar ex flabel"*) and
     aug_path:
     "\<exists>p. matching_augmenting_path M p \<and> path G p \<and> distinct p"
     and
@@ -5486,11 +5767,12 @@ lemma invar_init:
     "path_invar par"
     "flabel_invar_2 flabel"
     "examined_have_odd_verts_invar ex flabel"
-    "unexamined_matched_unlabelled_invar ex flabel"
+    (*"unexamined_matched_unlabelled_invar ex flabel"
     "finite_odds_invar flabel"
     "odd_labelled_verts_num_invar ex flabel"
     "ulabelled_verts_matched_invar ex flabel"
-    "odd_then_matched_examined_invar ex flabel"
+    "odd_then_matched_examined_invar ex flabel"*)
+    "invar_unmatched_even flabel"
 proof-
   show "flabel_invar flabel"
     using assms  
@@ -5500,7 +5782,7 @@ proof-
     using assms  
     unfolding examined_have_odd_verts_invar_def
     by auto
-  show "unexamined_matched_unlabelled_invar ex flabel"
+  (*show "unexamined_matched_unlabelled_invar ex flabel"
     using assms  
     unfolding unexamined_matched_unlabelled_invar_def
     by (auto simp: Vs_def)
@@ -5521,7 +5803,7 @@ proof-
   show "odd_then_matched_examined_invar ex flabel" 
     using assms  
     unfolding odd_then_matched_examined_invar_def
-    by auto
+    by auto*)
   show "parent_spec par"
     using assms  
     unfolding parent_spec_def
@@ -5566,6 +5848,8 @@ proof-
     using assms  
     unfolding flabel_invar_2_def
     by (simp add: edges_are_Vs)
+  show  "invar_unmatched_even flabel"
+    by(auto simp add: initialisation(1) intro: invar_unmatched_evenI)
 qed
 
 abbreviation "ex_init \<equiv> {}"
@@ -5662,5 +5946,5 @@ qed
 
 lemmas find_max_matching_works = find_max_matching_works 
 end
-
+find_theorems alt_path distinct
 end

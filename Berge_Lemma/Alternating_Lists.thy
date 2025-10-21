@@ -368,6 +368,7 @@ lemma alternating_eq_even_2:
   using alternating_eq_iff_even by blast
                                          
 lemmas last_even_P2 = alternating_list_even_last
+lemmas last_odd_P2 = alternating_list_odd_last
 
 lemma alternating_eq_even':
   "\<lbrakk>alt_list P1 P2 l; odd (length l); \<forall>x\<in>set l. P1 x \<longleftrightarrow> \<not> P2 x\<rbrakk> \<Longrightarrow> 
@@ -377,6 +378,11 @@ lemma alternating_eq_even':
 lemma last_odd_P1':
   "\<lbrakk>alt_list P1 P2 l; P1 (last l); \<forall>x\<in>set l. P1 x \<longleftrightarrow> \<not> P2 x; l \<noteq> []\<rbrakk> \<Longrightarrow> odd (length l)"
   using last_even_P2
+  by auto
+
+lemma last_even_P1':
+  "\<lbrakk>alt_list P1 P2 l; P2 (last l); \<forall>x\<in>set l. P1 x \<longleftrightarrow> \<not> P2 x; l \<noteq> []\<rbrakk> \<Longrightarrow> even (length l)"
+  using last_odd_P2[of P1 P2 l]
   by auto
 
 lemma alternating_gt_odd:
@@ -404,5 +410,27 @@ next
   then show ?case
     by (auto simp add: alt_list_step alt_list_empty)
 qed
+
+lemma alt_list_last_known_append_one:
+  assumes "alt_list P Q xs" "xs \<noteq> []" "\<And> x. x\<in>set xs \<Longrightarrow> P x = (\<not> Q x)"
+  shows   "P (last xs) \<Longrightarrow> Q x \<Longrightarrow> alt_list P Q (xs@[x])"
+          "Q (last xs) \<Longrightarrow> P x \<Longrightarrow> alt_list P Q (xs@[x])"
+proof(goal_cases)
+  case 1
+  have odd_length_xs: "odd (length xs)"
+    by(intro last_odd_P1'[OF assms(1) 1(1)]) 
+      (auto simp add: assms(2,3))
+  thus ?case
+     by(auto intro!: alt_list_append_2[OF assms(1)] alt_list.intros(1)
+           simp add: alt_list_step 1(2))
+next
+  case 2
+  have even_length_xs: "even (length xs)"
+    by(intro last_even_P1'[OF assms(1) 2(1)]) 
+      (auto simp add: assms(2,3))
+  thus ?case
+     by(auto intro!: alt_list_append_3[OF assms(1)] alt_list.intros(1)
+           simp add: alt_list_step 2(2))
+ qed
 
 end

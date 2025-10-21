@@ -1,6 +1,6 @@
 theory Graph_Quotient_working_2
 imports choose "Berge_Lemma.Berge"
-         
+                      
 begin
 
 subsection \<open>List Auxiliary Lemmas\<close>
@@ -4974,7 +4974,6 @@ next
     apply(intro quot_is_matching[where dume = "{last stem, last C}"] matching(1,2))
     by (auto simp add: doubleton_eq_iff; metis)
 qed
-
 
 end
 
