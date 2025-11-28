@@ -1,0 +1,22 @@
+session "Hungarian_Method" = "HOL-Library" +
+  options [document = pdf, document_output = "output"]
+
+sessions
+  "Berge_Lemma"
+  "RANKING"
+  Priority_Search_Trees
+  Flow_Theory
+  Primal_Dual_Bipartite_Matching
+
+
+theories
+	Key_Value_Queue_Spec
+	Ordered_Map_Heap
+	Naive_Primal_Dual
+	Alternating_Forest_Executable
+	Primal_Dual_Path_Search
+
+document_files
+  "root.tex"
+
+

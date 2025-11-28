@@ -1,8 +1,146 @@
 theory Naive_Primal_Dual
 imports  Flow_Theory.Arith_Lemmas "HOL-Data_Structures.Set_Specs"
 "HOL-Data_Structures.Map_Specs"  Flow_Theory.Logic_Lemmas
-Weighted_Matching_PD_Optcrits
+Primal_Dual_Bipartite_Matching.Matching_LP
 begin
+
+section \<open>The Algorithm Resulting from Shrijver\<close>
+
+subsection \<open>Preparation, to be moved\<close>
+
+no_translations
+  "_Collect p P"      <= "{p. P}"
+  "_Collect p P"      <= "{p|xs. P}"
+  "_CollectIn p A P"  <= "{p : A. P}"
+
+(*TODO MOVE*)
+lemma matching_graph_mono: "graph_matching G M \<Longrightarrow> G \<subseteq> G' \<Longrightarrow> graph_matching G' M"
+  by(auto simp add: matching_def)
+
+lemma perfect_matchingE:
+"perfect_matching G M \<Longrightarrow> (M \<subseteq> G \<Longrightarrow> matching M \<Longrightarrow> Vs G = Vs M \<Longrightarrow> P) \<Longrightarrow> P"
+  by(auto simp add: perfect_matching_def)
+(*TODO MOVE*)
+definition "Neighbourhood G V = {v | v u. {u, v} \<in> G \<and> u \<in> V \<and> v \<notin> V}"
+
+lemma not_in_NeighbourhoodE: "v \<notin> Neighbourhood G V \<Longrightarrow>
+                ((\<And> u. {u, v} \<in> G \<Longrightarrow> u \<in> V \<Longrightarrow> v \<notin> V \<Longrightarrow> False) \<Longrightarrow> P) \<Longrightarrow> P"
+  by(auto simp add: Neighbourhood_def)
+
+lemma self_not_in_Neighbourhood:
+"x \<in> V \<Longrightarrow> x \<notin> Neighbourhood G V"
+  by(auto simp add: Neighbourhood_def)
+
+lemma Neighbourhood_neighbourhood_union_inter:
+ "Neighbourhood G V = \<Union> (neighbourhood G ` V) - V"
+  by(auto simp add: Neighbourhood_def neighbourhood_def  insert_commute)
+
+lemma Neighbourhood_bipartite:
+  assumes"bipartite G X Y" "V \<subseteq> X \<or> V \<subseteq> Y"
+  shows  "Neighbourhood G V = \<Union> (neighbourhood G ` V)"
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 u)
+  then obtain v where uv:"{v, u} \<in> G" "v \<in> V"
+    by(auto simp add: Neighbourhood_def)
+  hence "u \<in> neighbourhood G v"
+    by(auto simp add: neighbourhood_def edge_commute) 
+  then show ?case 
+    using uv(2) by auto
+next
+  case (2 u)
+  then obtain v where v: "u \<in> neighbourhood G v" "v \<in> V" by auto
+  hence uv:"{u, v} \<in> G"
+    by(auto simp add: neighbourhood_def)
+  hence "u \<notin> V"
+    using v(2) assms by(fastforce simp add: bipartite_def)
+  then show ?case 
+    using edge_commute[OF uv] v(2)
+    by(auto simp add: Neighbourhood_def) 
+qed
+
+lemma Neighbourhood_bipartite_left:
+  assumes"bipartite G X Y" "V \<subseteq> X"
+  shows  "Neighbourhood G V \<subseteq> Y"
+  using assms
+  by(auto simp add: doubleton_eq_iff bipartite_def Neighbourhood_def dest: bipartite_edgeD(1))
+
+lemma Neighbourhood_bipartite_mono:
+  assumes"bipartite G X Y" "G' \<subseteq> G"
+  shows  "Neighbourhood G' X \<subseteq> Neighbourhood G X"
+  using assms
+  by (auto simp add: doubleton_eq_iff bipartite_def Neighbourhood_def)
+
+lemma Neighbourhood_bipartite_right:
+  assumes"bipartite G X Y" "V \<subseteq> Y"
+  shows  "Neighbourhood G V \<subseteq> X"
+  using assms
+  by (auto simp add: doubleton_eq_iff bipartite_def Neighbourhood_def dest: bipartite_edgeD(2))
+
+lemma bipartite_alternation:
+  assumes "bipartite G X Y" "walk_betw G s p t"
+  shows   "s \<in> X \<Longrightarrow> alt_list (\<lambda> x. x \<in> X) (\<lambda> x. x \<in> Y) p"
+          "s \<in> Y \<Longrightarrow> alt_list (\<lambda> x. x \<in> Y) (\<lambda> x. x \<in> X) p"
+  using assms(2)
+proof(induction rule: induct_walk_betw , goal_cases)
+  case (1 s)
+  then show ?case 
+    by (simp add: alt_list.intros(1,2))
+next
+  case (2 s)
+  then show ?case
+    by (simp add: alt_list.intros(1,2))
+next
+  case (3 x y p t)
+  have XY: "x \<in> X" "y \<in> Y"
+    using  3(1,5) assms(1) bipartite_edgeD(1) by fastforce+
+  show ?case 
+    by(auto intro!: 3(4) intro:  alt_list.intros(2) simp add: XY)
+next
+  case (4 x y p t)
+  have XY: "x \<in> Y" "y \<in> X"
+    using  4(1,5) assms(1) bipartite_edgeD(2) by fastforce+
+  show ?case 
+    by(auto intro!: 4(3) intro:  alt_list.intros(2) simp add: XY)
+qed
+
+lemma bipartite_ends_and_lengths:
+  assumes "bipartite G X Y" "walk_betw G s p t"
+  shows   "s \<in> X \<Longrightarrow> even (length p) \<Longrightarrow> t \<in> Y"
+          "s \<in> X \<Longrightarrow> odd (length p) \<Longrightarrow> t \<in> X"
+          "s \<in> Y \<Longrightarrow> even (length p) \<Longrightarrow> t \<in> X"
+          "s \<in> Y \<Longrightarrow> odd (length p) \<Longrightarrow> t \<in> Y"
+          "s \<in> X \<Longrightarrow> t \<in> Y \<Longrightarrow> even (length p)"
+          "s \<in> X \<Longrightarrow> t \<in> X \<Longrightarrow> odd (length p)"
+          "s \<in> Y \<Longrightarrow> t \<in> X \<Longrightarrow> even (length p)"
+          "s \<in> Y \<Longrightarrow> t \<in> Y \<Longrightarrow> odd (length p)"
+  using bipartite_alternation[OF assms]
+        alternating_list_odd_last[of _ _ p]
+        alternating_list_even_last[of _ _ p] assms(2)
+        bipartite_vertex(1)[OF walk_endpoints(1) assms(1)] walk_symmetric[OF assms(2)] 
+  by (fastforce simp add: walk_between_nonempty_pathD(4)[OF assms(2)])+
+
+(*Do we have something like that already?*)
+definition "pick_one e = (SOME v. v \<in> e)"
+definition "pick_another e = (SOME v. v \<in> e \<and> v \<noteq> pick_one e)"
+
+lemma pick_one_and_another_props:
+  assumes "\<exists> u v. e = {u, v} \<and> u \<noteq> v" 
+  shows   "pick_one e \<in> e" "pick_another e \<in> e"
+          "e = {pick_one e, pick_another e}"
+proof-
+  obtain u v where uv: "e = {u, v}" "u \<noteq> v" using assms by auto
+  have "pick_one e = u \<or> pick_one e = v"
+    using uv 
+    by (metis empty_iff insert_iff pick_one_def some_in_eq)
+  moreover have "pick_one e = u \<Longrightarrow> pick_another e = v"
+    using uv 
+    by (metis (mono_tags, lifting) insert_iff pick_another_def singletonD someI_ex)
+  moreover have "pick_one e = v \<Longrightarrow> pick_another e = u"
+    using uv 
+    by (metis (mono_tags, lifting) insert_iff pick_another_def singletonD someI_ex)
+  ultimately show  "pick_one e \<in> e" "pick_another e \<in> e" "e = {pick_one e, pick_another e}"
+    using uv by auto
+qed
 
 (*TODO MOVE*)
 
@@ -35,6 +173,8 @@ next
             intro: exI[of _ "i * int (lcm d1 d2 div d2)"] a1
          simp add: d2_i algebra_simps dest!: d(1))
 qed
+
+subsection \<open>Implementing the Algorithm\<close>
 
 datatype ('m, 'vset) match_or_witness_set = match 'm | witness 'vset 'vset
 
@@ -257,6 +397,7 @@ lemma pair_list_distinct_front[simp]: "pair_list_distinct (x#xs) =
           (x \<notin> set xs \<and>  prod.swap x \<notin> set xs \<and> pair_list_distinct xs)"
   by(cases x)(auto simp add: pair_list_distinct_def)
 
+subsection \<open>Locale for Proofs\<close>
 
 locale  naive_primal_dual_reasoning =
  naive_primal_dual_spec +
@@ -354,6 +495,8 @@ definition "pair_weight e =  weight (fst e) (snd e)"
 
 lemma pair_weight_fold: "weight u v = pair_weight (u, v)"
   by(auto simp add: pair_weight_def)
+
+subsection \<open>Properties of Auxiliary Functions\<close>
 
 lemma init_potential_props:
 "p_invar init_potential"
@@ -586,13 +729,15 @@ proof-
           have h1: "{u, v} = set_of_pair e \<Longrightarrow> edge_slack pmap x y \<le> edge_slack pmap u v" for u v
             using IH_applied[simplified] 
             by (smt (verit, best) doubleton_eq_iff e_split set_of_pair_applied_to_pair xy_same_slack)
-          have a1: "(a, b) \<in> set es \<Longrightarrow> vset_isin S a \<Longrightarrow> edge_slack pmap a b \<noteq> 0\<Longrightarrow> foldr it_e es \<infinity> \<le>  edge_slack pmap a b" 
+          have a1: "\<lbrakk>(a, b) \<in> set es; vset_isin S a; edge_slack pmap a b \<noteq> 0\<rbrakk>
+                 \<Longrightarrow> foldr it_e es \<infinity> \<le>  edge_slack pmap a b" 
                    for a b
             using IH_applied[simplified] 
             by (smt (verit, del_insts) Min.bounded_iff finite_insert finites2 image_iff 
                 insert_Collect
                 insert_not_empty mem_Collect_eq order_refl set_of_pair_applied_to_pair)
-          have a2: "(b, a) \<in> set es \<Longrightarrow> vset_isin S a \<Longrightarrow> edge_slack pmap a b \<noteq> 0\<Longrightarrow> foldr it_e es \<infinity> \<le>  edge_slack pmap a b" 
+          have a2: "\<lbrakk>(b, a) \<in> set es; vset_isin S a; edge_slack pmap a b \<noteq> 0\<rbrakk>
+                \<Longrightarrow> foldr it_e es \<infinity> \<le>  edge_slack pmap a b" 
                    for a b
             using IH_applied[simplified] 
             by (smt (verit, best) Min.bounded_iff empty_def finite_insert finites2 image_eqI insert_commute
@@ -602,22 +747,17 @@ proof-
             by(auto simp add: set_of_pair_def doubleton_eq_iff ereal_less_eq(3)[symmetric]
                           simp del: ereal_less_eq(3)
                intro:  order.trans[OF _ a2, of _ a b] order.trans[OF _ a1, of _ a b])
-          have h3: "edge_slack pmap u v \<noteq> 0 \<Longrightarrow>
-           {u, v} = set_of_pair e \<Longrightarrow>
-           edge_slack pmap x y = 0 \<Longrightarrow> foldr it_e es \<infinity> \<le> ereal (edge_slack pmap u v)" for u v
+          have h3: "\<lbrakk>edge_slack pmap u v \<noteq> 0; {u, v} = set_of_pair e; edge_slack pmap x y = 0\<rbrakk>
+                 \<Longrightarrow> foldr it_e es \<infinity> \<le> ereal (edge_slack pmap u v)" for u v
             by (metis doubleton_eq_iff e_split set_of_pair_applied_to_pair xy_same_slack)
-          have h4: "vset_isin S u \<Longrightarrow>
-           {u, v} = set_of_pair e \<Longrightarrow>
-           \<not> vset_isin S x \<Longrightarrow> \<not> vset_isin S y \<Longrightarrow> foldr it_e es \<infinity> \<le> ereal (edge_slack pmap u v)" for u v
+          have h4: "\<lbrakk>vset_isin S u; {u, v} = set_of_pair e; \<not> vset_isin S x; \<not> vset_isin S y\<rbrakk>
+                 \<Longrightarrow> foldr it_e es \<infinity> \<le> ereal (edge_slack pmap u v)" for u v
             by (metis e_split empty_iff insert_iff set_of_pair_applied_to_pair)
-          have h5: "vset_isin S u \<Longrightarrow>
-                 edge_slack pmap u v \<noteq> 0 \<Longrightarrow>
-                {u, v} = set_of_pair (a, b) \<Longrightarrow>
-                  (a, b) \<in> set es \<Longrightarrow>
+          have h5: "\<lbrakk>vset_isin S u;  edge_slack pmap u v \<noteq> 0; {u, v} = set_of_pair (a, b);
+                    (a, b) \<in> set es\<rbrakk> \<Longrightarrow>
                    foldr it_e es \<infinity> \<le> ereal (edge_slack pmap u v)" for u v a b
             by (metis a1 a2 doubleton_eq_iff set_of_pair_applied_to_pair)
-          have h6: "{u, v} = set_of_pair e \<Longrightarrow>
-           \<not> ereal (edge_slack pmap x y) < foldr it_e es \<infinity> \<Longrightarrow>
+          have h6: "\<lbrakk>{u, v} = set_of_pair e; \<not> ereal (edge_slack pmap x y) < foldr it_e es \<infinity>\<rbrakk> \<Longrightarrow>
            foldr it_e es \<infinity> \<le> ereal (edge_slack pmap u v)" for u v
             by(meson h1 leI le_ereal_le )
           show ?case
@@ -799,6 +939,8 @@ lemma w_weight_cong: "{u, v} \<in> G \<Longrightarrow> w {u, v} = weight u v"
       basic_graph_props(9)[of u]
       pick_one_and_another_props(3)[of "{u, v}"] sym_weights[of u v]
   by(auto simp add: w_def) 
+
+subsection \<open>One Step and Invariants\<close>
 
 lemma naive_primal_dual_one_step:
   assumes "naive_primal_dual_call_cond pmap" "p_invar pmap"
@@ -1086,6 +1228,8 @@ proof-
  qed
 qed
 
+subsection \<open>Correctness\<close>
+
 lemma naive_primal_dual_ret_cond_correctness:
   assumes "naive_primal_dual_ret_cond pmap" "p_invar pmap"
           "feasible_max_dual LR G w (abstract_real_map (p_lookup pmap))"
@@ -1232,6 +1376,8 @@ lemma naive_primal_dual_partial_correctness:
    by(auto intro!: naive_primal_dual_partial_correctness_general assms
          simp add: init_potential_props(1) initial_feasible)
 
+ subsection \<open>Termination and Total Correctness\<close>
+
 lemma naive_primal_dual_termination_general:
   assumes   "epsilon_multiples \<epsilon> w G" "p_invar pmap" 
             "feasible_max_dual LR G w (abstract_real_map (p_lookup pmap))"  
@@ -1301,6 +1447,8 @@ lemma naive_primal_dual_total_correctness:
           "\<exists> pmap. min_feasible_max_dual LR G w (potential pmap)"
   using assms naive_primal_dual_partial_correctness naive_primal_dual_termination
   by auto
+
+subsection \<open>Termination for a Specific Case\<close>
 
 context
   fixes \<epsilon>::real
