@@ -506,7 +506,7 @@ definition
   "empty_forest roots = (Forest roots roots vset_empty parent_empty 
      (foldl (\<lambda> m r. origin_upd r r m) origin_empty (vset_flatten roots)))" for roots
 
-definition "extend_forest_even_unclassified F x y z= 
+definition "extend_forest_even_unclassified (F::('vset, 'vset, 'vset, 'parent, 'origin) alt_forest) x y z= 
 (Forest (roots F)
         (vset_insert z (evens F))
         (vset_insert y (odds F))
@@ -1625,5 +1625,9 @@ interpretation satisfied: alternating_forest_ordinary_extension_spec
   by (simp_all add: satisfied_simple_extension_precond_same extension_main_preservation 
       extension_abstract_is extension_evens extension_odds extension_roots 
       empty_forest_correctess)
+
+lemmas satisified = satisfied.alternating_forest_ordinary_extension_spec_axioms
+
 end
+
 end

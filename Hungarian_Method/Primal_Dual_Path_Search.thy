@@ -2,6 +2,7 @@ theory Primal_Dual_Path_Search
   imports Berge_Lemma.Berge Flow_Theory.Arith_Lemmas "HOL-Data_Structures.Set_Specs"
 "HOL-Data_Structures.Map_Specs"
 RANKING.More_Graph  Alternating_Forest_Spec Key_Value_Queue_Spec
+Path_Search_Result
 begin
 (*TODO MOVE*)
 
@@ -160,9 +161,6 @@ heap::'heap
 missed::'miss
 acc::real
 augpath::"('v list) option"
-
-datatype ('v, 'pot) path_search_result = 
-  Dual_Unbounded | Lefts_Matched | Next_Iteration "'v list" 'pot
 
 locale primal_dual_path_search_spec = 
   fixes G::"'v set set"
@@ -551,7 +549,17 @@ lemma search_path_loop_impl_same:
   apply(subst search_path_loop.psimps, simp)
   apply(subst search_path_loop_impl.simps)
   by (auto simp add: Let_def split: if_split option.split prod.split)
-
+lemmas [code] = 
+search_path_def 
+search_path_loop_impl.simps 
+new_potential_def
+w\<^sub>\<pi>_def
+unmatched_lefts_def
+initial_state_def
+init_best_even_neighbour_def
+update_best_even_neighbours_def
+update_best_even_neighbour_def
+forest_roots_def
 end
 
 subsection \<open>Locale for Proofs\<close>
