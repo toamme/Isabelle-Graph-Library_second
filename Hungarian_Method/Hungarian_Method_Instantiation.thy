@@ -509,7 +509,7 @@ end
 
 hide_const left
 
-thm search_path_def
+thm matching_augment_impl_def
 global_interpretation hungarian:
 hungarian_loop_spec
 where path_search = "\<lambda> M P. search_path left (\<lambda> M. buddy_lookup M)
@@ -521,6 +521,11 @@ and edge_costs = "(\<lambda> e. edge_costs (pick_one e) (pick_another e))"
 and init_potential = "init_potential potential_lookup potential_upd
                           empty_potential edge_costs to_list neighbs vs"
 and potential_abstract = "(\<lambda> \<pi> v. abstract_real_map (potential_lookup \<pi>) v)"
+and potential_invar = potential_invar
+and empty_matching = empty_buddies
+and matching_invar = buddy_invar
+and augment = "matching_augment_impl buddy_upd"
+and matching_abstract = "matching_abstract buddy_lookup"
 for 
      (*the graph*) G left right buddy edge_costs right_neighbs
      (*the forest*) parent_lookup  parent_upd parent_empty

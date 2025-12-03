@@ -552,6 +552,7 @@ global_interpretation aug_a_matching:
   matching_augmentation_spec buddy_empty buddy_upd buddy_lookup buddy_invar
   for buddy_empty buddy_upd buddy_lookup buddy_invar
   defines matching_augment_impl = aug_a_matching.augment_impl
+    and matching_abstract = aug_a_matching.\<M>
   done
 
 
