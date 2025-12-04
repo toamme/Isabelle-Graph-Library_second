@@ -69,7 +69,8 @@ no_notation digraph ("digraph")
 named_theorems Graph_Spec_Elims
 named_theorems Graph_Spec_Intros
 named_theorems Graph_Spec_Simps
-
+(*TODO: List parameters in desired order, othw. ordering is broken,
+bad for instantiation!*)
 locale Pair_Graph_Specs = 
  adjmap: Map 
  where update = update and invar = adjmap_inv +
