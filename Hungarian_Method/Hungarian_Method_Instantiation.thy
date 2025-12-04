@@ -3,6 +3,8 @@ theory Hungarian_Method_Instantiation
 Naive_Primal_Dual "HOL-Library.Rewrite"
 Matching_Augmentation_Executable
 Hungarian_Method_Top_Loop
+Graph_Algorithms_Dev.DFS_Example
+ "HOL-Library.Product_Lexorder"
 begin
 
 text \<open>Let's instantiate the path search\<close>
@@ -69,8 +71,10 @@ defines search_path = pd_path_search_spec.search_path
   done
 
 (*manual fix of "partially applied constant on left hand side of equation"*)
-lemmas [code] = pd_path_search_spec.search_path_def[folded search_path_def]
+lemmas [code] = pd_path_search_spec.search_path_def[folded search_path_def  path_search_initial_state_def]
                 pd_path_search_spec.initial_state_def[folded path_search_initial_state_def]
+
+hide_const RBT_Set.insert
                 
 locale path_search_instantiated_correct = 
   fixes G::"('v::linorder) set set"
@@ -266,7 +270,7 @@ qed
 
 lemmas search_path_correct = pd_path_search.search_path_correct
 end
-
+hide_const nbs
 locale build_init_potential_spec =
   fixes vs::"'v list"
   and   neighbs::"'v \<Rightarrow> 'vset option"
@@ -509,31 +513,82 @@ end
 
 hide_const left
 
-thm matching_augment_impl_def
-global_interpretation hungarian:
+
+definition "default_neighb D neighbs = (\<lambda> v. (case neighbs v of None \<Rightarrow> D
+                                                | Some N \<Rightarrow> N))"
+thm hungarian_loop_spec.hungarian_def
+global_interpretation hungarian_top_loop:
 hungarian_loop_spec
-where path_search = "\<lambda> M P. search_path left (\<lambda> M. buddy_lookup M)
-                    (edge_costs::('a::linorder) \<Rightarrow> 'a \<Rightarrow> real) right_neighbs parent_lookup
+where path_search = "\<lambda> M P. search_path left (buddy_lookup M)
+                    (edge_costs::('a::linorder) \<Rightarrow> 'a \<Rightarrow> real) 
+                     (default_neighb vset_empty right_neighbs) parent_lookup
                      parent_upd parent_empty  origin_upd origin_lookup origin_empty P 
                      potential_lookup potential_upd missed_lookup  missed_empty missed_upd 
                      ben_upd ben_lookup ben_empty to_list vset_insert vset_empty"
 and edge_costs = "(\<lambda> e. edge_costs (pick_one e) (pick_another e))"
 and init_potential = "init_potential potential_lookup potential_upd
-                          empty_potential edge_costs to_list neighbs vs"
+                          empty_potential edge_costs to_list right_neighbs (to_list left)"
 and potential_abstract = "(\<lambda> \<pi> v. abstract_real_map (potential_lookup \<pi>) v)"
 and potential_invar = potential_invar
 and empty_matching = empty_buddies
 and matching_invar = buddy_invar
 and augment = "matching_augment_impl buddy_upd"
 and matching_abstract = "matching_abstract buddy_lookup"
+and card_L = "length (to_list left)"
+and card_R = "length (to_list right)"
+and G = undefined
 for 
      (*the graph*) G left right buddy edge_costs right_neighbs
+     (*the matching*) empty_buddies buddy_lookup buddy_upd buddy_invar
      (*the forest*) parent_lookup  parent_upd parent_empty
                     origin_upd origin_lookup origin_empty 
-     (*the potential*) initial_pot potential_lookup potential_upd
+     (*the potential*) initial_pot potential_lookup potential_upd empty_potential
+                       potential_invar
      (*missed change in potential*) missed_lookup missed_empty missed_upd
      (*best even neighbour map*) ben_upd ben_lookup ben_empty
      (*sets of vertices*) vset_isin to_list vset_to_set vset_insert vset_empty
+   defines hungarian = hungarian_top_loop.hungarian
+   and initial_state =hungarian_top_loop.initial_state
+   and hungarianl_loop_impl = hungarian_top_loop.hungarian_loop_impl
+   
   done
+
+thm hungarian_def
+
+definition "edges_and_costs = [(0::nat, 1::nat, 1::real), (0,3, -10), 
+(0,5, 2/3), (0,7, 1/87), (2,5, -12), (2,9, 100), (2,1, 2.5), (4,5, 2+1/7), 
+(4,3, -1.3), (4,7, 2.4),
+   (6,1, 1.8+1/9), (6,9, 0.2), (8, 9, 10000), (8,1, 6.2), (0, 9, -100),
+ (2, 7, -100), (2,3,-40), (2,9,-100), (4,9, -100)]"
+
+definition "edges = zip (map fst edges_and_costs) (map (fst o snd) edges_and_costs)"
+
+definition "c_list = zip (zip (map fst edges_and_costs)  (map (fst o snd) edges_and_costs)) 
+                   (map (snd o snd) edges_and_costs)"
+
+definition "c_impl = foldr (\<lambda> xy tree.
+              update (prod.swap (prod.fst xy)) (prod.snd xy)
+              ( update (prod.fst xy) (prod.snd xy) tree))
+              c_list Leaf"
+
+definition "weights = (\<lambda> u v. abstract_real_map (lookup c_impl) (u, v))"
+
+definition "bipartite_test = filter odd (map fst edges) @ filter even (map snd edges)"
+value bipartite_test
+
+definition "G = a_graph edges"
+hide_const right
+
+definition "left = foldr (\<lambda> x tree. RBT.insert x tree) (map fst edges_and_costs) Leaf"
+definition "right = foldr (\<lambda> x tree. RBT.insert x tree) (map (fst o snd) edges_and_costs) Leaf"
+thm hungarian_def
+
+definition "final_matching = hungarian left right weights (lookup G) empty lookup update lookup update empty
+update lookup empty lookup (\<lambda> T n v. update n v T) empty lookup empty 
+ (\<lambda> T n v. update n v T) (\<lambda> T n v. update n v T) lookup empty inorder RBT.insert empty"
+
+value "final_matching"
+
+value "inorder (the final_matching)"
 
 end
