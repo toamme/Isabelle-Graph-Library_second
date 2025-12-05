@@ -222,6 +222,28 @@ lemma no_self_loop_buddy_and_\<M>_dir:
   "no_self_loop_buddy M \<longleftrightarrow> (\<nexists> x. (x,x) \<in> \<M>_dir M)"
   by(auto simp add: no_self_loop_buddy_def \<M>_dir_def)
 
+definition "invar_matching G M = 
+  (buddy_invar M \<and> symmetric_buddies M \<and> no_self_loop_buddy M \<and>
+   graph_matching G (\<M> M) \<and> finite (\<M> M))"
+
+lemma invar_matchingE:
+"invar_matching G M \<Longrightarrow> 
+ (\<lbrakk>buddy_invar M; symmetric_buddies M; no_self_loop_buddy M;
+    graph_matching G (\<M> M); finite (\<M> M)\<rbrakk>
+ \<Longrightarrow> P)
+\<Longrightarrow> P"
+and invar_matchingI:
+"\<lbrakk>buddy_invar M; symmetric_buddies M; no_self_loop_buddy M;
+  graph_matching G (\<M> M); finite (\<M> M)\<rbrakk>
+ \<Longrightarrow> invar_matching G M"
+and invar_matchingD:
+"invar_matching G M \<Longrightarrow> buddy_invar M"
+"invar_matching G M \<Longrightarrow> symmetric_buddies M"
+"invar_matching G M \<Longrightarrow> no_self_loop_buddy M"
+"invar_matching G M \<Longrightarrow> graph_matching G (\<M> M)"
+"invar_matching G M \<Longrightarrow> finite (\<M> M)"
+  by(auto simp add: invar_matching_def)
+
 end
 
 locale matching_augmentation =
@@ -511,28 +533,6 @@ lemma
                 augment_impl_no_self_loop_buddy_pres\<close>)
     (auto intro: aug_paths_are_even simp add: matching_augmenting_path_def)
 
-definition "invar_matching G M = 
-  (buddy_invar M \<and> symmetric_buddies M \<and> no_self_loop_buddy M \<and>
-   graph_matching G (\<M> M) \<and> finite (\<M> M))"
-
-lemma invar_matchingE:
-"invar_matching G M \<Longrightarrow> 
- (\<lbrakk>buddy_invar M; symmetric_buddies M; no_self_loop_buddy M;
-    graph_matching G (\<M> M); finite (\<M> M)\<rbrakk>
- \<Longrightarrow> P)
-\<Longrightarrow> P"
-and invar_matchingI:
-"\<lbrakk>buddy_invar M; symmetric_buddies M; no_self_loop_buddy M;
-  graph_matching G (\<M> M); finite (\<M> M)\<rbrakk>
- \<Longrightarrow> invar_matching G M"
-and invar_matchingD:
-"invar_matching G M \<Longrightarrow> buddy_invar M"
-"invar_matching G M \<Longrightarrow> symmetric_buddies M"
-"invar_matching G M \<Longrightarrow> no_self_loop_buddy M"
-"invar_matching G M \<Longrightarrow> graph_matching G (\<M> M)"
-"invar_matching G M \<Longrightarrow> finite (\<M> M)"
-  by(auto simp add: invar_matching_def)
-
 lemma augmentation_correct:
   assumes "invar_matching G M"
           "graph_augmenting_path G (\<M> M) p"
@@ -546,6 +546,12 @@ lemma augmentation_correct:
                    symmetric_buddy_matching finite_symm_diff
          simp add: augment_impl_correct)+ 
 
+lemma empty_matching_props:
+"invar_matching G buddy_empty"
+"\<M> buddy_empty = {}"
+   by(auto intro!: invar_matchingI symmetric_buddiesI no_self_loop_buddyI 
+         simp add: buddies \<M>_def)
+
 end
 
 global_interpretation aug_a_matching:
@@ -553,6 +559,7 @@ global_interpretation aug_a_matching:
   for buddy_empty buddy_upd buddy_lookup buddy_invar
   defines matching_augment_impl = aug_a_matching.augment_impl
     and matching_abstract = aug_a_matching.\<M>
+    and matching_invar = aug_a_matching.invar_matching
   done
 
 

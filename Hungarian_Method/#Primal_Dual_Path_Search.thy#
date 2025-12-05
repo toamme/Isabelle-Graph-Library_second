@@ -2980,7 +2980,7 @@ lemma augpath_Some_valid_result:
           \<exists> u v. e = {u, v} \<and> \<w> u v = \<pi>\<^sup>* state' u + \<pi>\<^sup>* state' v" (is ?th4)
     "graph_augmenting_path G \<M> (the (augpath state'))" (is ?th5)
      "forest_invar \<M> (forest state')" (is ?th6)
-     "invar_basic state" (is ?th7)
+     "invar_basic state'" (is ?th7)
 proof-
   have  "?th1 \<and> ?th2 \<and> ?th4 \<and> ?th5 \<and> ?th6 \<and> ?th7"
     using assms(1-8)
@@ -3009,13 +3009,12 @@ proof-
       case 3
       show ?thesis 
         using IH(10) 
-        apply(unfold search_path_loop_simps(3)[OF IH(1) 3])
-        using IH(2) oops
+        by(unfold search_path_loop_simps(3)[OF IH(1) 3], intro IH(2))
           (auto intro!: 3 invar_pres_one_step IH(1,3-9)
             simp add: search_path_loop_simps(3)[OF IH(1) 3])
     qed
   qed
-  thus ?th1 ?th2 ?th4 ?th5 ?th6
+  thus ?th1 ?th2 ?th4 ?th5 ?th6 ?th7
     by auto
 qed
 
@@ -3451,12 +3450,9 @@ proof-
     by (auto simp add: from_assms(2,3) new_potential_props(2) doubleton_eq_iff)
   show     "potential_invar \<pi>'"
     by (simp add: from_assms(3) new_potential_props(1))
-  show
-    "dom (potential_lookup \<pi>') \<subseteq> L \<union> R"
-    unfolding new_potential_props from_assms(3)
-    find_theorems search_path_loop initial_state
-    oops
-    find_theorems dom \<pi>'
+  show "dom (potential_lookup \<pi>') \<subseteq> L \<union> R"
+    using result_props(6)  invar_basicD(10,9) potential_in_G
+    by (auto simp add: new_potential_props from_assms(3))
 qed
 (*TODO say dual unbounded*)
 lemmas search_path_correct = 
@@ -3464,13 +3460,6 @@ lemmas search_path_correct =
  Dual_Unbounded_dual_unbounded
  Next_Iteration_tight_path_and_new_feasible_potential
 
-lemma search_path_result_invars:
-  assumes "search_path = Next_Iteration M \<pi>'"
-  shows   "potential_invar \<pi>'"
-          "dom (potential_lookup \<pi>') \<subseteq> Vs G"
-  using assms
-   apply(auto simp add: search_path_def
-           if_split[of "\<lambda> x. x = Next_Iteration M \<pi>'"] Let_def)
-  using if_split[of "\<lambda> x. x = Next_Iteration M \<pi>'"]
+
 end
 end

@@ -3,9 +3,11 @@ theory Hungarian_Method_Instantiation
 Naive_Primal_Dual "HOL-Library.Rewrite"
 Matching_Augmentation_Executable
 Hungarian_Method_Top_Loop
-Graph_Algorithms_Dev.DFS_Example
- "HOL-Library.Product_Lexorder"
+(*Graph_Algorithms_Dev.DFS_Example
+ "HOL-Library.Product_Lexorder"*)
 begin
+hide_const R
+term R
 
 text \<open>Let's instantiate the path search\<close>
 
@@ -74,7 +76,7 @@ defines search_path = pd_path_search_spec.search_path
 lemmas [code] = pd_path_search_spec.search_path_def[folded search_path_def  path_search_initial_state_def]
                 pd_path_search_spec.initial_state_def[folded path_search_initial_state_def]
 
-hide_const RBT_Set.insert
+(*hide_const RBT_Set.insert*)
                 
 locale path_search_instantiated_correct = 
   fixes G::"('v::linorder) set set"
@@ -118,6 +120,7 @@ and   origin_empty::'origin
 and   origin_upd::"'v\<Rightarrow>'v\<Rightarrow>'origin\<Rightarrow>'origin"
 and   origin_lookup::"'origin \<Rightarrow> 'v \<Rightarrow> 'v option"
 and   origin_invar::"'origin \<Rightarrow> bool"
+
 assumes G: "bipartite G (vset_to_set left) (vset_to_set right)"
            "\<And> u v. in_G u v \<longleftrightarrow> {u, v} \<in> G"
            "vset_invar left" "vset_invar right"
@@ -173,6 +176,12 @@ and potential_in_G:
     "\<And> par x s. origin_invar par \<Longrightarrow> origin_invar (origin_upd x s par)"
     "\<And> par x s. origin_invar par \<Longrightarrow> origin_lookup (origin_upd x s par) =
                 (origin_lookup par)(x \<mapsto> s)"
+and buddies:
+ "buddy_invar buddy_empty"
+  "\<And> buddy u v. buddy_invar buddy \<Longrightarrow> buddy_invar (buddy_upd  u v buddy)"
+  "\<And> buddy u v. buddy_invar buddy \<Longrightarrow> buddy_lookup (buddy_upd  u v buddy) =
+                (buddy_lookup buddy)(u \<mapsto> v)"
+  "\<And> u. buddy_lookup buddy_empty u = None"
 begin
 
 interpretation fmnlp: forest_manipulation
@@ -270,7 +279,7 @@ qed
 
 lemmas search_path_correct = pd_path_search.search_path_correct
 end
-hide_const nbs
+(*hide_const nbs*)
 locale build_init_potential_spec =
   fixes vs::"'v list"
   and   neighbs::"'v \<Rightarrow> 'vset option"
@@ -313,7 +322,7 @@ for potential_lookup potential_upd empty_potential
 locale build_init_potential = 
 build_init_potential_spec+
 assumes vs_distinct: "distinct vs"
-and neighbs: "\<And> v N. neighbs v = Some N \<Longrightarrow> vset_invar N"
+and neighbs: "\<And> v N. \<lbrakk> v \<in> set vs; neighbs v = Some N\<rbrakk> \<Longrightarrow> vset_invar N"
 and vset: "\<And> S. vset_invar S \<Longrightarrow> distinct (to_list S)"
           "\<And> S. vset_invar S \<Longrightarrow> vset_to_set S = set (to_list S)"
 and potential:
@@ -423,15 +432,19 @@ proof-
     for \<pi> E 
      proof-
        define vvs where "vvs = rev vs"
+       have vvs_in_vs: "set vvs \<subseteq> set vs"
+         by(auto simp add: vvs_def)
        have "?rslt0 \<and> ?rslt1 \<and> ?rslt2"
          using that
          unfolding foldl_conv_foldr vvs_def[symmetric] set_rev[of vs, symmetric]
+         using vvs_in_vs
        proof(induction vvs)
          case Nil
          then show ?case by auto
        next
          case (Cons u vvs)
-         note IH_applied_all = Cons(1)[OF Cons(2,3,4)]
+         hence vvs_in_vs: "set vvs \<subseteq> set vs" by auto
+         note IH_applied_all = Cons(1)[OF Cons(2,3,4) vvs_in_vs]
          note IH_applied = conjunct1[OF IH_applied_all]
                            conjunct1[OF conjunct2[OF IH_applied_all]]
                            conjunct2[OF conjunct2[OF IH_applied_all]]
@@ -459,7 +472,7 @@ proof-
            case (2 N)
            note two = this
            have vset_invar_N:"vset_invar N"
-             using "2" neighbs by auto
+             using "2" neighbs Cons.prems(4) by auto
            show ?case 
              apply(subst 2 option.cases(2))+
              proof(rule, goal_cases)
@@ -513,7 +526,6 @@ end
 
 hide_const left
 
-
 definition "default_neighb D neighbs = (\<lambda> v. (case neighbs v of None \<Rightarrow> D
                                                 | Some N \<Rightarrow> N))"
 thm hungarian_loop_spec.hungarian_def
@@ -531,12 +543,12 @@ and init_potential = "init_potential potential_lookup potential_upd
 and potential_abstract = "(\<lambda> \<pi> v. abstract_real_map (potential_lookup \<pi>) v)"
 and potential_invar = potential_invar
 and empty_matching = empty_buddies
-and matching_invar = buddy_invar
+and matching_invar = "matching_invar buddy_lookup buddy_invar G"
 and augment = "matching_augment_impl buddy_upd"
 and matching_abstract = "matching_abstract buddy_lookup"
 and card_L = "length (to_list left)"
 and card_R = "length (to_list right)"
-and G = undefined
+and G = G
 for 
      (*the graph*) G left right buddy edge_costs right_neighbs
      (*the matching*) empty_buddies buddy_lookup buddy_upd buddy_invar
@@ -552,13 +564,13 @@ for
    and hungarianl_loop_impl = hungarian_top_loop.hungarian_loop_impl
    
   done
-
+(*
 thm hungarian_def
 
 definition "edges_and_costs = [(0::nat, 1::nat, 1::real), (0,3, -10), 
 (0,5, 2/3), (0,7, 1/87), (2,5, -12), (2,9, 100), (2,1, 2.5), (4,5, 2+1/7), 
 (4,3, -1.3), (4,7, 2.4),
-   (6,1, 1.8+1/9), (6,9, 0.2), (8, 9, 10000), (8,1, 6.2), (0, 9, -100),
+   (6,1, 1.8+1/9), (6,9, 2000000000), (8, 9, 10000), (8,1, 6.2), (0, 9, -100),
  (2, 7, -100), (2,3,-40), (2,9,-100), (4,9, -100)]"
 
 definition "edges = zip (map fst edges_and_costs) (map (fst o snd) edges_and_costs)"
@@ -590,5 +602,498 @@ update lookup empty lookup (\<lambda> T n v. update n v T) empty lookup empty
 value "final_matching"
 
 value "inorder (the final_matching)"
+*)
+
+locale hungarian_method_together_correct = 
+  fixes G::"('v::linorder) set set"
+    and edge_costs::"'v \<Rightarrow> 'v \<Rightarrow> real"
+    and left::'vset
+    and right::'vset
+    and right_neighbs::"'v \<Rightarrow> 'vset option"
+
+   and potential_upd::"'potential \<Rightarrow> 'v \<Rightarrow> real \<Rightarrow> 'potential"
+   and potential_lookup::"'potential \<Rightarrow> 'v \<Rightarrow> real option"
+   and potential_invar::"'potential \<Rightarrow> bool"
+   and potential_empty::"'potential"
+
+   and ben_empty::'ben
+   and ben_lookup::"'ben \<Rightarrow> 'v \<Rightarrow> 'v option"
+   and ben_upd::"'ben \<Rightarrow> 'v \<Rightarrow> 'v \<Rightarrow> 'ben"
+   and ben_invar::"'ben \<Rightarrow> bool"
+
+   and missed_empty::'miss
+   and missed_lookup::"'miss \<Rightarrow> 'v \<Rightarrow> real option"
+   and missed_upd::"'miss \<Rightarrow> 'v \<Rightarrow> real \<Rightarrow> 'miss"
+   and missed_invar::"'miss \<Rightarrow> bool"
+
+   and to_list::"'vset \<Rightarrow> 'v list"
+   and vset_to_set::"'vset \<Rightarrow> 'v set"
+   and vset_isin::"'v \<Rightarrow> 'vset \<Rightarrow> bool"
+   and vset_empty::"'vset"
+   and vset_insert::"'v \<Rightarrow> 'vset \<Rightarrow> 'vset"
+   and vset_invar::"'vset \<Rightarrow> bool"
+
+   and parent_empty::'parent
+    and   parent_upd::"'v\<Rightarrow>'v\<Rightarrow>'parent\<Rightarrow>'parent"
+    and   parent_lookup::"'parent \<Rightarrow> 'v \<Rightarrow> 'v option"
+    and   parent_delete::"'v \<Rightarrow> 'parent \<Rightarrow>'parent"
+    and   parent_invar::"'parent \<Rightarrow> bool"
+
+and   origin_empty::'origin
+and   origin_upd::"'v\<Rightarrow>'v\<Rightarrow>'origin\<Rightarrow>'origin"
+and   origin_lookup::"'origin \<Rightarrow> 'v \<Rightarrow> 'v option"
+and   origin_invar::"'origin \<Rightarrow> bool"
+
+
+and buddy_empty::'buddy
+   and  buddy_upd::"'v \<Rightarrow> 'v \<Rightarrow> 'buddy \<Rightarrow> 'buddy"
+   and  buddy_lookup::"'buddy \<Rightarrow> 'v \<Rightarrow> 'v option"
+   and  buddy_invar::"'buddy \<Rightarrow> bool"
+
+assumes G: "bipartite G (vset_to_set left) (vset_to_set right)"
+           "vset_invar left" "vset_invar right"
+           "(vset_to_set left) \<union> (vset_to_set right) \<subseteq> Vs G"
+
+           "\<And> v N. \<lbrakk>v \<in> vset_to_set left;right_neighbs v= Some N\<rbrakk> 
+                 \<Longrightarrow> vset_invar N"
+           "\<And> v .  v \<in> vset_to_set left 
+                     \<Longrightarrow> \<exists> N .right_neighbs v= Some N \<and>
+                            vset_to_set N = {u | u. {v, u} \<in> G}"
+           "\<And> u v. {u, v} \<in> G \<Longrightarrow> edge_costs u v = edge_costs v u"
+and potential:
+ "potential_invar potential_empty"
+ "potential_lookup potential_empty = (\<lambda> v. None)"
+ "\<And> pot x s. potential_invar pot \<Longrightarrow> potential_invar (potential_upd pot x s)"
+ "\<And> pot x s. potential_invar pot \<Longrightarrow> potential_lookup (potential_upd pot x s) =
+                (potential_lookup pot)(x \<mapsto> s)"
+and best_even_neighbour:
+ "ben_invar ben_empty"
+  "\<And> ben x s. ben_invar ben \<Longrightarrow> ben_invar (ben_upd ben x s)"
+  "\<And> ben x s. ben_invar ben \<Longrightarrow> ben_lookup (ben_upd ben x s) =
+                (ben_lookup ben)(x \<mapsto> s)"
+  "\<And> x. ben_lookup ben_empty x = None"
+and vset:
+ "vset_invar vset_empty" "vset_to_set vset_empty = {}"
+ "\<And> V v. vset_invar V \<Longrightarrow> vset_invar (vset_insert v V)"
+ "\<And> V v. vset_invar V \<Longrightarrow> vset_to_set (vset_insert v V) = insert v (vset_to_set V)"
+ "\<And> V v. vset_invar V \<Longrightarrow> vset_isin v V \<longleftrightarrow> v \<in> vset_to_set V"
+ "\<And> V vs. \<lbrakk>vset_invar V; to_list V = vs\<rbrakk> \<Longrightarrow> distinct vs"
+ "\<And> V vs. \<lbrakk>vset_invar V; to_list V = vs\<rbrakk> \<Longrightarrow> set vs = vset_to_set V"
+and missed:
+ "missed_invar missed_empty" "\<And> x. missed_lookup missed_empty x= None"
+  "\<And> missed x s. missed_invar missed \<Longrightarrow> missed_invar (missed_upd missed x s)"
+  "\<And> missed x s. missed_invar missed \<Longrightarrow> missed_lookup (missed_upd missed x s) =
+                (missed_lookup missed)(x \<mapsto> s)"
+  "\<And> x. missed_lookup missed_empty x = None"
+    and parent:
+    "parent_invar parent_empty"
+    "parent_lookup parent_empty = (\<lambda> x. None)"
+    "\<And> par x s. parent_invar par \<Longrightarrow> parent_invar (parent_upd x s par)"
+    "\<And> par x s. parent_invar par \<Longrightarrow> parent_lookup (parent_upd x s par) =
+                (parent_lookup par)(x \<mapsto> s)"
+    and origin:
+    "origin_invar origin_empty"
+    "origin_lookup origin_empty = (\<lambda> x. None)"
+    "\<And> par x s. origin_invar par \<Longrightarrow> origin_invar (origin_upd x s par)"
+    "\<And> par x s. origin_invar par \<Longrightarrow> origin_lookup (origin_upd x s par) =
+                (origin_lookup par)(x \<mapsto> s)"
+and buddies:
+ "buddy_invar buddy_empty"
+  "\<And> buddy u v. buddy_invar buddy \<Longrightarrow> buddy_invar (buddy_upd  u v buddy)"
+  "\<And> buddy u v. buddy_invar buddy \<Longrightarrow> buddy_lookup (buddy_upd  u v buddy) =
+                (buddy_lookup buddy)(u \<mapsto> v)"
+  "\<And> u. buddy_lookup buddy_empty u = None"
+begin
+
+interpretation fmnlp: forest_manipulation
+  where vset_flatten = to_list
+  using vset(1-5) vset (6-7)[OF _ refl]
+  by(auto intro!: forest_manipulation.intro parent origin)
+
+abbreviation "forest_invar == fmnlp.forest_invar"
+abbreviation "L \<equiv> vset_to_set left"
+abbreviation "R \<equiv> vset_to_set right"
+abbreviation "init_potential_here \<equiv> init_potential potential_lookup potential_upd
+                          potential_empty edge_costs to_list right_neighbs (to_list left)"
+
+interpretation build_init_pot_thms: build_init_potential
+  where potential_lookup = potential_lookup 
+and potential_upd = potential_upd
+and empty_potential = potential_empty
+and edge_costs = edge_costs
+and to_list = to_list 
+and neighbs =  right_neighbs
+and vs = "to_list left"
+  using vset(7)[OF G(2) refl]  G(2,5)
+  by(auto intro!: build_init_potential.intro vset(6)[OF G(2) refl]
+        simp add: vset potential)
+
+lemma init_potential_def': 
+"build_init_pot_thms.init_potential = init_potential_here"
+  by(simp add: build_init_potential_spec.init_potential_def
+               init_potential_def )
+
+lemmas init_potential_props=
+  build_init_pot_thms.init_potential_props[unfolded init_potential_def']
+
+interpretation  satisfied_simple:
+ alternating_forest_spec evens odds "get_path parent_lookup" "abstract_forest parent_lookup"
+     forest_invar roots vset_invar vset_to_set
+  unfolding abstract_forest_def get_path_def
+  apply(intro alternating_forest_spec.intro 
+      fmnlp.simple_invariant_consequences)
+  using fmnlp.complex_invariant_consequences(1,2) 
+  by(auto simp add: fmnlp.get_path_correct(1,2,3,4,5))
+
+abbreviation "\<ww> \<equiv> (\<lambda> e. edge_costs (pick_one e) (pick_another e))"
+
+lemma w_is_edge_costs: 
+  assumes"{u, v} \<in> G" 
+  shows  "\<ww> {u, v} = edge_costs u v"
+proof-
+  have "u \<noteq> v"
+    by(rule bipartite_edgeE[OF assms G(1)])
+      (auto simp add: doubleton_eq_iff)
+  thus ?thesis
+    using  pick_one_and_another_props(3)[of "{u, v}", OF exI[of _ u]]
+    by(auto  simp add: doubleton_eq_iff  G(7)[OF assms])
+qed
+
+lemma feasible_init:
+"feasible_min_perfect_dual G \<ww>
+     (abstract_real_map (potential_lookup init_potential_here))"
+proof(rule feasible_min_perfect_dualI, goal_cases)
+  case (1 e u v)
+  then obtain u' v' where u'v':  "e = {u', v'}" "u' \<in> L" "v' \<in> R" 
+    using G(1)
+    by (auto elim!: bipartite_edgeE)
+  hence "v' \<notin> L" "u' \<notin> R" "u' \<noteq> v'" 
+    using G(4) bipartite_vertex(2)[OF _ G(1)] by auto
+  hence pot_v_0:"abstract_real_map (potential_lookup init_potential_here) v' = 0"
+    using init_potential_props(3)
+    by(auto intro!: abstract_real_map_outside_dom dest: domI
+          simp add: build_init_pot_thms.vset(2)[OF G(2)])
+   have f_of_uv:"(f::_ \<Rightarrow> real) u +  f v = f u' + f v'" for f
+    using 1(2) u'v'(1)
+    by(auto simp add: doubleton_eq_iff)
+  obtain U where neighbsU: "right_neighbs u' = Some U" 
+    using u'v'  G(6) by auto
+  hence v'_in_U: "v' \<in> vset_to_set U"
+    using "1"(1) G(6) u'v'(1,2) by force
+  show ?case 
+    using 1(1)
+    by(auto intro!: feasible_min_perfect_dualI v'_in_U
+                       init_potential_props(2) neighbsU
+          simp add: u'v' w_is_edge_costs f_of_uv pot_v_0 vset(7)[OF G(2) refl])
+qed
+
+interpretation fe_spec: 
+     alternating_forest_ordinary_extension_spec vset_invar vset_to_set evens odds
+     "get_path parent_lookup" "abstract_forest parent_lookup" forest_invar roots vset_empty
+     "extend_forest_even_unclassified parent_upd vset_insert origin_upd origin_lookup"
+     "empty_forest parent_empty vset_empty to_list origin_empty origin_upd"
+  apply(intro alternating_forest_ordinary_extension_spec.intro
+      satisfied_simple.alternating_forest_spec_axioms
+      alternating_forest_ordinary_extension_spec_axioms.intro)
+  by (simp_all add:  fmnlp.extension_main_preservation fmnlp.satisfied_simple_extension_precond_same
+      fmnlp.extension_abstract_is fmnlp.extension_evens fmnlp.extension_odds fmnlp.extension_roots 
+      fmnlp.empty_forest_correctess  extend_forest_even_unclassified_def 
+      abstract_forest_def empty_forest_def)
+
+interpretation matching_augmentation_thms:
+  matching_augmentation buddy_empty buddy_upd buddy_lookup buddy_invar
+  by(auto intro!: matching_augmentation.intro buddies)
+
+lemmas augmentation_correct =
+ matching_augmentation_thms.augmentation_correct
+ [folded matching_invar_def matching_abstract_def matching_augment_impl_def]
+
+lemmas matching_invarD = aug_a_matching.invar_matchingD
+   [of buddy_lookup buddy_invar G,
+    folded matching_invar_def matching_abstract_def]
+
+lemmas empty_matching_props =
+matching_augmentation_thms.empty_matching_props
+[folded matching_invar_def matching_abstract_def]
+
+abbreviation "potential_invar' \<equiv> 
+\<lambda> \<pi> . potential_invar \<pi> \<and> dom (potential_lookup \<pi>) \<subseteq> Vs G"
+
+abbreviation "path_search_precond \<equiv>
+    hungarian_loop_spec.path_search_precond
+        (\<lambda>\<pi>. abstract_real_map (potential_lookup \<pi>)) potential_invar'
+        (matching_invar buddy_lookup buddy_invar G)
+        (matching_abstract buddy_lookup) \<ww> G"
+
+abbreviation "search_path_here \<equiv>
+   (\<lambda> M \<pi>. search_path left (buddy_lookup M) edge_costs
+        (default_neighb vset_empty right_neighbs) parent_lookup parent_upd
+        parent_empty origin_upd origin_lookup origin_empty \<pi> potential_lookup
+        potential_upd missed_lookup missed_empty missed_upd ben_upd ben_lookup
+        ben_empty to_list vset_insert vset_empty)"
+
+abbreviation "symmetric_buddies \<equiv> 
+matching_augmentation_spec.symmetric_buddies buddy_lookup"
+
+abbreviation "good_search_result \<equiv>  
+hungarian_top_loop.good_search_result potential_lookup potential_invar'
+        buddy_lookup edge_costs G"
+
+interpretation hungarian_top_loop:
+hungarian_loop
+where path_search = "\<lambda> m p. search_path left (buddy_lookup m)
+                      edge_costs
+                     (default_neighb vset_empty right_neighbs) parent_lookup
+                     parent_upd parent_empty  origin_upd origin_lookup origin_empty p 
+                     potential_lookup potential_upd missed_lookup  missed_empty missed_upd 
+                     ben_upd ben_lookup ben_empty to_list vset_insert vset_empty"
+and edge_costs = \<ww>
+and init_potential = "init_potential_here"
+and potential_abstract = "(\<lambda> \<pi> v. abstract_real_map (potential_lookup \<pi>) v)"
+and potential_invar = potential_invar'
+and empty_matching = buddy_empty
+and matching_invar = "matching_invar buddy_lookup buddy_invar G"
+and augment = "matching_augment_impl buddy_upd"
+and matching_abstract = "matching_abstract buddy_lookup"
+and card_L = "length (to_list left)"
+and card_R = "length (to_list right)"
+and G = G
+and L = L
+and R = R
+proof(rule hungarian_loop.intro, goal_cases)
+  case 1
+  then show ?case 
+    using G(1) by simp
+next
+  case 2
+  then show ?case 
+    using vset(6,7)[OF G(2) refl] distinct_card by fastforce
+next
+  case 3
+  then show ?case 
+    using vset(6,7)[OF G(3) refl] distinct_card by fastforce
+next
+  case 4
+  then show ?case 
+    using vset(7)[OF G(2) refl, symmetric] by simp
+next
+  case 5
+  then show ?case 
+    using vset(7)[OF G(3) refl, symmetric] by simp
+next
+  case 6
+  then show ?case 
+    using G(4) by simp
+next
+  case 7
+  then show ?case
+    using init_potential_props(1,3) G(4) build_init_pot_thms.vset(2)[OF G(2)] 
+    by auto
+next
+  case 8
+  then show ?case 
+    using feasible_init by simp
+next
+  case (9 M)
+  then show ?case 
+    using matching_invarD by simp
+next
+  case 10
+  then show ?case 
+    using empty_matching_props by simp
+next
+  case 11
+  then show ?case 
+    using empty_matching_props by simp
+next
+  case (12 M p)
+  then show ?case 
+    using augmentation_correct by simp
+next
+  case (13 M p)
+  then show ?case 
+    using augmentation_correct by simp
+next
+  fix M \<pi> B \<pi>'
+  assume asm: "path_search_precond M \<pi>"
+  note path_search_precondD = hungarian_loop_spec.path_search_precondD[OF asm]
+  note symmetric_buddiesD = aug_a_matching.symmetric_buddiesD[of buddy_lookup]
+  have \<M>_is: "pd_path_search_spec.\<M> (buddy_lookup M) =
+             matching_abstract buddy_lookup M" 
+    by(force simp add: matching_abstract_def pd_path_search_spec.\<M>_def
+              matching_augmentation_spec.\<M>_def doubleton_eq_iff) 
+
+  interpret pd_path_search: primal_dual_path_search
+  (*the graph*)
+  where G = G
+   and left = left
+   and right = right
+   and buddy = "buddy_lookup M"
+   and edge_costs = edge_costs
+   and right_neighbs = "default_neighb vset_empty right_neighbs"
+  (*the forest*)
+   and evens = evens
+   and odds = odds
+   and abstract_forest = "abstract_forest parent_lookup"
+   and get_path = "get_path parent_lookup"
+   and extend_forest_even_unclassified = 
+     "extend_forest_even_unclassified parent_upd vset_insert 
+          origin_upd origin_lookup" 
+   and empty_forest = 
+      "empty_forest parent_empty vset_empty to_list origin_empty origin_upd"
+   and roots = roots
+   and forest_invar = forest_invar
+  (*the heap*)
+   and heap_insert = queue_insert
+   and heap_decrease_key = queue_decrease_key
+   and heap_empty = queue_empty
+   and heap_extract_min = queue_extract_min
+   and heap_invar = queue_invar
+   and heap_abstract = queue_abstract
+  (*the potential*)
+   and initial_pot = \<pi>
+   and potential_lookup = potential_lookup
+   and potential_upd = potential_upd
+  (*missed change in potential*)
+   and missed_lookup = missed_lookup
+   and missed_empty = missed_empty
+   and missed_upd = missed_upd
+  (*best even neighbour map*)
+   and ben_upd = ben_upd
+   and ben_lookup = ben_lookup
+   and ben_empty = ben_empty
+  (*sets of vertices*)
+   and vset_isin= vset_isin
+   and to_list = to_list
+   and vset_to_set = vset_to_set
+   and vset_insert = vset_insert
+   and vset_empty = vset_empty
+proof(rule primal_dual_path_search.intro, goal_cases)
+  case 1
+  thus ?case
+    using fe_spec.alternating_forest_ordinary_extension_spec_axioms
+    by simp
+next
+  case 2
+  thus ?case
+    using key_value_queue_spec_satisfied.key_value_queue_axioms by simp
+next
+  case 3
+  have help1:
+     "v \<in> L \<Longrightarrow> vset_invar (default_neighb vset_empty right_neighbs v)" for v
+    by(auto simp add: default_neighb_def split: option.split
+               intro: vset G)
+  have help2: "v \<in> L \<Longrightarrow>
+         vset_to_set (default_neighb vset_empty right_neighbs v) = 
+          {u | u. {v, u} \<in> G}" for v
+    using G(6)
+    by(fastforce simp add: default_neighb_def vset(2) split: option.split)
+  have help3: "{u, v} \<in> G \<Longrightarrow>
+           abstract_real_map (potential_lookup \<pi>) u +
+           abstract_real_map (potential_lookup \<pi>) v
+           \<le> edge_costs u v" for u v
+    using feasible_min_perfect_dualD path_search_precondD(5) w_is_edge_costs
+    by fastforce
+  have help4: "{u, v} \<in> matching_abstract buddy_lookup M \<Longrightarrow>
+           abstract_real_map (potential_lookup \<pi>) u +
+           abstract_real_map (potential_lookup \<pi>) v =
+           edge_costs u v" for u v
+    by(auto dest!: set_mp[OF path_search_precondD(4)]
+         simp add: tight_subgraph_def doubleton_eq_iff
+                   w_is_edge_costs \<M>_is G(7))
+  have help5: "dom (potential_lookup \<pi>) \<subseteq> L \<union> R"
+    using path_search_precondD(2)  G(1) bipartite_vs_subset by blast
+  note help6 = symmetric_buddiesD[OF 
+      matching_invarD(2)[OF path_search_precondD(1)]]
+  show ?case
+    apply(rule primal_dual_path_search_axioms.intro G(1,2,3,7) help1 help2
+               help3 | assumption)+
+    by(unfold \<M>_is help6| intro help4 conjunct1[OF path_search_precondD(2)]
+             potential best_even_neighbour vset missed help5
+             path_search_precondD(3)[simplified aug_a_matching.\<M>_def]
+        | assumption)+
+qed
+  have search_path_is:
+    "pd_path_search.search_path = search_path_here M \<pi>"
+    by (simp add: search_path_def)
+  note search_path_correct = pd_path_search.search_path_correct[unfolded search_path_is]
+ 
+  show "search_path_here M \<pi> = Dual_Unbounded \<Longrightarrow>
+       \<exists>\<pi>'. feasible_min_perfect_dual G \<ww> \<pi>' \<and> B < sum \<pi>' (L \<union> R)"
+  proof(goal_cases)
+    case 1
+    obtain \<pi>' where pi':
+           "\<And> u v. {u, v} \<in> G \<Longrightarrow> \<pi>' u + \<pi>' v \<le> \<w> u v"
+           "B+1 \<le> sum \<pi>' (pd_path_search.L \<union> pd_path_search.R)"
+      using search_path_correct(2)[OF 1, of "B+1"] by auto
+    show ?case
+      using pi'(2)
+      by(auto intro!: exI[of _ \<pi>'] feasible_min_perfect_dualI pi'(1)
+            simp add: w_is_edge_costs)
+  qed
+
+  show "search_path_here M \<pi> = Lefts_Matched \<Longrightarrow>
+           L \<subseteq> Vs (matching_abstract buddy_lookup M)"
+    using search_path_correct(1) by(simp add: \<M>_is)
+
+  show "search_path_here M \<pi> = Next_Iteration p \<pi>'
+         \<Longrightarrow> good_search_result M \<pi>' p" for p
+  proof(goal_cases)
+    case 1
+    note search_path_in_this_case =
+            search_path_correct(3-)[OF 1, unfolded \<M>_is]
+    show ?case
+    proof(rule hungarian_top_loop.good_search_resultI, goal_cases)
+      case 1
+      then show ?case 
+        using search_path_in_this_case(5,6) G(4) by blast
+    next
+      case 2
+      show ?case
+      proof(rule, goal_cases)
+        case (1 e)
+        then obtain u v where uv: "e = {u, v}" "{u, v} \<in> G"
+          using  G(1) bipartite_edgeE[OF _  G(1)] path_search_precondD(3)
+          by blast
+        show ?case
+          using  search_path_in_this_case(2)[OF 1[unfolded uv(1)]]
+          by(auto simp add: tight_subgraph_def uv w_is_edge_costs
+                    intro!: exI[of "\<lambda> u. \<exists> v. _ u v" u] exI[of "\<lambda> u. _ u \<and> _ u" v])
+      qed
+    next
+      case 3
+      show ?case 
+      proof(rule feasible_min_perfect_dualI, goal_cases)
+        case (1 e u v)
+        then show ?case 
+          using search_path_in_this_case(1)
+          by(auto simp add: w_is_edge_costs)
+      qed
+    next
+      case 4
+      show ?case 
+      proof(rule, goal_cases)
+        case (1 e)
+        hence "e \<in> G" 
+          using search_path_in_this_case(4)
+          by (auto dest: path_edges_subset)
+        then obtain u v where uv: "e = {u, v}" "{u, v} \<in> G" "u \<noteq> v"
+          using  G(1) bipartite_edgeE[OF _  G(1), of e] by blast
+        show ?case
+          using  search_path_in_this_case(3)[OF 1[unfolded uv(1)]]
+          by(auto simp add: tight_subgraph_def uv w_is_edge_costs
+                    intro!: exI[of "\<lambda> u. \<exists> v. _ u v" u] exI[of "\<lambda> u. _ u \<and> _ u" v])
+      qed
+    next
+      case 5
+      then show ?case 
+        using search_path_in_this_case(4) by simp
+    qed
+  qed
+qed
+
+lemmas hungarian_correctness = hungarian_top_loop.hungarian_correctness
+  [folded hungarian_def]
+end
 
 end
