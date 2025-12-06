@@ -1055,11 +1055,32 @@ proof-
     "invar_forest_even_and_odd (extend_forest_even_unclassified F x y z)"
   proof(rule invar_forest_even_and_oddI, goal_cases)
     case (1 u v)
-    then show ?case (*TODO fix this non-terminal auto*)
-      apply(auto simp only: new_abstract_is extension_evens extension_odds)
-      using  extension_precond(2,3,8,9,7) invar_basic_old(6,7) 
-        invar_forest_even_and_oddD[OF invars_old(3)]
-      by (auto simp add: doubleton_eq_iff dest: edges_are_Vs)
+    show ?case
+    proof(cases "{u, v} = {x, y}")
+      case True
+      then show ?thesis 
+      using  extension_precond(2,3,8,9,7) invar_basic_old(7) 
+      by (auto simp add: extension_evens extension_odds)
+    next
+      case False
+      note false = this
+      show ?thesis 
+      proof(cases "{u, v} = {y, z}")
+        case True
+        then show ?thesis 
+         using  extension_precond(3) 
+         by (auto simp add: extension_evens extension_odds doubleton_eq_iff )
+      next
+        case False
+        hence "{u, v} \<in> abstract_forest F"
+          using false 1
+          by(auto simp add: new_abstract_is)
+        then show ?thesis 
+          using  extension_precond(3) invar_basic_old(6) 
+                 invar_forest_even_and_oddD[OF invars_old(3)]
+          by (auto simp add: extension_evens extension_odds doubleton_eq_iff)
+      qed
+    qed
   qed
   have invar_parent_wf_new: "invar_parent_wf (extend_forest_even_unclassified F x y z)"
   proof(rule invar_parent_wfI, goal_cases)
@@ -1247,7 +1268,7 @@ proof-
           using FALSE False  extension_precond(3) helper  neither_even_not_odd_no_parent 
             no_children_not_in_follow[OF follow_dom_invar_parent_wf(1)[OF invars_old(4)] _ _ refl]
             other_follows[OF False FALSE] three(2)
-          by(force simp add:  parent_lookup_is  follow_def  origins_lookup_is )
+          by(force simp add:  parent_lookup_is  follow_def  origins_lookup_is)
       qed
     qed
   next
