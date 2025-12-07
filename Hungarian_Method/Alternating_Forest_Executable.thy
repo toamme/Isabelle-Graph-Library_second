@@ -482,29 +482,23 @@ datatype ('roots, 'evens, 'odds, 'parents, 'origin) alt_forest =
   Forest (roots: 'roots) (evens: 'evens) (odds: 'odds) (parents: 'parents) (origins: 'origin)
 
 locale forest_manipulation_spec = 
-  fixes parent_empty::'parent
-    and   parent_upd::"'v\<Rightarrow>'v\<Rightarrow>'parent\<Rightarrow>'parent"
-    and   parent_lookup::"'parent \<Rightarrow> 'v \<Rightarrow> 'v option"
-    and   parent_delete::"'v \<Rightarrow> 'parent \<Rightarrow>'parent"
-    and   parent_invar::"'parent \<Rightarrow> bool"
-
-and   vset_empty::'vset
-and   vset_to_set::"'vset \<Rightarrow> 'v set"
-and   vset_invar::"'vset \<Rightarrow> bool"
-and   vset_insert::"'v \<Rightarrow> 'vset \<Rightarrow> 'vset"
-and   vset_delete::"'v \<Rightarrow> 'vset\<Rightarrow> 'vset"
-and   vset_isin::"'v \<Rightarrow> 'vset \<Rightarrow> bool"
-and   vset_flatten::"'vset \<Rightarrow> 'v list"
-
-and   origin_empty::'origin
-and   origin_upd::"'v\<Rightarrow>'v\<Rightarrow>'origin\<Rightarrow>'origin"
-and   origin_lookup::"'origin \<Rightarrow> 'v \<Rightarrow> 'v option"
-and   origin_invar::"'origin \<Rightarrow> bool"
+parent_map: Map parent_empty parent_upd parent_delete parent_lookup parent_invar +
+origin_map: Map origin_empty origin_upd origin_delete origin_lookup origin_invar +
+vset: Set vset_empty vset_insert vset_delete vset_isin vset_to_set vset_invar
+for parent_empty and parent_upd::"'v\<Rightarrow>'v\<Rightarrow>'parent\<Rightarrow>'parent"
+and  parent_delete parent_lookup parent_invar
+and origin_empty and origin_upd::"'v\<Rightarrow>'v\<Rightarrow>'origin\<Rightarrow>'origin" 
+and origin_delete origin_lookup origin_invar
+and vset_empty and vset_insert::"'v \<Rightarrow> 'vset \<Rightarrow> 'vset"
+and  vset_delete vset_isin vset_to_set vset_invar
+ +
+fixes  vset_iterate::"('origin \<Rightarrow> 'v \<Rightarrow> 'origin)
+             \<Rightarrow> 'origin \<Rightarrow> 'vset \<Rightarrow> 'origin"
 begin
 
 definition 
   "empty_forest roots = (Forest roots roots vset_empty parent_empty 
-     (foldl (\<lambda> m r. origin_upd r r m) origin_empty (vset_flatten roots)))" for roots
+     (vset_iterate (\<lambda> m r. origin_upd r r m) origin_empty roots))" for roots
 
 definition "extend_forest_even_unclassified (F::('vset, 'vset, 'vset, 'parent, 'origin) alt_forest) x y z= 
 (Forest (roots F)
@@ -529,26 +523,31 @@ subsection \<open>Locale for Proofs\<close>
 
 locale forest_manipulation =  
   forest_manipulation_spec +
-  assumes vset:
-    "vset_invar vset_empty" "vset_to_set vset_empty = {}"
-    "\<And> V v. vset_invar V \<Longrightarrow> vset_invar (vset_insert v V)"
-    "\<And> V v. vset_invar V \<Longrightarrow> vset_to_set (vset_insert v V) = insert v (vset_to_set V)"
-    "\<And> V v. vset_invar V \<Longrightarrow> vset_isin v V \<longleftrightarrow> v \<in> vset_to_set V"
-    "\<And> V vs. \<lbrakk>vset_invar V; vset_flatten V = vs\<rbrakk> \<Longrightarrow> distinct vs"
-    "\<And> V vs. \<lbrakk>vset_invar V; vset_flatten V = vs\<rbrakk> \<Longrightarrow> set vs = vset_to_set V" 
-    and parent:
-    "parent_invar parent_empty"
-    "parent_lookup parent_empty = (\<lambda> x. None)"
-    "\<And> par x s. parent_invar par \<Longrightarrow> parent_invar (parent_upd x s par)"
-    "\<And> par x s. parent_invar par \<Longrightarrow> parent_lookup (parent_upd x s par) =
-                (parent_lookup par)(x \<mapsto> s)"
-    and origin:
-    "origin_invar origin_empty"
-    "origin_lookup origin_empty = (\<lambda> x. None)"
-    "\<And> par x s. origin_invar par \<Longrightarrow> origin_invar (origin_upd x s par)"
-    "\<And> par x s. origin_invar par \<Longrightarrow> origin_lookup (origin_upd x s par) =
-                (origin_lookup par)(x \<mapsto> s)"
+  assumes vseta:
+    "\<And> V f init. vset_invar V \<Longrightarrow> 
+          \<exists> vs. vset_to_set V = set vs \<and> distinct vs \<and>
+            vset_iterate f init V = foldl f init vs"
 begin
+
+lemmas vset =
+vset.invar_empty
+vset.set_empty
+vset.invar_insert
+vset.set_insert
+vset.set_isin
+vseta
+
+lemmas parent =
+ parent_map.invar_empty
+ parent_map.map_empty
+ parent_map.invar_update
+ parent_map.map_update
+
+lemmas origin = 
+ origin_map.invar_empty
+ origin_map.map_empty
+ origin_map.invar_update
+ origin_map.map_update
 
 subsection \<open>The Invariants\<close>
 
@@ -912,7 +911,7 @@ proof-
     by(auto simp add: extend_forest_even_unclassified_def)
   show parent_lookup_is: "parent_lookup (parents (extend_forest_even_unclassified F x y z))
                             = (parent_lookup (parents F))(y \<mapsto> x, z \<mapsto> y)"
-    by (simp add: forest_manipulation_spec.extend_forest_even_unclassified_def new_parent_lookup)
+    by (simp add: extend_forest_even_unclassified_def new_parent_lookup)
   show origins_lookup_is: "origin_lookup (origins (extend_forest_even_unclassified F x y z))
                             = (origin_lookup (origins F))(y \<mapsto> the (origin_lookup (origins F) x),
                                                           z \<mapsto>  the (origin_lookup (origins F) x))"
@@ -1514,7 +1513,7 @@ next
   proof(rule forest_invarI, goal_cases)
     case 1
     then show ?case 
-      using four vset(7)
+      using four vset(6)[of R "\<lambda>m r. origin_upd r r m" origin_empty]
       by (auto intro!: invar_basicI 
           simp add: abstract_forest_def parent(1,2) vset(1,2) empty_forest_def
           card_gt_0_iff orig_inv orig_lookup )
@@ -1546,9 +1545,10 @@ next
       by(auto simp add: parent_def parent_spec_def)
     note follow_psimps = parent_empty.follow_psimps[folded follow_def]
     show ?case 
+      using four(2) vset(6)[of R "\<lambda>m r. origin_upd r r m" origin_empty]
       by(auto intro!: invar_rootsI
           simp add: empty_forest_def abstract_forest_def parent(2)
-          orig_lookup vset(7)[OF four(2)] follow_psimps)
+          orig_lookup follow_psimps)
   next
     case 7
     then show ?case 
@@ -1599,23 +1599,7 @@ proof-
 qed
 
 end
-
-subsection \<open>Instantiation\<close>
-
-global_interpretation forest_manipulation_spec_i: forest_manipulation_spec
-  parent_empty parent_upd parent_lookup  parent_delete  parent_invar
-vset_empty  vset_to_set  vset_invar vset_insert vset_delete vset_isin vset_flatten
-origin_empty origin_upd origin_lookup origin_invar
-
-for parent_empty parent_upd parent_lookup  parent_delete  parent_invar
-vset_empty  vset_to_set  vset_invar vset_insert vset_delete vset_isin vset_flatten
-origin_empty origin_upd origin_lookup origin_invar
-
-defines get_path = forest_manipulation_spec_i.get_path
-  and abstract_forest = forest_manipulation_spec_i.abstract_forest
-  and extend_forest_even_unclassified =  forest_manipulation_spec_i.extend_forest_even_unclassified
-  and empty_forest = forest_manipulation_spec_i.empty_forest
-  done                                   
+                              
 
 context
   forest_manipulation

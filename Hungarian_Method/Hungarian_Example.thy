@@ -3,7 +3,9 @@ theory Hungarian_Example
           "HOL-Library.Product_Lexorder"
 begin
 
-hide_const right left
+section \<open>HM on Example Graph\<close>
+
+hide_const right 
 
 definition "edges_and_costs = [(0::nat, 1::nat, 1::real), (0,3, -10), 
 (0,5, 2/3), (0,7, 1/87), (2,5, -12), (2,9, 100), (2,1, 2.5), (4,5, 2+1/7), 
@@ -32,9 +34,8 @@ definition "left = foldr (\<lambda> x tree. RBT.insert x tree) (map fst edges_an
 definition "right = foldr (\<lambda> x tree. RBT.insert x tree) (map (fst o snd) edges_and_costs) Leaf"
 thm hungarian_def
 
-definition "final_matching = hungarian left right weights (lookup G) empty lookup update lookup update empty
-update lookup empty lookup (\<lambda> T n v. update n v T) empty lookup empty 
- (\<lambda> T n v. update n v T) (\<lambda> T n v. update n v T) lookup empty inorder RBT.insert empty"
+definition "final_matching = hungarian left right weights (lookup G)
+      lookup update"
 
 value "final_matching"
 

@@ -3,6 +3,7 @@ theory Matching_Augmentation_Executable
    Primal_Dual_Bipartite_Matching.Even_More_Graph
    Directed_Set_Graphs.Summary
    Undirected_Set_Graphs.Pair_Graph_Berge_Adaptor
+   "HOL-Data_Structures.Map_Specs"
 begin
 
 (*TODO MOVE*)
@@ -171,10 +172,10 @@ lemma "UD D = G"
 end
 
 locale matching_augmentation_spec =
-  fixes buddy_empty::'buddy
-   and  buddy_upd::"'v \<Rightarrow> 'v \<Rightarrow> 'buddy \<Rightarrow> 'buddy"
-   and  buddy_lookup::"'buddy \<Rightarrow> 'v \<Rightarrow> 'v option"
-   and  buddy_invar::"'buddy \<Rightarrow> bool"
+  buddy_map: Map buddy_empty buddy_upd buddy_delete buddy_lookup buddy_invar
+  for  buddy_empty
+  and  buddy_upd::"'v \<Rightarrow> 'v \<Rightarrow> 'buddy \<Rightarrow> 'buddy"
+  and  buddy_delete buddy_lookup buddy_invar
 begin
 
 fun augment_impl
@@ -247,15 +248,14 @@ and invar_matchingD:
 end
 
 locale matching_augmentation =
-matching_augmentation_spec +
-assumes
-buddies:
- "buddy_invar buddy_empty"
-  "\<And> buddy u v. buddy_invar buddy \<Longrightarrow> buddy_invar (buddy_upd  u v buddy)"
-  "\<And> buddy u v. buddy_invar buddy \<Longrightarrow> buddy_lookup (buddy_upd  u v buddy) =
-                (buddy_lookup buddy)(u \<mapsto> v)"
-  "\<And> u. buddy_lookup buddy_empty u = None"
+matching_augmentation_spec 
 begin
+
+lemmas buddies = 
+ buddy_map.invar_empty
+ buddy_map.invar_update
+ buddy_map.map_update
+ buddy_map.map_empty
   
 lemma \<M>_dir_one_upd_change:
   assumes "buddy_invar M"  "M' = buddy_upd v u (buddy_upd u v M)"
@@ -553,14 +553,5 @@ lemma empty_matching_props:
          simp add: buddies \<M>_def)
 
 end
-
-global_interpretation aug_a_matching:
-  matching_augmentation_spec buddy_empty buddy_upd buddy_lookup buddy_invar
-  for buddy_empty buddy_upd buddy_lookup buddy_invar
-  defines matching_augment_impl = aug_a_matching.augment_impl
-    and matching_abstract = aug_a_matching.\<M>
-    and matching_invar = aug_a_matching.invar_matching
-  done
-
 
 end

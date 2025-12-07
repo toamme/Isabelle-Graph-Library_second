@@ -2,6 +2,7 @@ session "Hungarian_Method" = "HOL-Library" +
   options [document = pdf, document_output = "output"]
 
 sessions
+  Graph_Algorithms_Dev
   "Berge_Lemma"
   "RANKING"
   Priority_Search_Trees

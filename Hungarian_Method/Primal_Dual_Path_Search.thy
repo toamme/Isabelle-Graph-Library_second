@@ -163,6 +163,16 @@ acc::real
 augpath::"('v list) option"
 
 locale primal_dual_path_search_spec = 
+ben_map: Map ben_empty ben_upd ben_delete ben_lookup ben_invar +
+missed_map: Map missed_empty missed_upd missed_delete missed_lookup missed_invar +
+vset: Set vset_empty vset_insert vset_delete vset_isin vset_to_set vset_invar
+for ben_empty and  ben_upd::"'v \<Rightarrow> 'v \<Rightarrow> 'ben \<Rightarrow> 'ben"
+    and ben_delete ben_lookup ben_invar and
+    missed_empty and missed_upd::"'v \<Rightarrow> real \<Rightarrow>'miss \<Rightarrow> 'miss" and 
+    missed_delete missed_lookup missed_invar and
+    vset_empty vset_insert vset_delete vset_isin and 
+    vset_to_set::"'vset \<Rightarrow> 'v set" and vset_invar
++
   fixes G::"'v set set"
     and edge_costs::"'v \<Rightarrow> 'v \<Rightarrow> real"
     and left::'vset
@@ -182,15 +192,10 @@ locale primal_dual_path_search_spec =
     and forest_invar::"'v set set \<Rightarrow> 'forest \<Rightarrow> bool"
     and roots::"'forest \<Rightarrow> 'vset"
 
-   and potential_upd::"'potential \<Rightarrow> 'v \<Rightarrow> real \<Rightarrow> 'potential"
+   and potential_upd::"'v \<Rightarrow> real \<Rightarrow>'potential \<Rightarrow> 'potential"
    and potential_lookup::"'potential \<Rightarrow> 'v \<Rightarrow> real option"
    and potential_invar::"'potential \<Rightarrow> bool"
    and initial_pot::"'potential"
-
-   and ben_empty::'ben
-   and ben_lookup::"'ben \<Rightarrow> 'v \<Rightarrow> 'v option"
-   and ben_upd::"'ben \<Rightarrow> 'v \<Rightarrow> 'v \<Rightarrow> 'ben"
-   and ben_invar::"'ben \<Rightarrow> bool"
 
    and heap_empty::'heap
    and heap_extract_min::"'heap \<Rightarrow> ('heap \<times> 'v option)"
@@ -199,17 +204,13 @@ locale primal_dual_path_search_spec =
    and heap_invar::"'heap \<Rightarrow> bool"
    and heap_abstract::"'heap \<Rightarrow> ('v \<times> real) set"
 
-   and missed_empty::'miss
-   and missed_lookup::"'miss \<Rightarrow> 'v \<Rightarrow> real option"
-   and missed_upd::"'miss \<Rightarrow> 'v \<Rightarrow> real \<Rightarrow> 'miss"
-   and missed_invar::"'miss \<Rightarrow> bool"
+   and vset_iterate_ben::"('ben \<times> 'heap \<Rightarrow> 'v \<Rightarrow> 'ben \<times> 'heap)
+       \<Rightarrow> 'ben \<times> 'heap \<Rightarrow> 'vset \<Rightarrow> 'ben \<times> 'heap"
+   and vset_iterate_pot::"('potential \<Rightarrow> 'v \<Rightarrow> 'potential)
+      \<Rightarrow> 'potential \<Rightarrow> 'vset \<Rightarrow> 'potential"
+   and vset_filter::"('v \<Rightarrow> bool) \<Rightarrow> 'vset \<Rightarrow> 'vset"
 
-   and to_list::"'vset \<Rightarrow> 'v list"
-   and vset_to_set::"'vset \<Rightarrow> 'v set"
-   and vset_isin::"'v \<Rightarrow> 'vset \<Rightarrow> bool"
-   and vset_empty::"'vset"
-   and vset_insert::"'v \<Rightarrow> 'vset \<Rightarrow> 'vset"
-   and vset_invar::"'vset \<Rightarrow> bool"
+   and vset_is_empty::"'vset \<Rightarrow> bool"
 begin
 
 notation edge_costs ("\<w>")
@@ -227,31 +228,31 @@ definition "w\<^sub>\<pi> u v = edge_costs u v - \<pi> u - \<pi> v"
 
 definition working_potential ("\<pi>\<^sup>*") where
 "\<pi>\<^sup>* state v =
-        (if vset_isin v (evens (forest state)) then 
+        (if vset_isin (evens (forest state)) v then 
            \<pi> v + acc state - missed_at state v
-         else if vset_isin v (odds (forest state)) then 
+         else if vset_isin (odds (forest state)) v then 
            \<pi> v - acc state + missed_at state v
          else \<pi> v)"
 
 definition "update_best_even_neighbour off ben queue l =
-   foldl 
+   vset_iterate_ben 
        (\<lambda> (ben, queue) r. 
                 (case ben_lookup ben r of None \<Rightarrow>
-                     (ben_upd ben r l, heap_insert queue r (w\<^sub>\<pi> l r + off l)) |
+                     (ben_upd r l ben, heap_insert queue r (w\<^sub>\<pi> l r + off l)) |
                  Some l' \<Rightarrow>
                  if w\<^sub>\<pi> l r + off l < w\<^sub>\<pi> l' r + off l'
-                 then (ben_upd ben r l, heap_decrease_key queue r (w\<^sub>\<pi> l r + off l))
+                 then (ben_upd r l ben, heap_decrease_key queue r (w\<^sub>\<pi> l r + off l))
                  else (ben, queue)))
-                   (ben, queue) 
-        (to_list (right_neighbs l))"
+        (ben, queue) (right_neighbs l)"
 
 definition "update_best_even_neighbours off ben queue new_evens =
-  foldl 
+  vset_iterate_ben 
     (\<lambda> ben_queue r. update_best_even_neighbour off (fst ben_queue) (snd ben_queue) r) 
   (ben, queue) new_evens"
 
-definition "unmatched_lefts = filter (\<lambda> v. if buddy v = None then True else False) (to_list left)"
-definition "forest_roots = foldl (\<lambda> vset v. vset_insert v vset) vset_empty unmatched_lefts"
+definition "unmatched_lefts = 
+  vset_filter (\<lambda> v. if buddy v = None then True else False) left"
+definition "forest_roots = unmatched_lefts"
 definition "init_best_even_neighbour = 
    update_best_even_neighbours (\<lambda> x. 0) ben_empty heap_empty unmatched_lefts"
 
@@ -282,9 +283,9 @@ function (domintros) search_path_loop::
                     state \<lparr> acc := acc',
                             augpath:= Some (r # get_path F l) \<rparr>|
                  Some l' \<Rightarrow>
-                     (let missed' = missed_upd (
-                                    missed_upd (missed state) r acc') 
-                                                l' acc';
+                     (let missed' = missed_upd l' acc' 
+                                    (missed_upd r acc' (missed state)) 
+                                                ;
                           (ben', queue') = update_best_even_neighbour 
                                            (abstract_real_map (missed_lookup missed'))
                                            ben queue l';
@@ -381,8 +382,7 @@ definition "search_path_loop_cont_upd state =
        l = the (ben_lookup ben r);
         acc' = w\<^sub>\<pi> l r + missed_\<epsilon> l;
        l' =  the (buddy r);
-       missed' = missed_upd (missed_upd (missed state) r acc') 
-                                                l' acc';
+       missed' = missed_upd  l' acc' (missed_upd r acc' (missed state));
        (ben', queue') = update_best_even_neighbour 
                  (abstract_real_map (missed_lookup missed'))ben queue l';
        F'= extend_forest_even_unclassified F l r l' 
@@ -514,9 +514,8 @@ partial_function (tailrec) search_path_loop_impl::
                     state \<lparr> acc := acc',
                             augpath:= Some (r # get_path F l) \<rparr>|
                  Some l' \<Rightarrow>
-                     (let missed' = missed_upd (
-                                    missed_upd (missed state) r acc') 
-                                                l' acc';
+                     (let missed' = missed_upd l' acc'
+                                    (missed_upd r acc' (missed state));
                           (ben', queue') = update_best_even_neighbour 
                                            (abstract_real_map (missed_lookup missed'))
                                            ben queue l';
@@ -530,13 +529,13 @@ partial_function (tailrec) search_path_loop_impl::
              )))))"
 
 definition "new_potential state = 
-(foldl (\<lambda> p v. potential_upd p v (\<pi> v - acc state + missed_at state v))
-   (foldl (\<lambda> p v. potential_upd p v (\<pi> v + acc state - missed_at state v)) 
-      initial_pot (to_list (evens (forest state))))
- (to_list (odds (forest state))))"
+(vset_iterate_pot (\<lambda> p v. potential_upd v (\<pi> v - acc state + missed_at state v) p)
+   (vset_iterate_pot (\<lambda> p v. potential_upd v (\<pi> v + acc state - missed_at state v) p) 
+      initial_pot (evens (forest state)))
+  (odds (forest state)))"
 
 definition "search_path = 
-(if unmatched_lefts = [] then Lefts_Matched
+(if vset_is_empty unmatched_lefts then Lefts_Matched
 else (let final_state = search_path_loop_impl initial_state
       in (case augpath final_state of 
                None \<Rightarrow> Dual_Unbounded 
@@ -611,31 +610,42 @@ and matching: "\<And> u v. buddy u = Some v \<Longrightarrow> buddy v = Some u"
               "\<And> u v. {u, v} \<in> \<M> \<Longrightarrow> \<pi> u + \<pi> v = \<w> u v"
 and potential:
  "potential_invar initial_pot"
- "\<And> pot x s. potential_invar pot \<Longrightarrow> potential_invar (potential_upd pot x s)"
- "\<And> pot x s. potential_invar pot \<Longrightarrow> potential_lookup (potential_upd pot x s) =
+ "\<And> pot x s. potential_invar pot \<Longrightarrow> potential_invar (potential_upd x s pot)"
+ "\<And> pot x s. potential_invar pot \<Longrightarrow> potential_lookup (potential_upd x s pot) =
                 (potential_lookup pot)(x \<mapsto> s)"
-and best_even_neighbour:
- "ben_invar ben_empty"
-  "\<And> ben x s. ben_invar ben \<Longrightarrow> ben_invar (ben_upd ben x s)"
-  "\<And> ben x s. ben_invar ben \<Longrightarrow> ben_lookup (ben_upd ben x s) =
-                (ben_lookup ben)(x \<mapsto> s)"
-  "\<And> x. ben_lookup ben_empty x = None"
-and vset:
- "vset_invar vset_empty" "vset_to_set vset_empty = {}"
- "\<And> V v. vset_invar V \<Longrightarrow> vset_invar (vset_insert v V)"
- "\<And> V v. vset_invar V \<Longrightarrow> vset_to_set (vset_insert v V) = insert v (vset_to_set V)"
- "\<And> V v. vset_invar V \<Longrightarrow> vset_isin v V \<longleftrightarrow> v \<in> vset_to_set V"
- "\<And> V vs. \<lbrakk>vset_invar V; to_list V = vs\<rbrakk> \<Longrightarrow> distinct vs"
- "\<And> V vs. \<lbrakk>vset_invar V; to_list V = vs\<rbrakk> \<Longrightarrow> set vs = vset_to_set V"
-and missed:
- "missed_invar missed_empty" "\<And> x. missed_lookup missed_empty x= None"
-  "\<And> missed x s. missed_invar missed \<Longrightarrow> missed_invar (missed_upd missed x s)"
-  "\<And> missed x s. missed_invar missed \<Longrightarrow> missed_lookup (missed_upd missed x s) =
-                (missed_lookup missed)(x \<mapsto> s)"
-  "\<And> x. missed_lookup missed_empty x = None"
+and vset_iterations:
+  "\<And> V f init. vset_invar V \<Longrightarrow>
+      \<exists> vs. set vs = vset_to_set V \<and> distinct vs 
+          \<and> vset_iterate_ben f init V = foldl f init vs"
+  "\<And> V f init. vset_invar V \<Longrightarrow>
+      \<exists> vs. set vs = vset_to_set V \<and> distinct vs 
+          \<and> vset_iterate_pot f init V = foldl f init vs"
+  "\<And> V P. vset_invar V \<Longrightarrow> vset_invar (vset_filter P V)"
+  "\<And> V P. vset_invar V \<Longrightarrow> vset_to_set (vset_filter P V) = vset_to_set V \<inter> Collect P"
 and potential_in_G:
 "dom (potential_lookup initial_pot) \<subseteq> L \<union> R"
+and vset_is_empty: "\<And> X. vset_invar X \<Longrightarrow> vset_is_empty X \<longleftrightarrow> vset_to_set X = {}"
 begin
+
+lemmas vset = 
+vset.invar_empty
+vset.set_empty
+vset.invar_insert
+vset.set_insert
+vset.set_isin
+(*vseta*)
+
+lemmas missed = 
+missed_map.invar_empty
+missed_map.map_empty
+missed_map.invar_update
+missed_map.map_update
+
+lemmas best_even_neighbour = 
+  ben_map.invar_empty
+  ben_map.invar_update
+  ben_map.map_update
+  ben_map.map_empty
 
 subsection \<open>Misc about the Graph\<close>
 
@@ -646,8 +656,13 @@ lemma w\<^sub>\<pi>_non_neg: "{u, v} \<in> G \<Longrightarrow> w\<^sub>\<pi> u v
   using G(7) w\<^sub>\<pi>_def by fastforce
 
 lemma finite_L: "finite L" and finite_R: "finite R"
-  using vset(7)[OF G(2) refl, symmetric] vset(7)[OF G(3) refl, symmetric]
-  by simp+
+  subgoal
+   apply(rule exE[OF vset_iterations(2)[OF G(2)]])
+    by (auto dest: sym[of "set _" L])
+  subgoal
+   apply(rule exE[OF vset_iterations(2)[OF G(3)]])
+    by (auto dest: sym[of "set _" R])
+  done
 
 lemma \<M>_is_matching: "matching \<M>"
 proof(rule matchingI, rule ccontr, goal_cases)
@@ -667,38 +682,48 @@ lemma one_buddy_no_buddy_false:
 "\<lbrakk>Some v = buddy u;  None = buddy v\<rbrakk> \<Longrightarrow> False"
   using  matching(1)[of u v] by simp
 
+lemma llist:
+  obtains llist where "set llist = vset_to_set left" "distinct llist"
+  using vset_iterations[OF G(2)] by force
+
+lemma rlist:
+  obtains rlist where "set rlist = vset_to_set right" "distinct rlist"
+  using vset_iterations[OF G(3)] by force
+
+lemma unmatched_lefts_are:
+      "vset_to_set unmatched_lefts = vset_to_set left - Collect (\<lambda> v. buddy v \<noteq> None)"
+    by(auto simp add: unmatched_lefts_def vset_iterations(4)[OF G(2)])
+
 lemma unmatched_lefts:
- "set (unmatched_lefts) = L - Vs \<M>"
- "length (unmatched_lefts) = card (L - Vs \<M>)"
+ "vset_to_set (unmatched_lefts) = L - Vs \<M>"
+ "vset_invar unmatched_lefts"
 proof-
-  show  "set (unmatched_lefts) = L - Vs \<M>"
+  obtain llist where llist: "set llist = vset_to_set left" "distinct llist"
+    using llist by auto
+  obtain rlist where rlist: "set rlist = vset_to_set right" "distinct rlist"
+    using rlist by auto
+  show  "vset_to_set (unmatched_lefts) = L - Vs \<M>"
   proof(rule, all \<open>rule\<close>, goal_cases)
     case (1 x)
     then show ?case 
-  using vset(6,7)[OF G(2) refl] 
-  by(cases "buddy x")
-    (auto elim!: vs_member_elim 
-      intro: one_buddy_no_buddy_false 
-      simp add: unmatched_lefts_def \<M>_def)
+      by(cases "buddy x")
+        (auto elim!: vs_member_elim 
+         intro: one_buddy_no_buddy_false 
+         simp add: unmatched_lefts_are \<M>_def)
   next
     case (2 x)
     then show ?case 
-    using vset(6,7)[OF G(2) refl] vs_member_intro[of "x" "{x, the (buddy x)}" \<M>]
+    using  vs_member_intro[of "x" "{x, the (buddy x)}" \<M>]
     by(cases "buddy x")
       (fastforce intro: one_buddy_no_buddy_false 
-      simp add: unmatched_lefts_def \<M>_def doubleton_eq_iff)+ 
+      simp add:  \<M>_def doubleton_eq_iff unmatched_lefts_are)+
 qed
-  thus "length unmatched_lefts = card (L - Vs \<M>)"
-    using  distinct_card[of unmatched_lefts] distinct_filter[of unmatched_lefts]
-           vset(6)[OF G(2) refl]
-    by(auto simp add: unmatched_lefts_def) 
+  show "vset_invar unmatched_lefts"
+    by(auto simp add: unmatched_lefts_def intro!: vset_iterations(3) G(2))
 qed  
 
-lemma unmatched_lefts_in_L: "set unmatched_lefts \<subseteq> L"
+lemma unmatched_lefts_in_L: "vset_to_set unmatched_lefts \<subseteq> L"
   using unmatched_lefts by simp
-
-lemma to_list_left_is_L:"set (to_list left) = L"
-  using G(2) vset(7) by blast
 
 lemma M_verts_by_buddy:
  "x \<in> Vs \<M> \<Longrightarrow> buddy x \<noteq> None"
@@ -706,11 +731,10 @@ lemma M_verts_by_buddy:
 proof(goal_cases)
   case 1
   then show ?case  
-  using vset(6,7)[OF G(3) refl] 
   by(cases "buddy x")
     (auto elim!: vs_member_elim 
       intro: one_buddy_no_buddy_false 
-      simp add: unmatched_lefts_def \<M>_def)
+      simp add: \<M>_def)
 next
   case 2
   then obtain y where "buddy x = Some y"
@@ -721,9 +745,9 @@ next
     by blast 
 qed
 
-lemma finite_G: "finite G" 
-  by (metis G(1,3) List.finite_set finite_parts_bipartite_graph_invar graph_invar_finite
-      to_list_left_is_L vset(7))
+lemma finite_G: "finite G"
+  using  finite_parts_bipartite_graph_invar[OF finite_L finite_R G(1)]
+  by(auto intro!: finite_UnionD simp add: Vs_def)
 
 subsection \<open>Setting Up Invariants\<close>
 
@@ -973,15 +997,17 @@ lemma update_best_even_neighbour_correct:
 proof-
   define f where "f = (\<lambda> (ben, queue) r.
      case ben_lookup ben r of
-     None \<Rightarrow> (ben_upd ben r l, heap_insert queue r (w\<^sub>\<pi> l r + off l))
+     None \<Rightarrow> (ben_upd r l ben, heap_insert queue r (w\<^sub>\<pi> l r + off l))
      | Some l' \<Rightarrow>
          if w\<^sub>\<pi> l r + off l < w\<^sub>\<pi> l' r + off l'
-         then (ben_upd ben r l, heap_decrease_key queue r (w\<^sub>\<pi> l r + off l))
+         then (ben_upd r l ben, heap_decrease_key queue r (w\<^sub>\<pi> l r + off l))
          else (ben, queue))"
-  define rs where "rs = rev (to_list (right_neighbs l))"
+  obtain rnlist where rnlist:"set rnlist = vset_to_set (right_neighbs l)" "distinct rnlist"
+                      "vset_iterate_ben f (ben, queue) (right_neighbs l) = foldl f (ben, queue) rnlist"
+    using vset_iterations(1)[OF G(4), OF assms(3), of f] by force
+  define rs where "rs = rev rnlist"
   have rs_props: "distinct rs" "set rs = vset_to_set (right_neighbs l)"
-    using vset(6)[of "right_neighbs l"] G(4) assms(3)
-          vset(7)[of "right_neighbs l", OF _ refl]
+    using rnlist
     by (auto simp add: rs_def)
   have news_in_G:"{{l, r} | r. r \<in> set rs} \<subseteq> G" 
     unfolding rs_props G(5)[OF assms(3)] by blast
@@ -992,8 +1018,9 @@ proof-
              off l \<ge> w\<^sub>\<pi> l' r + off l')
            \<and> ?thesis3 \<and> ?thesis4"
     using assms(1,2,4,5,6) rs_props(1)  news_in_G
-    unfolding update_best_even_neighbour_def foldl_conv_foldr
+    unfolding update_best_even_neighbour_def
     unfolding rs_def[symmetric] rs_props(2)[symmetric] f_def[symmetric]
+              rnlist(3) foldl_conv_foldr rs_def[symmetric] 
   proof(induction rs arbitrary: queue ben queue' ben')
     case Nil
     thus ?case
@@ -1189,55 +1216,63 @@ proof-
 qed
 
 lemma update_best_even_neighbours_correct:
-  assumes "ben_invar ben" "heap_invar queue" "set ls \<subseteq> L"
+  assumes "ben_invar ben" "heap_invar queue" "vset_to_set ls \<subseteq> L"
           "\<And> r k. (r, k) \<in> heap_abstract queue \<longrightarrow>
           (\<exists> l. ben_lookup ben r = Some l \<and> k = w\<^sub>\<pi> l r + off l)"
           "\<And> r l' l. ben_lookup ben r = Some l' \<and> (\<nexists> k. (r, k) \<in> heap_abstract queue)  \<longrightarrow>
              off l \<ge> w\<^sub>\<pi> l' r + off l'"
           "(ben', queue') = update_best_even_neighbours off ben queue ls"
+          "vset_invar ls"
  defines "conn_min \<equiv> (\<lambda> r.
      Min ((if ben_lookup ben r \<noteq> None
           then {w\<^sub>\<pi> (the (ben_lookup ben r)) r + off (the (ben_lookup ben r))}
           else {}) \<union> 
-          {w\<^sub>\<pi> l r + off l | l. l \<in> set ls \<and> r \<in> vset_to_set (right_neighbs l)}))"
+          {w\<^sub>\<pi> l r + off l | l. l \<in> vset_to_set ls \<and> r \<in> vset_to_set (right_neighbs l)}))"
  shows "ben_invar ben'" (is ?thesis1) "heap_invar queue'" (is ?thesis2)
        "\<And> r k. (r, k) \<in> heap_abstract queue' \<Longrightarrow>
          (\<exists> l. ben_lookup ben' r = Some l \<and> k = w\<^sub>\<pi> l r + off l)"
        "\<And> r l' l. ben_lookup ben' r = Some l' \<and> (\<nexists> k. (r, k) \<in> heap_abstract queue') \<Longrightarrow>
              off l \<ge> w\<^sub>\<pi> l' r + off l'"
-       "\<And> r. r \<notin> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> set ls} 
+       "\<And> r. r \<notin> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> vset_to_set ls} 
                  \<Longrightarrow> ben_lookup ben' r = ben_lookup ben r"
-       "\<And> r. r \<in> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> set ls} 
-                 \<Longrightarrow> \<exists> l. ((l \<in> set ls \<and> r \<in> vset_to_set (right_neighbs l))
+       "\<And> r. r \<in> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> vset_to_set ls} 
+                 \<Longrightarrow> \<exists> l. ((l \<in> vset_to_set ls \<and> r \<in> vset_to_set (right_neighbs l))
                             \<or> Some l = ben_lookup ben r) 
                           \<and> w\<^sub>\<pi> l r + off l = conn_min r \<and> ben_lookup ben' r = Some l"
       "heap_abstract queue' = 
        heap_abstract queue
-           - {(r, k) | r k l. r \<in> vset_to_set (right_neighbs l) \<and>l \<in> set ls}
+           - {(r, k) | r k l. r \<in> vset_to_set (right_neighbs l) \<and>l \<in> vset_to_set ls}
            \<union> {(r, w\<^sub>\<pi> ll r + off ll) | r l ll. 
                r \<in> vset_to_set (right_neighbs l) \<and> 
-               l \<in> set ls \<and> Some ll = ben_lookup ben' r \<and>
+               l \<in> vset_to_set ls \<and> Some ll = ben_lookup ben' r \<and>
                (r \<in> fst ` (heap_abstract queue) \<or> ben_lookup ben r = None)}"
                (is ?thesis4)
 proof-
-  define ls' where "ls' = rev ls"
-  have set_ls_is:"set ls = set ls'"
-    by(auto simp add: ls'_def)
+  obtain lslist where lslist: "vset_to_set ls = set lslist" "distinct lslist"
+    "vset_iterate_ben 
+         (\<lambda> ben_queue r. update_best_even_neighbour off (fst ben_queue) (snd ben_queue) r) 
+         (ben, queue) ls =
+    foldl (\<lambda> ben_queue r. update_best_even_neighbour off (fst ben_queue) (snd ben_queue) r) 
+         (ben, queue) lslist"
+    using vset_iterations(1)[OF assms(7), of _ "(ben, queue)"] by force
+  define ls' where "ls' = rev lslist"
+  have set_ls_is:"vset_to_set ls = set ls'"
+    by(auto simp add: ls'_def lslist(1))
   have "?thesis1 \<and> ?thesis2 \<and>
        (\<forall> r k. (r, k) \<in> heap_abstract queue' \<longrightarrow> 
           (\<exists> l. ben_lookup ben' r = Some l \<and> k = w\<^sub>\<pi> l r + off l)) \<and>
        (\<forall> l r l'.  ben_lookup ben' r = Some l' \<and> (\<nexists> k. (r, k) \<in> heap_abstract queue')\<longrightarrow>
              off l \<ge> w\<^sub>\<pi> l' r + off l') \<and>
-       (\<forall> r.  r \<notin> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> set ls} \<longrightarrow> 
+       (\<forall> r.  r \<notin> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> vset_to_set ls} \<longrightarrow> 
          ben_lookup ben' r = ben_lookup ben r) \<and>
-       (\<forall> r \<in> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> set ls}.  
-         \<exists>l. ((l \<in> set ls \<and> r \<in> vset_to_set (right_neighbs l))
+       (\<forall> r \<in> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> vset_to_set ls}.  
+         \<exists>l. ((l \<in> vset_to_set ls \<and> r \<in> vset_to_set (right_neighbs l))
                   \<or> Some l = ben_lookup ben r) \<and> 
              w\<^sub>\<pi> l r + off l = conn_min r \<and> ben_lookup ben' r = Some l) \<and>
        ?thesis4"
-    using assms(1-6) meta_eq_to_obj_eq[OF assms(7)]
+    using assms(1-6) meta_eq_to_obj_eq[OF assms(8)]
     unfolding update_best_even_neighbours_def foldl_conv_foldr
-              ls'_def[symmetric] set_ls_is
+              ls'_def[symmetric] set_ls_is lslist(3)
   proof(induction ls' arbitrary: ben' queue' queue ben conn_min)
     case (Cons l ls)
     have ls_in_L: "set ls \<subseteq> L"
@@ -1565,10 +1600,10 @@ proof-
      qed
    qed auto
    thus ?thesis1 ?thesis2 ?thesis4       
-        "\<And> r. r \<notin> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> set ls} 
+        "\<And> r. r \<notin> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> vset_to_set ls} 
                  \<Longrightarrow> ben_lookup ben' r = ben_lookup ben r"
-        "\<And> r. r \<in> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> set ls} 
-                 \<Longrightarrow> \<exists> l. ((l \<in> set ls \<and> r \<in> vset_to_set (right_neighbs l))
+        "\<And> r. r \<in> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> vset_to_set ls} 
+                 \<Longrightarrow> \<exists> l. ((l \<in> vset_to_set ls \<and> r \<in> vset_to_set (right_neighbs l))
                              \<or> Some l = ben_lookup ben r) 
                           \<and> w\<^sub>\<pi> l r + off l = conn_min r \<and> ben_lookup ben' r = Some l"
         "\<And> r k. (r, k) \<in> heap_abstract queue' \<Longrightarrow>
@@ -1614,9 +1649,7 @@ proof-
   obtain l' where l'_def: "buddy r = Some l'"
     using queue_heap_min_def assms(1)
     by(auto elim: search_path_loop_cont_condE simp add: r_def)
-  define missed' where "missed' = missed_upd (
-                                    missed_upd (missed state) r acc') 
-                                                l' acc'"
+  define missed' where "missed' = missed_upd  l' acc' (missed_upd  r acc' (missed state))"
   obtain ben' queue' where ben'_queue'_def:
     "(ben', queue') = update_best_even_neighbour 
                                            (abstract_real_map (missed_lookup missed'))
@@ -3031,24 +3064,14 @@ lemma forest_roots:
 "finite (vset_to_set forest_roots)"
 "vset_to_set forest_roots \<inter> Vs \<M> = {}"
 proof-
-  define vs where "vs = rev unmatched_lefts"
-  have helper:
-      "vset_invar (foldl (\<lambda>vset v. vset_insert v vset) vset_empty unmatched_lefts) \<and>
-       vset_to_set (foldl (\<lambda>vset v. vset_insert v vset) vset_empty unmatched_lefts) = 
-       set unmatched_lefts"
-    unfolding foldl_conv_foldr vs_def[symmetric]
-              set_rev[of unmatched_lefts, symmetric]
-    by(induction vs)
-      (auto simp add: vset(1-4))
-  thus ths1and2:"vset_invar forest_roots" "vset_to_set forest_roots = L - Vs \<M>"
-    using   M_verts_by_buddy
-    by(force simp add: forest_roots_def unmatched_lefts_def 
-                       conjunct2[OF helper, simplified unmatched_lefts_def] 
-                       to_list_left_is_L[symmetric])+
+  show ths1and2:"vset_invar forest_roots" "vset_to_set forest_roots = L - Vs \<M>"
+    using  unmatched_lefts
+    unfolding forest_roots_def 
+    by auto
   thus "vset_to_set forest_roots \<noteq> {}"
     using there_are_unmatched_lefts by auto
   show "finite (vset_to_set forest_roots)" 
-    by (simp add: forest_roots_def helper)
+    by (simp add: finite_L ths1and2(2))
   show "vset_to_set forest_roots \<inter> Vs \<M> = {}" 
     by (simp add: inf.commute ths1and2(2))
 qed
@@ -3069,11 +3092,12 @@ lemma invars_init:
 proof(goal_cases)
   case 1
     have helper:"dom (ben_lookup (best_even_neighbour initial_state)) =
-        {r | r l. r \<in> vset_to_set (right_neighbs l) \<and> l \<in> set unmatched_lefts}"
+        {r | r l. r \<in> vset_to_set (right_neighbs l) \<and> l \<in> vset_to_set unmatched_lefts}"
     proof(rule set_eqI, goal_cases)
       case (1 x)
       then show ?case 
-      using  props_of_init_heap_and_ben(5,6)[OF surjective_pairing[symmetric], of x] 
+        using  props_of_init_heap_and_ben(5,6)[OF surjective_pairing[symmetric]
+                  unmatched_lefts(2), of x] 
       by (auto simp add: initial_state_def)+
      qed
   show ?case 
@@ -3087,12 +3111,12 @@ proof(goal_cases)
     case 2
     then show ?case  
     by(simp add: initial_state_def 
-                 props_of_init_heap_and_ben(1,2)[OF surjective_pairing[symmetric]])     
+                 props_of_init_heap_and_ben(1,2)[OF surjective_pairing[symmetric] unmatched_lefts(2)])     
   next
     case 3
     then show ?case 
     by(simp add: initial_state_def 
-                 props_of_init_heap_and_ben(1,2)[OF surjective_pairing[symmetric]])
+                 props_of_init_heap_and_ben(1,2)[OF surjective_pairing[symmetric] unmatched_lefts(2)])
   next
     case 4
     then show ?case 
@@ -3109,27 +3133,27 @@ proof(goal_cases)
   next
     case 7
      show ?case 
-       by (simp add: domIff missed(2) primal_dual_path_search_spec.initial_state_def
-           subset_iff)
+       by (simp add: domIff missed(2) initial_state_def subset_iff)
   next
     case 8
     have helper:"fst ` heap_abstract (heap initial_state) =
-        {r | r l. r \<in> vset_to_set (right_neighbs l) \<and> l \<in> set unmatched_lefts}"
+        {r | r l. r \<in> vset_to_set (right_neighbs l) \<and> l \<in> vset_to_set unmatched_lefts}"
     proof(rule, all \<open>rule\<close>, goal_cases)
       case (1 x)
       then show ?case 
-        by(auto simp add: initial_state_def
+        by(auto simp add: initial_state_def unmatched_lefts(2)
             props_of_init_heap_and_ben(7)[OF surjective_pairing[symmetric]])
     next
       case (2 x)
-      then obtain l where l: "l \<in> set unmatched_lefts" "x \<in> vset_to_set (right_neighbs l)"
+      then obtain l where l: "l \<in> vset_to_set unmatched_lefts" "x \<in> vset_to_set (right_neighbs l)"
         by blast
-       obtain l where l: "l \<in> set unmatched_lefts" "x \<in> vset_to_set (right_neighbs l)"
+       obtain l where l: "l \<in> vset_to_set unmatched_lefts" "x \<in> vset_to_set (right_neighbs l)"
               "ben_lookup (fst init_best_even_neighbour) x = Some l"
          using props_of_init_heap_and_ben(6)[OF surjective_pairing[symmetric], of x] l
+               unmatched_lefts(2)
                 by blast
         then show ?case
-            by(auto simp add: initial_state_def
+            by(auto simp add: initial_state_def unmatched_lefts(2)
                props_of_init_heap_and_ben(7)[OF surjective_pairing[symmetric]]
               intro!: image_eqI[of _ _ "(x, w\<^sub>\<pi> l x)"])
         qed
@@ -3157,7 +3181,7 @@ proof(goal_cases)
          by auto
        then show ?case 
          using props_of_init_heap_and_ben(5,6)[OF surjective_pairing[symmetric], of r]
-               unmatched_lefts(1) forest_roots(2) empty_forest(1)
+               unmatched_lefts(1) forest_roots(2) empty_forest(1) unmatched_lefts(2)
          by(auto simp add: initial_state_def)
      qed
    next 
@@ -3190,7 +3214,7 @@ next
   have help1: "(a, b) \<in> heap_abstract (snd init_best_even_neighbour) 
                   \<Longrightarrow> a \<in> Vs G" for a b
     by (auto intro: edges_are_Vs_2 
-          simp add: G(5)[OF set_mp[OF unmatched_lefts_in_L]]
+          simp add: G(5)[OF set_mp[OF unmatched_lefts_in_L]] unmatched_lefts(2)
                     props_of_init_heap_and_ben(7)[OF surjective_pairing[symmetric]])
   have help2: "\<lbrakk>(a, b) \<in> heap_abstract (snd init_best_even_neighbour);
                 a \<in> vset_to_set forest_roots\<rbrakk> \<Longrightarrow> False" for a b
@@ -3218,7 +3242,7 @@ next
   have helper1: False if
         "r \<in> Vs G"" r \<notin> vset_to_set forest_roots"
         "\<forall>l. l \<in> vset_to_set forest_roots \<longrightarrow> {l, r} \<notin> G"
-        "r \<in> vset_to_set (right_neighbs l)" "l \<in> set unmatched_lefts" for r l
+        "r \<in> vset_to_set (right_neighbs l)" "l \<in> vset_to_set unmatched_lefts" for r l
     using that by(simp add: G(5) forest_roots(2) unmatched_lefts(1))
   have helper2: "\<exists>l. ben_lookup (fst init_best_even_neighbour) r = Some l \<and>
                {r, l} \<in> G \<and> l \<in> vset_to_set forest_roots\<and>
@@ -3228,16 +3252,17 @@ next
         "l \<in> vset_to_set forest_roots" "{l, r} \<in> G" for l r
   proof-
     have first_step:
-     "\<exists>x. (\<exists>l. x = vset_to_set (right_neighbs l) \<and> l \<in> set unmatched_lefts) \<and> r \<in> x"
+     "\<exists>x. (\<exists>l. x = vset_to_set (right_neighbs l) \<and> l \<in> vset_to_set unmatched_lefts) \<and> r \<in> x"
       using that unmatched_lefts(1) forest_roots(2)
       by(auto intro!: exI[of _ "vset_to_set (right_neighbs l)"] exI[of _ l]
              simp add:  G(5))
-    then obtain l' where l': "l' \<in> set unmatched_lefts"
+    then obtain l' where l': "l' \<in> vset_to_set unmatched_lefts"
         "r \<in> vset_to_set (right_neighbs l')"
         "w\<^sub>\<pi> l' r =
-        Min {w\<^sub>\<pi> l r | l. l \<in> set unmatched_lefts \<and> r \<in> vset_to_set (right_neighbs l)}"
+        Min {w\<^sub>\<pi> l r | l. l \<in> vset_to_set unmatched_lefts \<and> r \<in> vset_to_set (right_neighbs l)}"
         "ben_lookup (fst init_best_even_neighbour) r = Some l'"
       using props_of_init_heap_and_ben(6)[OF surjective_pairing[symmetric], of r] 
+            unmatched_lefts(2)
       by auto     
     then show ?thesis
       using G(5) forest_roots(2) unmatched_lefts(1)
@@ -3247,11 +3272,11 @@ next
      by(force intro: invar_best_even_neighbour_mapI helper1 helper2
                      props_of_init_heap_and_ben(5)[OF surjective_pairing[symmetric]]
          simp add: initial_state_def missed(2) abstract_real_map_def
-                   empty_forest(1,2) vset(2))
+                   empty_forest(1,2) vset(2) unmatched_lefts(2))
  next
    case 7
    show ?case
-     using  props_of_init_heap_and_ben(5)[OF surjective_pairing[symmetric]]
+     using  props_of_init_heap_and_ben(5)[OF surjective_pairing[symmetric]] unmatched_lefts(2)
      by(fastforce intro!: invar_out_of_heapI
                 simp add: initial_state_def props_of_init_heap_and_ben(7)[OF surjective_pairing[symmetric]])
  qed
@@ -3269,21 +3294,22 @@ subsection \<open>Correctness of Path Search\<close>
 lemma Lefts_Matched_all_lefts_matched:
   assumes "search_path = Lefts_Matched"
   shows   "L \<subseteq> Vs \<M>"
-  using assms  unmatched_lefts(1)
+  using assms  unmatched_lefts(1) 
   by(auto simp add: search_path_def
-                    if_split[of "\<lambda> x. x = Lefts_Matched" "unmatched_lefts = []"] 
-                    option.split[of  "\<lambda> x. x = Lefts_Matched"] Let_def)
+                    if_split[of "\<lambda> x. x = Lefts_Matched" _] 
+                    option.split[of  "\<lambda> x. x = Lefts_Matched"] Let_def 
+                          vset_is_empty[OF unmatched_lefts(2)])
 
 lemma Dual_Unbounded_dual_unbounded:
   assumes "search_path = Dual_Unbounded"
   shows   "\<exists> p.  (\<forall> u v. {u, v} \<in> G \<longrightarrow> edge_costs u v \<ge> p u +  p v)
              \<and> sum p (L \<union> R) \<ge> bound"
   apply(rule augpath_None_gen_unbounded_dual[of initial_state])
-  using assms unmatched_lefts(1)[symmetric]
+  using assms unmatched_lefts(1)
   by(auto simp add: search_path_def  search_path_loop_of_init_same
-                    if_split[of "\<lambda> x. x = Dual_Unbounded" "unmatched_lefts = []"] 
-                    option.split[of  "\<lambda> x. x = Dual_Unbounded"] Let_def 
-             intro: invars_init)
+                    if_split[of "\<lambda> x. x = Dual_Unbounded" _] 
+                    option.split[of  "\<lambda> x. x = Dual_Unbounded"] Let_def vset_is_empty[OF unmatched_lefts(2)]
+             intro!: invars_init) 
 
 lemma new_potential_correct:
   assumes "forest_invar \<M> (forest state)"
@@ -3295,14 +3321,8 @@ lemma new_potential_correct:
          (vset_to_set (evens (forest state))) \<union>
          (vset_to_set (odds (forest state)))"
 proof-
-  define evs where "evs = rev (to_list (evens (forest state)))"
-  have evs_props: "rev (to_list (evens (forest state))) = evs" "distinct evs"
-    using assms evens_and_odds(1) vset(6) by (auto simp add: evs_def)
-  define ods where "ods = rev (to_list (odds (forest state)))"
-  have ods_props: "rev (to_list (odds (forest state))) = ods" "distinct ods"
-    using assms evens_and_odds(2) vset(6) by (auto simp add: ods_def)
-  define fo where "fo = (\<lambda>x y. potential_upd y x (\<pi> x - acc state + missed_at state x))"
-  define fe where "fe = (\<lambda>x y. potential_upd y x (\<pi> x + acc state - missed_at state x))"
+  define fo where "fo = (\<lambda>x y. potential_upd x (\<pi> x - acc state + missed_at state x) y)"
+  define fe where "fe = (\<lambda>x y. potential_upd x (\<pi> x + acc state - missed_at state x) y)"
   have fe_it_invar_pres: 
        "potential_invar p \<Longrightarrow> potential_invar (foldr fe evs p)" for p evs
   proof(induction evs)
@@ -3319,10 +3339,30 @@ proof-
       by(subst foldr_Cons, subst o_apply, subst fo_def)
         (auto intro!: potential(2) Cons)
   qed auto
+ obtain evenlist where evenlist:
+    "vset_to_set (evens (forest state)) = set evenlist" "distinct evenlist"
+    "vset_iterate_pot (\<lambda> x y. fe y x) initial_pot (evens (forest state))
+          = foldl (\<lambda> x y. fe y x) initial_pot evenlist"
+    using vset_iterations(2)[OF evens_and_odds(1), OF assms] by blast     
+  define evs where "evs = rev evenlist"
+  have evs_props: "rev evenlist = evs" "distinct evs"
+    using evenlist(2) by (auto simp add: evs_def)
+  define intermed_pot where "intermed_pot = foldr fe evs initial_pot"
+ obtain oddlist where oddlist:
+    "vset_to_set (odds (forest state)) = set oddlist" "distinct oddlist"
+    "vset_iterate_pot (\<lambda> x y. fo y x) intermed_pot (odds (forest state))
+          = foldl (\<lambda> x y. fo y x) intermed_pot oddlist"
+    using vset_iterations(2)[OF evens_and_odds(2), OF assms] by blast     
+  define ods where "ods = rev oddlist"
+  have ods_props: "rev oddlist = ods" "distinct ods"
+    using oddlist(2) by (auto simp add: ods_def)
+  have new_potential_def: "new_potential state = foldr fo ods (foldr fe evs initial_pot)"
+    using oddlist(3) evenlist(3)
+    by(auto simp add: new_potential_def foldr_conv_foldl intermed_pot_def
+                      fe_def fo_def evs_def ods_def)
   show  "potential_invar (new_potential state)"
     by(auto intro!: fo_it_invar_pres fe_it_invar_pres potential(1)
-          simp add: new_potential_def foldl_conv_foldr evs_props(1) 
-                    ods_props(1) fo_def[symmetric] fe_def[symmetric])
+          simp add:  foldl_conv_foldr new_potential_def)
  have fe_it_is: 
        "\<lbrakk>potential_invar p; distinct evs\<rbrakk>
           \<Longrightarrow> abstract_real_map (potential_lookup (foldr fe evs p)) = 
@@ -3358,12 +3398,12 @@ proof-
     \<pi>\<^sup>* state"
     using evens_and_odds(1,2,4)[OF assms]
     by(auto intro!: ext 
-          simp add: disjoint_iff working_potential_def evs_def ods_def vset(7)[OF _ refl] vset(5))
+          simp add: disjoint_iff working_potential_def evs_def ods_def vset(5)
+                   evenlist(1) oddlist(1))
+
   thus "abstract_real_map (potential_lookup (new_potential state)) = \<pi>\<^sup>* state"
-    by((subst new_potential_def foldl_conv_foldr evs_props(1) 
-                    ods_props(1) fo_def[symmetric] fe_def[symmetric]
-                     fo_it_is_applied fe_it_is_applied)+)
-      auto
+    by((subst new_potential_def foldl_conv_foldr fo_it_is_applied fe_it_is_applied)+)
+    auto
   have fe_it_dom: 
        "potential_invar p \<Longrightarrow> dom (potential_lookup (foldr fe evs p)) =
           dom (potential_lookup p) \<union> set evs" for p evs
@@ -3392,12 +3432,11 @@ proof-
   note fe_it_dom_applied =  fe_it_dom[OF potential(1)]
   have "dom (potential_lookup initial_pot) \<union> set evs \<union> set ods =
     dom (potential_lookup initial_pot) \<union> aevens state \<union> aodds state"
-    using assms evens_and_odds(1,2) evs_props(1) ods_def vset(7) by fastforce
+    using assms evens_and_odds(1,2) evs_props(1) ods_def evenlist(1) oddlist(1)
+    by (auto simp add: new_potential_def)
   thus "dom (potential_lookup (new_potential state)) =
     dom (potential_lookup initial_pot) \<union> aevens state \<union> aodds state"
-    by(simp add: new_potential_def foldl_conv_foldr evs_props(1) 
-                    ods_props(1) fo_def[symmetric] fe_def[symmetric]
-                     fo_it_dom_applied fe_it_dom_applied)
+    by(simp add: new_potential_def fo_it_dom_applied fe_it_dom_applied)
 qed
 
 lemma Next_Iteration_tight_path_and_new_feasible_potential:
@@ -3419,9 +3458,9 @@ proof-
     "augpath (search_path_loop initial_state) = Some p"
     "\<pi>' = new_potential (search_path_loop initial_state)"
     "augpath (search_path_loop initial_state) \<noteq> None"
-    using assms unmatched_lefts(1)[symmetric]
+    using assms unmatched_lefts(1)
     by(auto simp add: search_path_def  search_path_loop_of_init_same
-        if_split[of "\<lambda> x. x = Next_Iteration _ _" "unmatched_lefts = []"] 
+        if_split[of "\<lambda> x. x = Next_Iteration _ _" ]  unmatched_lefts(2) vset_is_empty
         option.split[of  "\<lambda> x. x = Next_Iteration _ _"] Let_def 
         intro: invars_init)
   note result_props = augpath_Some_valid_result[OF invars_init[OF from_assms(1)]
