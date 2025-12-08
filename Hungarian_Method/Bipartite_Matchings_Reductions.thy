@@ -409,7 +409,7 @@ proof(rule ccontr, goal_cases)
     using assms(6) by simp
 qed
 
-lemma extending_perfect_matching_in_balanced_complete_bipartite:
+lemma extend_to_perfect_matching_in_balanced_complete_bipartite:
   assumes "balanced_complete_bipartite G L R"
     "graph_matching G M" "finite G"
   shows "\<exists> M'. perfect_matching G M' \<and> M' \<supseteq> M"
@@ -487,7 +487,7 @@ qed
 corollary perfect_matching_in_balanced_complete_bipartite:
   assumes "balanced_complete_bipartite G L R" "finite G"
   shows "\<exists> M. perfect_matching G M"
-  using extending_perfect_matching_in_balanced_complete_bipartite[where M = empty] assms
+  using extend_to_perfect_matching_in_balanced_complete_bipartite[where M = empty] assms
   by auto
 
 definition "penalty G w = (card (Vs G) / 2) * Max (insert 0 { \<bar>w e \<bar> | e. e \<in> G}) + 1"
@@ -868,7 +868,7 @@ proof-
     using assms(1) old_vertex_of_G_in_G'
     by(auto elim!: min_weight_matchingE intro!: perfect_matchingD)
   hence "\<exists>M'. perfect_matching local.G' M' \<and> ((image old_vertex) ` M) \<subseteq> M'"
-    by(auto intro!: extending_perfect_matching_in_balanced_complete_bipartite[
+    by(auto intro!: extend_to_perfect_matching_in_balanced_complete_bipartite[
           OF balanced_complete_bipartite_perfected(1)[OF bipartite_G]]
         simp add: finite_L finite_R finite_G')
   then obtain M' where M': "perfect_matching local.G' M'" "((image old_vertex) ` M) \<subseteq> M'"
@@ -1235,7 +1235,7 @@ proof-
     note that = graph_matching_M' M_projected_non_opt_cases
     have "\<exists>M''. perfect_matching G' M'' \<and> ((image old_vertex) ` M') \<subseteq> M''"
       using that(1) graph_matching_on_old_vertices old_vertex_of_G_in_G'
-      by(auto intro!: extending_perfect_matching_in_balanced_complete_bipartite[
+      by(auto intro!: extend_to_perfect_matching_in_balanced_complete_bipartite[
             OF balanced_complete_bipartite_perfected(1)[OF bipartite_G]]
           rev_image_eqI
           simp add: finite_L finite_R finite_G')
