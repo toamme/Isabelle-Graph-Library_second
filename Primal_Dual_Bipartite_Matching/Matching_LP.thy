@@ -45,7 +45,7 @@ and min_feasible_max_dualD:
   by(auto simp add: min_feasible_max_dual_def)
 
 definition "max_weight_matching E w M =
-  (graph_matching E M \<and> (\<forall> M'. graph_matching E M' \<longrightarrow> sum w M' \<le> sum w M))"
+  (graph_matching E M \<and> (\<forall> M'. graph_matching E M' \<longrightarrow> (sum w M'::real) \<le> sum w M))"
 
 lemma max_weight_matchingI:
 "graph_matching E M \<Longrightarrow> (\<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<le> sum w M)
@@ -113,7 +113,7 @@ and max_feasible_min_perfect_dualD:
   by(auto simp add: max_feasible_min_perfect_dual_def)
 
 definition "min_weight_perfect_matching E w M =
-  (perfect_matching E M \<and> (\<forall> M'. perfect_matching E M' \<longrightarrow> sum w M' \<ge> sum w M))"
+  (perfect_matching E M \<and> (\<forall> M'. perfect_matching E M' \<longrightarrow> (sum w M'::real) \<ge> sum w M))"
 
 lemma min_weight_perfect_matchingI:
 "perfect_matching E M \<Longrightarrow> (\<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M)

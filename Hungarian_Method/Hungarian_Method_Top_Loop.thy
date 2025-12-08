@@ -2,7 +2,7 @@ theory Hungarian_Method_Top_Loop
   imports Primal_Dual_Bipartite_Matching.Matching_LP
           Path_Search_Result Matching_Augmentation_Executable
 begin
-
+(*TODO MOVE*)
 lemma bipartite_same_matcheds_on_both_sides:
   assumes "bipartite G L R" "graph_matching G M"
   shows   "card (Vs M \<inter> L) = card (Vs M \<inter> R)"
@@ -90,6 +90,39 @@ next
     using assms(5) 
     by(intro card_subset_eq) auto
   hence "R \<subseteq> Vs M" 
+    by auto
+  hence "Vs G \<subseteq> Vs M"
+    using assms(2) bipartite_vs_subset[OF assms(1)] by auto
+  then show ?case 
+    by (simp add: assms(4) subgraph_vs_subset_eq)  
+qed
+
+lemma all_right_matched_perfect:
+  assumes "bipartite G L R"
+          "R \<subseteq> Vs M" "card L = card R"
+          "graph_matching G M" "finite L"
+    shows "perfect_matching G M"
+proof(rule perfect_matchingI, goal_cases)
+  case 1
+  then show ?case 
+    using assms(4) by simp 
+next
+  case 2
+  then show ?case 
+   using assms(4) by simp
+next
+  case 3
+  have "Vs M \<inter> R = R"
+    using assms(1,2,4)
+    by blast
+  hence "card R = card (Vs M \<inter> L)"
+    using bipartite_same_matcheds_on_both_sides[OF assms(1,4)] by simp
+  hence "card (Vs M \<inter> L) = card L"
+    using assms(3) by simp
+  hence "Vs M \<inter> L = L"
+    using assms(5) 
+    by(intro card_subset_eq) auto
+  hence "L \<subseteq> Vs M" 
     by auto
   hence "Vs G \<subseteq> Vs M"
     using assms(2) bipartite_vs_subset[OF assms(1)] by auto

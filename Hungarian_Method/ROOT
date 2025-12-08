@@ -21,6 +21,7 @@ theories
 	Hungarian_Method_Top_Loop
 	Hungarian_Method_Instantiation
 	Hungarian_Example
+	Bipartite_Matchings_Reductions
 	
 
 document_files
