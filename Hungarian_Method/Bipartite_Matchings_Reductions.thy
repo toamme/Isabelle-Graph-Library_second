@@ -18,7 +18,7 @@ lemma matchingI:
   "(\<And>e1 e2. \<lbrakk>e1 \<in> M; e2 \<in> M; e1 \<noteq> e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}) \<Longrightarrow> matching M"
   by (auto simp: matching_def)
 
-lemma matching_disjoint_union:
+lemma matching_vertex_disj_union:
   assumes "matching M" "matching M'" "Vs M \<inter> Vs M' = {}"
   shows   "matching (M \<union> M')" 
 proof(rule matchingI, goal_cases)
@@ -33,7 +33,7 @@ proof(rule matchingI, goal_cases)
     using 1 by fast
 qed
 
-lemma matching_union:
+lemma matching_overlapping_union:
   assumes "matching M" "matching M'" "Vs M \<inter> Vs M' = Vs (M \<inter> M')"
   shows   "matching (M \<union> M')" 
 proof(rule matchingI, goal_cases)
@@ -1615,11 +1615,11 @@ proof
     using exten_matching_in_extended_G assms by blast
   show "matching (extend_matching G M)"
     unfolding extend_matching_def
-  proof(rule matching_disjoint_union, goal_cases)
+  proof(rule matching_vertex_disj_union, goal_cases)
     case 1
     then show ?case 
       using assms
-      by(auto intro!: matching_disjoint_union matching_image 
+      by(auto intro!: matching_vertex_disj_union matching_image 
             simp add: fst_cpy_inj_on snd_cpy_inj_on Vs_of_fst_cpy Vs_of_snd_cpy)  
   next
     case 2
