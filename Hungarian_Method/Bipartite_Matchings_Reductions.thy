@@ -2,11 +2,90 @@ theory Bipartite_Matchings_Reductions
   imports Primal_Dual_Bipartite_Matching.Matching_LP  Hungarian_Method_Top_Loop
 begin
 
+lemma sum_inner_function_to_image:
+  "inj_on g X \<Longrightarrow> sum (\<lambda> x. f (g x)) X = sum f (g ` X)"
+  by (simp add: sum.reindex_cong)
+
 lemma max_card_matchingE:
   "max_card_matching G M \<Longrightarrow>
  (\<lbrakk> M \<subseteq> G; matching M; \<And> M'. \<lbrakk>M' \<subseteq> G; matching M'\<rbrakk> \<Longrightarrow> card M' \<le> card M\<rbrakk> \<Longrightarrow> P)
 \<Longrightarrow> P"
   by(auto simp add: max_card_matching_def)
+
+  (*TODO MOVE*)
+
+lemma matchingI:
+  "(\<And>e1 e2. \<lbrakk>e1 \<in> M; e2 \<in> M; e1 \<noteq> e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}) \<Longrightarrow> matching M"
+  by (auto simp: matching_def)
+
+lemma matching_disjoint_union:
+  assumes "matching M" "matching M'" "Vs M \<inter> Vs M' = {}"
+  shows   "matching (M \<union> M')" 
+proof(rule matchingI, goal_cases)
+  case (1 e1 e2)
+  have "\<lbrakk>e1 \<in> M; e2 \<in> M'\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}" for e1 e2
+    using assms(3) by auto
+  moreover have "\<lbrakk>e1 \<in> M; e2 \<in> M; e1\<noteq>e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}" for e1 e2
+    using assms(1) by (auto elim!: matchingE) 
+  moreover have "\<lbrakk>e1 \<in> M'; e2 \<in> M'; e1\<noteq>e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}" for e1 e2
+    using assms(2) by (auto elim!: matchingE) 
+  ultimately show ?case 
+    using 1 by fast
+qed
+
+lemma matching_union:
+  assumes "matching M" "matching M'" "Vs M \<inter> Vs M' = Vs (M \<inter> M')"
+  shows   "matching (M \<union> M')" 
+proof(rule matchingI, goal_cases)
+  case (1 e1 e2)
+  have "\<lbrakk>e1 \<in> M; e2 \<in> M'; e1 \<notin> M'\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}" for e1 e2
+  proof(rule ccontr, goal_cases)
+    case 1
+    then obtain x where x: "x \<in> e1" "x \<in> e2" by auto
+    hence "x \<in>  Vs (M \<inter> M')"
+      using 1 assms by blast
+    then obtain e3 where "e3 \<in> M \<inter> M'" "x \<in> e3" 
+      by(auto elim!: vs_member_elim)
+    hence "e3 = e1" "e3 = e2"
+      using  x 1  matching_unique_match[OF assms(1), of x e1 e3]
+             matching_unique_match[OF assms(2), of x e2 e3] by blast+
+    thus ?case
+      using 1 by auto
+  qed
+  moreover have "\<lbrakk>e1 \<in> M; e2 \<in> M; e1\<noteq>e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}" for e1 e2
+    using assms(1) by (auto elim!: matchingE) 
+  moreover have "\<lbrakk>e1 \<in> M'; e2 \<in> M'; e1\<noteq>e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}" for e1 e2
+    using assms(2) by (auto elim!: matchingE) 
+  ultimately show ?case 
+    using 1 by fast
+qed
+
+lemma matching_image:
+  assumes "matching M" "inj_on f (Vs M)"
+  shows   "matching ((image f) ` M)"
+proof(rule matchingI, rule ccontr, goal_cases)
+  case (1 e1 e2)
+  obtain e1' where e1': "e1 = f ` e1'" "e1' \<in> M" 
+    using 1 by auto
+  obtain e2' where e2': "e2 = f ` e2'" "e2' \<in> M" 
+    using 1 by auto
+  have e1'_not_e2':"e1' \<noteq> e2'"
+    using "1"(3) e1'(1) e2'(1) by blast
+  hence e1'_inter_e2'_empty:"e1' \<inter> e2' = {}"
+    using assms(1) e1'(2) e2'(2)
+    by(auto elim: matchingE)
+  obtain x where x: "x \<in> e1 \<inter> e2"
+    using 1 by auto
+  obtain x1 where x1: "x1 \<in> e1'" "f x1 = x"
+    using e1'(1) x by auto
+  obtain x2 where x2: "x2 \<in> e2'" "f x2 = x"
+    using e2'(1) x by auto
+  have "x1 = x2" 
+    using  e1'(2) e2'(2) inj_on_contraD[OF assms(2)] x1(1,2) x2(1,2) 
+    by force
+  then show ?case
+    using e1'_inter_e2'_empty x1(1) x2(1) by blast
+qed
 
 section \<open>Variants of Weighted Matching\<close>
 
@@ -60,7 +139,7 @@ lemma max_weight_perfect_matchingI:
   "max_weight_perfect_matching E w M \<Longrightarrow> perfect_matching E M' \<Longrightarrow> sum w M' \<le> sum w M"
   by(auto simp add: max_weight_perfect_matching_def)
 
-lemma max_weight_matching_only_negs:
+lemma max_weight_matching_only_pos:
   "\<lbrakk>max_weight_matching G w M; finite M;e \<in> M\<rbrakk> \<Longrightarrow> w e \<ge> 0"
 proof(rule ccontr, goal_cases)
   case 1
@@ -597,12 +676,12 @@ lemma weight_diff_of_matchings_less_than_2_penalties:
     weight_of_matching_abs_less[OF assms(1,3), of w]
   by auto
 
-definition "min_costs_to_min_perfect_costs G (w::'a set \<Rightarrow> real) =
+definition "bp_min_costs_to_min_perfect_costs G (w::'a set \<Rightarrow> real) =
             (\<lambda> e. if \<exists> i. new_vertex i \<in> e then 0
                   else if (the_vertex ` e) \<notin> G then 0
                   else min 0 (w (the_vertex ` e)))"
 
-definition "min_max_card_costs_to_min_perfect_costs G (w::'a set \<Rightarrow> real) =
+definition "bp_min_max_card_costs_to_min_perfect_costs G (w::'a set \<Rightarrow> real) =
             (\<lambda> e. if \<exists> i. new_vertex i \<in> e then 2*penalty G w
                   else if (the_vertex ` e) \<notin> G then 2*penalty G w
                   else w (the_vertex ` e))"
@@ -642,19 +721,14 @@ lemma no_new_vertex_new_vertex_old_vertex_image_inverse:
   "the_vertex ` old_vertex ` e = e"
   by (auto intro!: image_eqI)
 
-lemma "min_costs_to_min_perfect_costs G w e < 0 
+lemma "bp_min_costs_to_min_perfect_costs G w e < 0 
         \<Longrightarrow> \<exists> e'. e = old_vertex ` e' \<and> w e' < 0 \<and> e' \<in> G"
-  by(auto simp add: min_costs_to_min_perfect_costs_def if_split[of "\<lambda> x. 0 > x"]
+  by(auto simp add: bp_min_costs_to_min_perfect_costs_def if_split[of "\<lambda> x. 0 > x"]
       no_new_vertex_old_vertex_new_vertex_image_inverse[of e] 
       intro!: exI[of _ "the_vertex ` e"] | 
       subst no_new_vertex_old_vertex_new_vertex_inverse)+
 
 definition "min_w_perfect_to_max_w_matching M w = {e | e. e \<in> M \<and> w e > 0}"
-  (*TODO MOVE*)
-
-lemma matchingI:
-  "(\<And>e1 e2. \<lbrakk>e1 \<in> M; e2 \<in> M; e1 \<noteq> e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}) \<Longrightarrow> matching M"
-  by (auto simp: matching_def)
 
 lemma max_weight_matching_unused_edges:
   assumes "max_weight_matching G w M" "e \<in> G" 
@@ -801,7 +875,7 @@ lemma finite_G: "finite G"
 abbreviation "G' \<equiv> bp_perfected_G G L R"
 abbreviation "L' \<equiv> bp_perfected_L L R"
 abbreviation "R' \<equiv> bp_perfected_R L R"
-abbreviation "w' \<equiv> min_costs_to_min_perfect_costs G w"
+abbreviation "w' \<equiv> bp_min_costs_to_min_perfect_costs G w"
 
 lemma old_vertex_of_G_in_G': "(image old_vertex) ` G \<subseteq> G'"
   using bipartite_G
@@ -817,27 +891,27 @@ proof-
     by (subst comm_monoid_add_class.sum.union_disjoint[symmetric]) 
       (auto intro!: arg_cong[of  _ _ "sum w'"])
   also have "... = sum w' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e)}"
-    by (auto simp add: min_costs_to_min_perfect_costs_def)
+    by (auto simp add: bp_min_costs_to_min_perfect_costs_def)
   also have "... = sum w' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> w' e < 0} +
                    sum w' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> w' e \<ge> 0}"
     using assms(1)
     by (subst comm_monoid_add_class.sum.union_disjoint[symmetric]) 
       (auto intro!: arg_cong[of  _ _ "sum w'"])
   also have "... =  sum w' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> w' e < 0}"
-    by(auto simp add: min_costs_to_min_perfect_costs_def
+    by(auto simp add: bp_min_costs_to_min_perfect_costs_def
         intro!: comm_monoid_add_class.sum.neutral)
   also have "... = sum w (project_to_old E \<inter> {e | e. w e < 0} \<inter> G)"
   proof-
     have pto_is:"project_to_old E \<inter> {e | e. w e < 0} \<inter> G = 
           (image the_vertex) ` {e |e. e \<in> E \<and> (\<nexists>i. new_vertex i \<in> e) \<and> local.w' e < 0}"
-      by (auto simp add: project_to_old_def min_costs_to_min_perfect_costs_def)
+      by (auto simp add: project_to_old_def bp_min_costs_to_min_perfect_costs_def)
     have inj: "inj_on ((`) the_vertex) {e |e. e \<in> E \<and> (\<nexists>i. new_vertex i \<in> e) \<and> local.w' e < 0}"
       by(auto simp add: inj_on_def  the_vertex_image_inj)
     show ?thesis
       apply(subst pto_is)
       apply(subst comm_monoid_add_class.sum.reindex[OF inj])
       by (auto intro: comm_monoid_add_class.sum.cong 
-          simp add: min_costs_to_min_perfect_costs_def)
+          simp add: bp_min_costs_to_min_perfect_costs_def)
   qed
   finally show ?thesis
     by simp
@@ -846,7 +920,7 @@ qed
 lemma project_to_old_of_negs_two_ways:
   "project_to_old (E \<inter> {e | e. w' e < 0}) \<inter> G =
        project_to_old E \<inter> {e | e. w e < 0} \<inter> G"
-  by(auto simp add:  project_to_old_def min_costs_to_min_perfect_costs_def)
+  by(auto simp add:  project_to_old_def bp_min_costs_to_min_perfect_costs_def)
 
 lemma finite_G':"finite G'"
   by(auto intro!: finite_G_finite_completion
@@ -889,7 +963,7 @@ proof-
       by auto
     hence e_props:"e \<in> G" "old_vertex ` e \<in> M'" "w' (old_vertex ` e) < 0" "w e < 0"
       using e
-      by(auto simp add: project_to_old_def min_costs_to_min_perfect_costs_def
+      by(auto simp add: project_to_old_def bp_min_costs_to_min_perfect_costs_def
           if_split[of "\<lambda> x. x < 0"] no_new_vertex_old_vertex_new_vertex_image_inverse)
     moreover have "matching (insert e M)"
       apply(subst matching_on_old_vertices)
@@ -915,10 +989,10 @@ proof-
       using "1"(1) M_props(1) by blast
     ultimately have "w' (old_vertex ` e) \<ge> 0"
       using 1(2)
-      by(auto simp add: project_to_old_def min_costs_to_min_perfect_costs_def
+      by(auto simp add: project_to_old_def bp_min_costs_to_min_perfect_costs_def
           if_split[of "\<lambda> x. x < 0"]) force
     hence "w e \<ge> 0" 
-      by (simp add: e_in_G image_iff min_costs_to_min_perfect_costs_def
+      by (simp add: e_in_G image_iff bp_min_costs_to_min_perfect_costs_def
           no_new_vertex_new_vertex_old_vertex_image_inverse)
     thus ?case
       using "1"(1) assms finite_M min_weight_matching_only_negs by fastforce
@@ -992,7 +1066,7 @@ proof-
   qed
 qed
 
-abbreviation "w'' \<equiv> min_max_card_costs_to_min_perfect_costs G w"
+abbreviation "w'' \<equiv> bp_min_max_card_costs_to_min_perfect_costs G w"
 
 lemma not_in_imageE:
   "y \<notin> f ` X \<Longrightarrow> ((\<And> x. x \<in> X \<Longrightarrow> y = f x \<Longrightarrow> False) \<Longrightarrow> P) \<Longrightarrow> P"
@@ -1018,7 +1092,7 @@ proof-
       (auto intro!: arg_cong[of  _ _ "sum w''"])
   moreover have "... = sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e)} +
                   card {e | e i. e \<in> E \<and> new_vertex i \<in> e} * pnty"
-    by (auto simp add: min_max_card_costs_to_min_perfect_costs_def pnty_def)
+    by (auto simp add: bp_min_max_card_costs_to_min_perfect_costs_def pnty_def)
   moreover have "... = sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<in> G} +
                    sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<notin> G} +
                   card {e | e i. e \<in> E \<and> new_vertex i \<in> e} * pnty"
@@ -1030,14 +1104,14 @@ proof-
   proof-
     have pto_is:"project_to_old E  \<inter> G = 
           (image the_vertex) ` {e |e. e \<in> E \<and> (\<nexists>i. new_vertex i \<in> e) \<and> the_vertex ` e \<in> G}"
-      by (auto simp add: project_to_old_def min_costs_to_min_perfect_costs_def)
+      by (auto simp add: project_to_old_def bp_min_costs_to_min_perfect_costs_def)
     have inj: "inj_on ((`) the_vertex) {e |e. e \<in> E \<and> (\<nexists>i. new_vertex i \<in> e) \<and> the_vertex ` e \<in> G}"
       by(auto simp add: inj_on_def  the_vertex_image_inj)
     show ?thesis
       apply(subst pto_is)
       apply(subst comm_monoid_add_class.sum.reindex[OF inj])
       by (auto intro: comm_monoid_add_class.sum.cong 
-          simp add: min_max_card_costs_to_min_perfect_costs_def)
+          simp add: bp_min_max_card_costs_to_min_perfect_costs_def)
   qed
   moreover have "sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<notin> G} +
                   card {e | e i. e \<in> E \<and> new_vertex i \<in> e} * pnty = 
@@ -1046,7 +1120,7 @@ proof-
     have "sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<notin> G} =
           card {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<notin> G} * pnty"
       by(auto intro!: same_sum_card_prod
-          simp add: penalty_def min_max_card_costs_to_min_perfect_costs_def pnty_def)
+          simp add: penalty_def bp_min_max_card_costs_to_min_perfect_costs_def pnty_def)
     moreover have "card {e | e i. e \<in> E \<and> new_vertex i \<in> e} +
             card {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<notin> G}
            = real (card E) - card (project_to_old E \<inter> G)"
@@ -1149,7 +1223,7 @@ proof-
       by auto
     hence e_props:"e \<in> G" "old_vertex ` e \<in> M'" 
       using e
-      by(auto simp add: project_to_old_def min_costs_to_min_perfect_costs_def
+      by(auto simp add: project_to_old_def bp_min_costs_to_min_perfect_costs_def
           if_split[of "\<lambda> x. x < 0"] no_new_vertex_old_vertex_new_vertex_image_inverse)
     moreover have "matching (insert e M)"
       apply(subst matching_on_old_vertices)
@@ -1281,5 +1355,492 @@ proof-
     by auto
 qed
 end
+
+hide_const G' L' R'
+
+subsubsection \<open>Maximum Weight (Maximum Cardinality) 
+                    to Minimum Weight Perfect (Potentially Non-Bipartite)\<close>
+
+text \<open>Defining the two graphs and some properties\<close>
+
+datatype 'v vertex_wrapper = is_fst: fst_cpy (the_vertex: 'v) | is_snd: snd_cpy (the_vertex: 'v)
+
+lemma fst_cpy_inj_on: "inj_on fst_cpy X"
+and snd_cpy_inj_on: "inj_on snd_cpy X"
+and img_fst_cpy_inj_on: "inj_on (image fst_cpy) Y"
+and img_snd_cpy_inj_on: "inj_on (image snd_cpy) Y"
+  by(auto simp add: inj_on_def)
+
+definition "two_cpys_ptwise_connected G = 
+   ((image fst_cpy) ` G \<union> (image snd_cpy) ` G)
+   \<union> {{fst_cpy v, snd_cpy v} | v. v \<in> Vs G}"
+
+lemma in_two_cpys_ptwise_connectedE:
+"e \<in> two_cpys_ptwise_connected G \<Longrightarrow>
+ (\<And> e'. \<lbrakk>e = fst_cpy ` e'; e' \<in> G\<rbrakk> \<Longrightarrow> P) \<Longrightarrow>
+ (\<And> e'. \<lbrakk>e = snd_cpy ` e'; e' \<in> G\<rbrakk> \<Longrightarrow> P) \<Longrightarrow>
+ (\<And> v. \<lbrakk>e = {fst_cpy v, snd_cpy v}; v \<in> Vs G\<rbrakk> \<Longrightarrow> P) \<Longrightarrow>
+P"
+  by(auto simp add: two_cpys_ptwise_connected_def)
+
+definition "is_fst_cpy e = (\<forall> v \<in> e. is_fst v)"
+definition "is_snd_cpy e = (\<forall> v \<in> e. is_snd v)"
+definition "crossing e = ((\<exists> v \<in> e. is_fst v)\<and> (\<exists> v \<in> e. is_snd v))"
+
+lemma not_crossing_fst_cpy: "\<not> crossing (fst_cpy ` e)" "crossing (fst_cpy ` e) \<Longrightarrow> False"
+and not_crossing_snd_cpy: "\<not> crossing (snd_cpy ` e)" "crossing (snd_cpy ` e) \<Longrightarrow> False"
+  by(auto simp add: crossing_def )
+
+lemma crossing_both_copies: "\<lbrakk>fst_cpy v \<in> e; snd_cpy v' \<in> e\<rbrakk> \<Longrightarrow> crossing e"
+  by(force simp add: crossing_def intro: exI[of _ v]  exI[of _ v'])
+
+lemma is_fst_cpy_def': "is_fst_cpy e \<longleftrightarrow> (\<exists> e'. e = fst_cpy ` e')"
+  by(auto simp add: is_fst_cpy_def image_iff intro!: exI[of _ "the_vertex ` e"])
+
+lemma is_snd_cpy_def': "is_snd_cpy e \<longleftrightarrow> (\<exists> e'. e = snd_cpy ` e')"
+  by(auto simp add: is_snd_cpy_def image_iff intro!: exI[of _ "the_vertex ` e"])
+
+lemma e_cpy_ptwise_connected_cases:
+ "\<lbrakk>is_fst_cpy e \<Longrightarrow> P; is_snd_cpy e \<Longrightarrow> P; crossing e \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  using vertex_wrapper.exhaust_disc
+  by(auto simp add: is_fst_cpy_def is_snd_cpy_def crossing_def)
+
+lemma crossing_and_fst_or_snd_cpy_exclusive:
+  "\<lbrakk>is_fst_cpy e; crossing e\<rbrakk> \<Longrightarrow> False"
+  "\<lbrakk>is_snd_cpy e; crossing e\<rbrakk> \<Longrightarrow> False"
+  by (auto simp add: crossing_def is_fst_cpy_def is_snd_cpy_def vertex_wrapper.distinct_disc(1))
+
+lemma fst_cpy_of_e_never_snd_cpy_of_e':
+"e \<noteq> {} \<or> e' \<noteq> {} \<Longrightarrow> fst_cpy ` e \<noteq> snd_cpy ` e'"
+  by blast
+
+lemma fst_and_snd_same_empty: 
+"fst_cpy ` e = snd_cpy ` e' \<Longrightarrow> e = {}"
+"fst_cpy ` e = snd_cpy ` e' \<Longrightarrow> e = e'"
+  by blast+
+
+lemma the_vertex_of_fst_cpy: "the_vertex ` fst_cpy ` e = e"
+  by force
+
+lemma the_vertex_of_snd_cpy: "the_vertex ` snd_cpy ` e = e"
+  by force
+
+lemma Vs_of_fst_cpy: "Vs ((`) fst_cpy ` G) = fst_cpy ` (Vs G)"
+and Vs_of_snd_cpy: "Vs ((`) snd_cpy ` G) = snd_cpy ` (Vs G)"
+  by(auto simp add: Vs_def)
+
+lemma Vs_of_mixed_edges:
+ "Vs {{fst_cpy v, snd_cpy v} |v. P v}  = fst_cpy ` (Collect P) \<union> snd_cpy ` (Collect P)"
+  by(auto simp add: Vs_def)
+
+definition "get_fst_only G = { the_vertex ` e | e. e \<in> G \<and> is_fst_cpy e}"
+
+lemma get_fst_only_finite: "finite G \<Longrightarrow> finite (get_fst_only G)"
+  by(auto simp add: get_fst_only_def)
+
+lemma get_fst_only_contains_empty: "{} \<in> get_fst_only G \<longleftrightarrow> {} \<in> G"
+  by(auto simp add: get_fst_only_def is_fst_cpy_def')
+
+definition "get_snd_only G = { the_vertex ` e | e. e \<in> G \<and> is_snd_cpy e}"
+
+lemma get_snd_only_finite: "finite G \<Longrightarrow> finite (get_snd_only G)"
+  by(auto simp add: get_snd_only_def)
+
+lemma get_snd_only_contains_empty: "{} \<in> get_snd_only G \<longleftrightarrow> {} \<in> G"
+  by(auto simp add: get_snd_only_def is_snd_cpy_def')
+
+definition "extend_matching G M = 
+   ((image fst_cpy) ` M \<union> (image snd_cpy) ` M 
+    \<union> {{fst_cpy v, snd_cpy v} | v. v \<in> Vs G - Vs M})"
+
+lemma exten_matching_in_extended_G:
+"M \<subseteq> G \<Longrightarrow> extend_matching G M \<subseteq> two_cpys_ptwise_connected G"
+  by(auto simp add: extend_matching_def two_cpys_ptwise_connected_def)
+
+lemma get_fst_only_of_extend_matching:
+  "get_fst_only (extend_matching G M) =  M"
+ by(auto simp add: extend_matching_def get_fst_only_def
+                   the_vertex_of_fst_cpy the_vertex_of_snd_cpy is_fst_cpy_def'
+           intro!: exI[of "\<lambda> x. _ = the_vertex ` x \<and> _ x" "fst_cpy ` _", OF
+                   conjI[OF the_vertex_of_fst_cpy[symmetric]]])
+
+lemma get_snd_only_of_extend_matching:
+  "get_snd_only (extend_matching G M) =  M"
+ by(auto simp add: extend_matching_def get_snd_only_def
+                   the_vertex_of_fst_cpy the_vertex_of_snd_cpy is_snd_cpy_def'
+           intro!: exI[of "\<lambda> x. _ = the_vertex ` x \<and> _ x" "snd_cpy ` _", OF
+                   conjI[OF the_vertex_of_snd_cpy[symmetric]]])
+
+lemma finite_extend_matching:
+"\<lbrakk>finite (Vs G); finite M\<rbrakk> \<Longrightarrow> finite (extend_matching G M)"
+  by(auto simp add: extend_matching_def)
+
+lemma empty_not_in_extend_matching:
+ "{} \<notin> M \<Longrightarrow> {} \<notin> (extend_matching G M)"
+  by(auto simp add: extend_matching_def)
+
+lemma the_vertex_of_Vs_ptwsie_connected_is_Vs:
+ "the_vertex ` (Vs (two_cpys_ptwise_connected G)) = Vs G"
+  by(auto simp add: two_cpys_ptwise_connected_def vs_union Vs_of_fst_cpy
+                     Vs_of_snd_cpy Vs_of_mixed_edges image_Un the_vertex_of_fst_cpy)
+
+
+lemma extend_matching_full_Vs:
+  assumes "M \<subseteq> G" 
+  shows "Vs (extend_matching G M) = Vs (two_cpys_ptwise_connected G)"
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 x)
+  then obtain e where ex: "e \<in> extend_matching G M" "x \<in> e" 
+    by (meson vs_member)
+  hence "e \<in> two_cpys_ptwise_connected G" 
+    using assms exten_matching_in_extended_G by blast
+  then show ?case 
+    using ex by blast
+next
+  case (2 x)
+  hence the_vertex_x_in_G:"the_vertex x \<in> Vs G"
+    using the_vertex_of_Vs_ptwsie_connected_is_Vs[of G] by blast 
+  show ?case 
+  proof(cases "the_vertex x \<in> Vs M")
+    case True
+    then obtain e where e: "e \<in> M" "the_vertex x \<in> e" 
+      by (meson vs_member)
+    hence "fst_cpy ` e \<in> extend_matching G M"  "snd_cpy ` e \<in> extend_matching G M"
+      by(auto simp add: extend_matching_def)
+    moreover have "x \<in> fst_cpy`  e \<or> x \<in> snd_cpy`  e"
+      using e by(cases x) auto
+    ultimately show ?thesis 
+      using e by auto
+  next
+    case False
+    hence a: "{fst_cpy (the_vertex x), snd_cpy (the_vertex x)} 
+      \<in> {{fst_cpy v, snd_cpy v} | v. v \<in> Vs G - Vs M}"
+      using the_vertex_x_in_G by auto
+    have "x \<in> Vs {{fst_cpy v, snd_cpy v} | v. v \<in> Vs G - Vs M}"
+      using a by(cases x) auto
+    thus ?thesis
+      by(unfold extend_matching_def vs_union) blast
+  qed
+qed
+
+text \<open>Matchings in those Graphs.\<close>
+
+lemma get_fst_only_of_two_cpys_ptwise_connected_subset:
+  assumes "G' \<subseteq> two_cpys_ptwise_connected G"
+  shows "get_fst_only G' \<subseteq> G"
+proof(rule, goal_cases)
+  case (1 e)
+  then obtain e' where "e = the_vertex ` e'" "e' \<in> G'" "is_fst_cpy e'"
+    by(auto simp add: get_fst_only_def)
+  moreover hence "e' \<in> two_cpys_ptwise_connected G"
+    using assms by auto
+  ultimately show ?case
+    by(auto simp add: two_cpys_ptwise_connected_def is_fst_cpy_def' is_snd_cpy_def'
+                      the_vertex_of_fst_cpy the_vertex_of_snd_cpy)
+qed
+
+lemma get_fst_only_of_matching:
+  assumes "matching M"
+  shows "matching (get_fst_only M)"
+proof(rule matchingI, rule ccontr, goal_cases)
+  case (1 e1 e2)
+    then obtain e1' where e1: "e1 = the_vertex ` e1'" "e1' \<in> M" "is_fst_cpy e1'"
+      by(auto simp add: get_fst_only_def)
+    from 1 obtain e2' where e2: "e2 = the_vertex ` e2'" "e2' \<in> M" "is_fst_cpy e2'"
+      by(auto simp add: get_fst_only_def)
+    have "e1' \<inter> e2' \<noteq> {}"
+      using 1(4) e1(3) e2(3) 
+      by (auto simp add: e1(1) e2(1) is_fst_cpy_def') 
+    moreover have "e1' \<noteq> e2'"
+      using 1(3) e1(1,3) e2(1,3) 
+      by(force simp add: is_fst_cpy_def')
+    ultimately show ?case 
+      using assms e1(2) e2(2)
+      by(auto elim!: matchingE)
+  qed
+
+lemma get_fst_only_of_graph_matching:
+  assumes "graph_matching (two_cpys_ptwise_connected G) M"
+  shows "graph_matching G (get_fst_only M)"
+  using get_fst_only_of_two_cpys_ptwise_connected_subset[of M G]
+        get_fst_only_of_matching[of M] assms
+  by auto
+
+lemma get_snd_only_of_two_cpys_ptwise_connected_subset:
+  assumes "G' \<subseteq> two_cpys_ptwise_connected G"
+  shows "get_snd_only G' \<subseteq> G"
+proof(rule, goal_cases)
+  case (1 e)
+  then obtain e' where "e = the_vertex ` e'" "e' \<in> G'" "is_snd_cpy e'"
+    by(auto simp add: get_snd_only_def)
+  moreover hence "e' \<in> two_cpys_ptwise_connected G"
+    using assms by auto
+  ultimately show ?case
+    by(auto simp add: two_cpys_ptwise_connected_def is_fst_cpy_def' is_snd_cpy_def'
+                      the_vertex_of_fst_cpy the_vertex_of_snd_cpy)
+qed
+
+lemma get_snd_only_of_matching:
+  assumes "matching M"
+  shows "matching (get_snd_only M)"
+proof(rule matchingI, rule ccontr, goal_cases)
+  case (1 e1 e2)
+    then obtain e1' where e1: "e1 = the_vertex ` e1'" "e1' \<in> M" "is_snd_cpy e1'"
+      by(auto simp add: get_snd_only_def)
+    from 1 obtain e2' where e2: "e2 = the_vertex ` e2'" "e2' \<in> M" "is_snd_cpy e2'"
+      by(auto simp add: get_snd_only_def)
+    have "e1' \<inter> e2' \<noteq> {}"
+      using 1(4) e1(3) e2(3) 
+      by (auto simp add: e1(1) e2(1) is_snd_cpy_def') 
+    moreover have "e1' \<noteq> e2'"
+      using 1(3) e1(1,3) e2(1,3) 
+      by(force simp add: is_snd_cpy_def')
+    ultimately show ?case 
+      using assms e1(2) e2(2)
+      by(auto elim!: matchingE)
+  qed
+
+lemma get_snd_only_of_graph_matching:
+  assumes "graph_matching (two_cpys_ptwise_connected G) M"
+  shows "graph_matching G (get_snd_only M)"
+  using get_snd_only_of_two_cpys_ptwise_connected_subset[of M G]
+        get_snd_only_of_matching[of M] assms
+  by auto
+
+lemma graph_matching_extend_matching:
+  assumes "graph_matching G M"
+  shows   "graph_matching (two_cpys_ptwise_connected G) (extend_matching G M)"
+proof
+  show "extend_matching G M \<subseteq> two_cpys_ptwise_connected G"
+    using exten_matching_in_extended_G assms by blast
+  show "matching (extend_matching G M)"
+    unfolding extend_matching_def
+  proof(rule matching_disjoint_union, goal_cases)
+    case 1
+    then show ?case 
+      using assms
+      by(auto intro!: matching_disjoint_union matching_image 
+            simp add: fst_cpy_inj_on snd_cpy_inj_on Vs_of_fst_cpy Vs_of_snd_cpy)  
+  next
+    case 2
+    then show ?case 
+      by(auto intro!: matchingI)
+  next
+    case 3
+    then show ?case 
+      by(auto simp add: Vs_of_fst_cpy Vs_of_snd_cpy vs_union Vs_of_mixed_edges)
+  qed
+qed
+
+text \<open>now add weights, too.\<close>
+
+definition "min_costs_to_min_perfect_costs G (w::'a set \<Rightarrow> real) =
+            (\<lambda> e. if crossing e then 0
+                  else w (the_vertex ` e))"
+
+abbreviation "mpc \<equiv> min_costs_to_min_perfect_costs"
+
+lemma weight_big_matching_split:
+  assumes "finite M" "{} \<notin> M"
+  shows  "sum (mpc G w) M = sum w (get_fst_only M) + sum w (get_snd_only M)"
+proof-
+  have "sum (mpc G w) {e | e. e\<in> M \<and> is_fst_cpy e } = sum w (get_fst_only M)"
+    unfolding min_costs_to_min_perfect_costs_def
+  proof(subst comm_monoid_add_class.sum.cong[OF refl if_not_P], goal_cases)
+    case 2
+    show ?case
+     apply(subst sum_inner_function_to_image[of "image the_vertex" ])
+      by(auto intro!: arg_cong[of _ _ "sum w"] 
+          simp add: get_fst_only_def inj_on_def is_fst_cpy_def' the_vertex_of_fst_cpy)
+  qed(auto intro: crossing_and_fst_or_snd_cpy_exclusive)
+  moreover have "sum (mpc G w) {e | e. e\<in> M \<and> is_snd_cpy e } = sum w (get_snd_only M)"
+    unfolding min_costs_to_min_perfect_costs_def
+  proof(subst comm_monoid_add_class.sum.cong[OF refl if_not_P], goal_cases)
+    case 2
+    show ?case
+     apply(subst sum_inner_function_to_image[of "image the_vertex" ])
+      by(auto intro!: arg_cong[of _ _ "sum w"] 
+          simp add: get_snd_only_def inj_on_def is_snd_cpy_def' the_vertex_of_snd_cpy)
+  qed(auto intro: crossing_and_fst_or_snd_cpy_exclusive)
+  moreover have "sum (mpc G w) {e | e. e\<in> M \<and> crossing e } = 0"
+    by(auto simp add: min_costs_to_min_perfect_costs_def)
+  moreover have "sum (mpc G w) M = 
+      sum (mpc G w) {e |e. e \<in> M \<and> is_fst_cpy e} +
+      sum (mpc G w) {e |e. e \<in> M \<and> is_snd_cpy e}+
+      sum (mpc G w) {e |e. e \<in> M \<and> crossing e}"
+  proof(subst comm_monoid_add_class.sum.union_disjoint[symmetric], goal_cases)
+    case 3
+    show ?case
+      using assms 
+      by(auto simp add: is_fst_cpy_def' is_snd_cpy_def' dest: fst_and_snd_same_empty(1))
+  next
+    case 4
+    show ?case
+    proof(subst comm_monoid_add_class.sum.union_disjoint[symmetric], goal_cases)
+      case 4
+      show ?case 
+        by(auto intro!: arg_cong[of _ _ "sum (min_costs_to_min_perfect_costs G w)"]
+                 intro: e_cpy_ptwise_connected_cases)
+    qed (insert assms, auto  dest!: crossing_and_fst_or_snd_cpy_exclusive)
+  qed (insert assms, auto)
+  ultimately show ?thesis 
+    by simp
+qed
+
+lemma weight_of_extend_matching:
+  assumes "finite M" "finite (Vs G)" "{} \<notin> M"
+  shows  "sum (mpc G w) (extend_matching G M)  = 2* sum w M"
+  using assms
+  by(auto simp add: weight_big_matching_split[of "extend_matching G M"] 
+                    finite_extend_matching empty_not_in_extend_matching
+                    get_fst_only_of_extend_matching get_snd_only_of_extend_matching)
+
+
+lemma perfect_matching_extend_matching:
+  assumes "graph_matching G M"
+  shows   "perfect_matching (two_cpys_ptwise_connected G) (extend_matching G M)"
+  using assms
+  by (intro perfect_matchingI)
+     (auto simp add: exten_matching_in_extended_G
+                     graph_matching_extend_matching extend_matching_full_Vs)
+
+text \<open>We show that for a minimum weight perfect matching in the old graph,
+      the submatchings in the two copies of the old graph must have the same weight.
+      We prove this by excluding one weight being strictly greater than the other by contradiction.
+      There are two symmetric lemmas before the main statement.\<close>
+
+lemma mwpm_in_two_cpys_ptwise_connected_fst_geq_snd:
+  assumes "min_weight_perfect_matching (two_cpys_ptwise_connected G) (mpc G w) M"
+           "sum w (get_fst_only M) < sum w (get_snd_only M)"
+          "finite (Vs M)" "{} \<notin> M" "finite (Vs G)"
+     shows False
+proof-
+  have finite_M: "finite M" 
+    by (simp add: assms(3) finite_Vs_then_finite)
+  have matching_fst_only: "graph_matching G (get_fst_only M)"
+    using assms(1)
+    by(intro get_fst_only_of_graph_matching)
+      (auto elim!: min_weight_perfect_matchingE dest: perfect_matchingD)
+  have "sum (mpc G w) M =  sum w (get_fst_only M) + sum w (get_snd_only M)"
+    by(rule weight_big_matching_split[OF finite_M assms(4)])
+  moreover have "sum w (get_fst_only M) + sum w (get_snd_only M) > 2*sum w (get_fst_only M)"
+    using assms(2) by simp
+  moreover have "2*sum w (get_fst_only M) = sum (mpc G w) (extend_matching G (get_fst_only M))"
+    by(auto intro!: weight_of_extend_matching[symmetric]
+          simp add: finite_M get_fst_only_finite assms(5,4) get_fst_only_contains_empty)
+  moreover have "perfect_matching (two_cpys_ptwise_connected G)
+                       (extend_matching G (get_fst_only M))"
+    using matching_fst_only
+    by(rule perfect_matching_extend_matching)
+  ultimately show False
+    using assms(1)
+    by(auto simp add: min_weight_perfect_matching_def)
+qed
+
+lemma mwpm_in_two_cpys_ptwise_connected_fst_leq_snd:
+  assumes "min_weight_perfect_matching (two_cpys_ptwise_connected G) (mpc G w) M"
+           "sum w (get_fst_only M) > sum w (get_snd_only M)"
+          "finite (Vs M)" "{} \<notin> M" "finite (Vs G)"
+     shows False
+proof-
+  have finite_M: "finite M" 
+    by (simp add: assms(3) finite_Vs_then_finite)
+  have matching_snd_only: "graph_matching G (get_snd_only M)"
+    using assms(1)
+    by(intro get_snd_only_of_graph_matching)
+      (auto elim!: min_weight_perfect_matchingE dest: perfect_matchingD)
+  have "sum (mpc G w) M =  sum w (get_fst_only M) + sum w (get_snd_only M)"
+    by(rule weight_big_matching_split[OF finite_M assms(4)])
+  moreover have "sum w (get_fst_only M) + sum w (get_snd_only M) > 2*sum w (get_snd_only M)"
+    using assms(2) by simp
+  moreover have "2*sum w (get_snd_only M) = sum (mpc G w) (extend_matching G (get_snd_only M))"
+    by(auto intro!: weight_of_extend_matching[symmetric]
+          simp add: finite_M get_snd_only_finite assms(5,4) get_snd_only_contains_empty)
+  moreover have "perfect_matching (two_cpys_ptwise_connected G)
+                       (extend_matching G (get_snd_only M))"
+    using matching_snd_only
+    by(rule perfect_matching_extend_matching)
+  ultimately show False
+    using assms(1)
+    by(auto simp add: min_weight_perfect_matching_def)
+qed
+
+lemma mwpm_in_two_cpys_ptwise_connected_fst_eq_snd:
+  assumes "min_weight_perfect_matching (two_cpys_ptwise_connected G) (mpc G w) M"
+          "finite (Vs M)" "{} \<notin> M" "finite (Vs G)"
+   shows  "sum w (get_fst_only M) = sum w (get_snd_only M)"
+  using mwpm_in_two_cpys_ptwise_connected_fst_leq_snd 
+        mwpm_in_two_cpys_ptwise_connected_fst_geq_snd 
+        assms
+  by force
+
+text \<open>Main reduction theorem:
+     A minimum weight perfect matching in the new graph implies
+     two (not necessarily distinct) minimum weight matchings in the old graph.
+     These are obtained by looking at the first or second copy exclusively.\<close>
+
+theorem min_w_perf_in_two_cpys_ptwise_connected_to_min_w:
+  assumes  "min_weight_perfect_matching (two_cpys_ptwise_connected G) (mpc G w) M"
+           "finite (Vs M)" "{} \<notin> M" "finite (Vs G)" "{} \<notin> G"
+  shows    "min_weight_matching G w (get_fst_only M)"
+           "min_weight_matching G w (get_snd_only M)"
+proof-
+  have finite_M: "finite M" 
+    by (simp add: assms(2) finite_Vs_then_finite)
+  have sum_split: "sum (mpc G w) M = sum w (get_fst_only M) + sum w (get_snd_only M)"
+    using finite_M assms(3) 
+    by(rule weight_big_matching_split)
+  have same_sum: "sum w (get_fst_only M) = sum w (get_snd_only M)"
+    using assms 
+    by(auto intro!: mwpm_in_two_cpys_ptwise_connected_fst_eq_snd)
+  show  "min_weight_matching G w (get_fst_only M)"
+  proof(rule ccontr, goal_cases)
+    case 1
+    have "graph_matching G (get_fst_only M)"
+      using assms(1)
+      by(intro get_fst_only_of_graph_matching)
+        (auto elim!: min_weight_perfect_matchingE dest: perfect_matchingD)
+    then obtain M' where M': "sum w M' < sum w (get_fst_only M)" "graph_matching G M'"
+      using 1
+      by(auto simp add: min_weight_matching_def linorder_not_le) 
+    have M'_props: "finite M'" "{} \<notin> M'"
+      using M'(2) assms(4,5) finite_Vs_then_finite finite_subset by blast+
+    have "sum (mpc G w) (extend_matching G M') = 2*sum w M'"
+      by(auto intro!: weight_of_extend_matching M'_props assms(4))
+    moreover have "perfect_matching (two_cpys_ptwise_connected G) (extend_matching G M')"
+      using M'(2)
+      by(auto intro!: perfect_matching_extend_matching)
+    ultimately have "\<not> min_weight_perfect_matching (two_cpys_ptwise_connected G) (mpc G w) M"
+      using M'(1) sum_split same_sum
+      by(auto simp add: min_weight_perfect_matching_def)
+    thus False 
+      using assms(1) 
+      by simp
+  qed
+    show  "min_weight_matching G w (get_snd_only M)"
+  proof(rule ccontr, goal_cases)
+    case 1
+    have "graph_matching G (get_snd_only M)"
+      using assms(1)
+      by(intro get_snd_only_of_graph_matching)
+        (auto elim!: min_weight_perfect_matchingE dest: perfect_matchingD)
+    then obtain M' where M': "sum w M' < sum w (get_snd_only M)" "graph_matching G M'"
+      using 1
+      by(auto simp add: min_weight_matching_def linorder_not_le) 
+    have M'_props: "finite M'" "{} \<notin> M'"
+      using M'(2) assms(4,5) finite_Vs_then_finite finite_subset by blast+
+    have "sum (mpc G w) (extend_matching G M') = 2*sum w M'"
+      by(auto intro!: weight_of_extend_matching M'_props assms(4))
+    moreover have "perfect_matching (two_cpys_ptwise_connected G) (extend_matching G M')"
+      using M'(2)
+      by(auto intro!: perfect_matching_extend_matching)
+    ultimately have "\<not> min_weight_perfect_matching (two_cpys_ptwise_connected G) (mpc G w) M"
+      using M'(1) sum_split same_sum
+      by(auto simp add: min_weight_perfect_matching_def)
+    thus False 
+      using assms(1) 
+      by simp
+  qed
+qed
 
 end
