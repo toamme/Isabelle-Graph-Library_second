@@ -1,8 +1,6 @@
-theory BFS_Subprocedures_Imperative
-  imports BFS_Subprocedures Directed_Set_Graphs.Pair_Graph_Imperative
+theory Double_Example
+  imports Imperative.Imperative_DS
 begin
-
-hide_const RBT_Set.ins
 
 locale double_naturals = 
 imp_set_iterate where is_set = is_set and it_next = it_next +

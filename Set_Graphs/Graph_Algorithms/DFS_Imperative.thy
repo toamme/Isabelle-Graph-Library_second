@@ -287,7 +287,7 @@ lemma DFS_imperative'_absrl:
   
   
   
-  
+                                     
   definition "iam_dfs_imp = iam_dfs.DFS_imperative"
   definition "iam_dfs_initial_state = iam_dfs.DFS_initial_state_impl"
   definition "iam_graph_from_list \<equiv> iam_graph.from_list_impl"
