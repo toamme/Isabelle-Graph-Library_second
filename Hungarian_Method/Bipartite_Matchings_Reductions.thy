@@ -1,6 +1,13 @@
 theory Bipartite_Matchings_Reductions
   imports Primal_Dual_Bipartite_Matching.Matching_LP  Hungarian_Method_Top_Loop
 begin
+(*-Do the moves
+- Rename theory, or split in two parts*)
+
+lemma graph_abs_no_empty:
+  "graph_abs M \<Longrightarrow> {} \<notin> M"
+  "\<lbrakk>graph_abs M; {} \<in> M\<rbrakk> \<Longrightarrow> False"
+  by(auto simp add: graph_abs_def)
 
 lemma sum_inner_function_to_image:
   "inj_on g X \<Longrightarrow> sum (\<lambda> x. f (g x)) X = sum f (g ` X)"
@@ -12,6 +19,53 @@ lemma max_card_matchingE:
 \<Longrightarrow> P"
   by(auto simp add: max_card_matching_def)
 
+lemma card_Vs_diff: 
+  "\<lbrakk>G \<subseteq> G'; finite (Vs G)\<rbrakk> \<Longrightarrow> card (Vs G' - Vs G) = card (Vs G') - card (Vs G)"
+  by(auto intro!: card_Diff_subset[OF _ Vs_subset])
+
+
+lemma same_matching_card:
+  assumes "graph_abs G" "graph_matching G M" "graph_matching G M'"
+  shows  "(card (Vs G - Vs M) = card (Vs G - Vs M')) \<longleftrightarrow> card M = card M'"
+proof-
+  have "card (Vs G - Vs M) = card (Vs G) - card (Vs M)" 
+    using assms(1,2) card_Vs_diff graph_abs.finite_Vs graph_abs_mono by blast
+  moreover have "card (Vs G) \<ge> card (Vs M)" 
+    by (simp add: Vs_subset assms(1,2) card_mono graph_abs.finite_Vs)
+  moreover have "card (Vs M) = 2*card M" 
+    using  assms(1,2)  graph_abs_mono
+    by(auto intro!: graph_abs.matching_card_vs[symmetric])
+  moreover have "card (Vs G - Vs M') = card (Vs G) - card (Vs M')" 
+    using assms(1,3) card_Vs_diff graph_abs.finite_Vs graph_abs_mono by blast
+  moreover have "card (Vs G) \<ge> card (Vs M')" 
+    by (simp add: Vs_subset assms(1,3) card_mono graph_abs.finite_Vs)
+  moreover have "card (Vs M') = 2*card M'" 
+    using  assms(1,3)  graph_abs_mono
+    by(auto intro!: graph_abs.matching_card_vs[symmetric])
+  ultimately show ?thesis
+    by linarith
+qed
+
+lemma max_card_matchings_same_number_unmatched:
+ "\<lbrakk> max_card_matching G M; max_card_matching G M'; graph_abs G\<rbrakk> 
+  \<Longrightarrow> card (Vs G-  Vs M) = card (Vs G - Vs M')"
+  by(subst same_matching_card)
+    (auto elim: max_card_matchingE
+         intro: max_card_matchings_same_size)
+
+lemma doublton_inj:
+  "\<lbrakk>inj_on f (Vs E); dblton_graph E\<rbrakk> \<Longrightarrow> dblton_graph ((image f) ` E)"
+proof(rule dblton_graphI, goal_cases)
+  case (1 e)
+  then obtain e' where e': "e' \<in> E" "e = f ` e'" by blast
+  moreover then obtain u v where "e' = {u, v}" "u \<noteq> v"
+    using 1(2) by auto
+  moreover hence "f u \<noteq> f v"
+    using e'(1) 
+    by(subst inj_on_eq_iff[OF 1(1)])(auto intro: edges_are_Vs)
+  ultimately show ?case 
+    by auto
+qed
   (*TODO MOVE*)
 
 lemma matchingI:
@@ -304,7 +358,11 @@ lemma perfect_matching_card':
   using  perfect_matching_card assms by fastforce
 
 subsection \<open>Reductions\<close>
-  (*max weight    max weight max card
+  (* For both the bipartite case and the general one,
+     we perform the following reductions to the minimum weight perfect version.
+     The outer arrow are trivial and of course bidirectional (see the following).
+     The inner arrows are harder.
+   max weight    max weight max card
      |                |
      v                v
    min weight   min weight max card
@@ -1371,6 +1429,10 @@ and img_fst_cpy_inj_on: "inj_on (image fst_cpy) Y"
 and img_snd_cpy_inj_on: "inj_on (image snd_cpy) Y"
   by(auto simp add: inj_on_def)
 
+lemma crossing_edge_inj_on:
+  "inj_on (\<lambda>x. {fst_cpy x, snd_cpy x}) X"
+  by(auto simp add: inj_on_def)
+
 definition "two_cpys_ptwise_connected G = 
    ((image fst_cpy) ` G \<union> (image snd_cpy) ` G)
    \<union> {{fst_cpy v, snd_cpy v} | v. v \<in> Vs G}"
@@ -1381,6 +1443,20 @@ lemma in_two_cpys_ptwise_connectedE:
  (\<And> e'. \<lbrakk>e = snd_cpy ` e'; e' \<in> G\<rbrakk> \<Longrightarrow> P) \<Longrightarrow>
  (\<And> v. \<lbrakk>e = {fst_cpy v, snd_cpy v}; v \<in> Vs G\<rbrakk> \<Longrightarrow> P) \<Longrightarrow>
 P"
+  by(auto simp add: two_cpys_ptwise_connected_def)
+
+lemma snd_cpy_in_e_in_two_cpys_ptwise_connected_cases:
+      "\<lbrakk>snd_cpy v\<in> e; e \<in> two_cpys_ptwise_connected G;
+        (\<And> e'. \<lbrakk>e = snd_cpy ` e'; e' \<in> G\<rbrakk> \<Longrightarrow> P );
+        (e = {fst_cpy v, snd_cpy v} \<Longrightarrow> P)\<rbrakk>
+       \<Longrightarrow> P"
+  by(auto simp add: two_cpys_ptwise_connected_def)
+
+lemma fst_cpy_in_e_in_two_cpys_ptwise_connected_cases:
+      "\<lbrakk>fst_cpy v\<in> e; e \<in> two_cpys_ptwise_connected G;
+        (\<And> e'. \<lbrakk>e = fst_cpy ` e'; e' \<in> G\<rbrakk> \<Longrightarrow> P );
+        (e = {fst_cpy v, snd_cpy v} \<Longrightarrow> P)\<rbrakk>
+       \<Longrightarrow> P"
   by(auto simp add: two_cpys_ptwise_connected_def)
 
 definition "is_fst_cpy e = (\<forall> v \<in> e. is_fst v)"
@@ -1449,6 +1525,23 @@ lemma get_snd_only_finite: "finite G \<Longrightarrow> finite (get_snd_only G)"
 lemma get_snd_only_contains_empty: "{} \<in> get_snd_only G \<longleftrightarrow> {} \<in> G"
   by(auto simp add: get_snd_only_def is_snd_cpy_def')
 
+definition "get_crossing G = {e | e. e \<in> G \<and> crossing e}"
+
+definition "get_crossing_projected G = {the_vertex ` e | e. e \<in> G \<and> crossing e}"
+
+lemma get_crossing_get_crossing_projected:
+  "(image the_vertex) ` get_crossing G = get_crossing_projected G"
+  by(auto simp add: get_crossing_projected_def get_crossing_def)
+
+lemma in_corssingI:
+"\<lbrakk>e \<in> G; crossing e\<rbrakk> \<Longrightarrow> e \<in> get_crossing G "
+and in_corssingE:
+" e \<in> get_crossing G \<Longrightarrow> (\<lbrakk>e \<in> G; crossing e\<rbrakk> \<Longrightarrow>P) \<Longrightarrow> P "
+and in_corssingD:
+"e \<in> get_crossing G \<Longrightarrow>e \<in> G"
+"e \<in> get_crossing G \<Longrightarrow>crossing e"
+  by(auto simp add: get_crossing_def)
+
 definition "extend_matching G M = 
    ((image fst_cpy) ` M \<union> (image snd_cpy) ` M 
     \<union> {{fst_cpy v, snd_cpy v} | v. v \<in> Vs G - Vs M})"
@@ -1484,6 +1577,12 @@ lemma the_vertex_of_Vs_ptwsie_connected_is_Vs:
   by(auto simp add: two_cpys_ptwise_connected_def vs_union Vs_of_fst_cpy
                      Vs_of_snd_cpy Vs_of_mixed_edges image_Un the_vertex_of_fst_cpy)
 
+lemma graph_abs_two_copies:
+   "graph_abs G \<Longrightarrow> graph_abs (two_cpys_ptwise_connected G)"
+  by(auto simp add: two_cpys_ptwise_connected_def graph_abs_def vs_union
+                    Vs_of_fst_cpy Vs_of_snd_cpy Vs_of_mixed_edges
+            intro!: dblton_graph_union doublton_inj fst_cpy_inj_on snd_cpy_inj_on
+             intro: dblton_graphI) 
 
 lemma extend_matching_full_Vs:
   assumes "M \<subseteq> G" 
@@ -1634,6 +1733,8 @@ qed
 
 text \<open>now add weights, too.\<close>
 
+subsubsection \<open>Mincost to Mincost-Perfect (General)\<close>
+
 definition "min_costs_to_min_perfect_costs G (w::'a set \<Rightarrow> real) =
             (\<lambda> e. if crossing e then 0
                   else w (the_vertex ` e))"
@@ -1779,7 +1880,7 @@ text \<open>Main reduction theorem:
      two (not necessarily distinct) minimum weight matchings in the old graph.
      These are obtained by looking at the first or second copy exclusively.\<close>
 
-theorem min_w_perf_in_two_cpys_ptwise_connected_to_min_w:
+theorem min_weight_to_min_weight_perfect_general:
   assumes  "min_weight_perfect_matching (two_cpys_ptwise_connected G) (mpc G w) M"
            "finite (Vs M)" "{} \<notin> M" "finite (Vs G)" "{} \<notin> G"
   shows    "min_weight_matching G w (get_fst_only M)"
@@ -1842,5 +1943,474 @@ proof-
       by simp
   qed
 qed
+
+subsubsection \<open>Mincost-Maxcard to Mincost-Perfect (General)\<close>
+
+text \<open>The same for min weight max card\<close>
+
+definition "min_weight_max_card_costs_to_min_perfect_costs G (w::'a set \<Rightarrow> real) =
+            (\<lambda> e. if crossing e then 4* penalty G w
+                  else w (the_vertex ` e))"
+
+abbreviation "mwmcpc \<equiv> min_weight_max_card_costs_to_min_perfect_costs"
+
+lemma weight_big_matching_split_max_card:
+  assumes "finite M" "{} \<notin> M"
+  shows  "sum (mwmcpc G w) M = 
+     sum w (get_fst_only M) + sum w (get_snd_only M) + card (get_crossing M)*4*penalty G w "
+proof-
+  have "sum (mwmcpc G w) {e | e. e\<in> M \<and> is_fst_cpy e } = sum w (get_fst_only M)"
+    unfolding min_weight_max_card_costs_to_min_perfect_costs_def
+  proof(subst comm_monoid_add_class.sum.cong[OF refl if_not_P], goal_cases)
+    case 2
+    show ?case
+     apply(subst sum_inner_function_to_image[of "image the_vertex" ])
+      by(auto intro!: arg_cong[of _ _ "sum w"] 
+          simp add: get_fst_only_def inj_on_def is_fst_cpy_def' the_vertex_of_fst_cpy)
+  qed(auto intro: crossing_and_fst_or_snd_cpy_exclusive)
+  moreover have "sum (mwmcpc G w) {e | e. e\<in> M \<and> is_snd_cpy e } = sum w (get_snd_only M)"
+    unfolding min_weight_max_card_costs_to_min_perfect_costs_def
+  proof(subst comm_monoid_add_class.sum.cong[OF refl if_not_P], goal_cases)
+    case 2
+    show ?case
+     apply(subst sum_inner_function_to_image[of "image the_vertex" ])
+      by(auto intro!: arg_cong[of _ _ "sum w"] 
+          simp add: get_snd_only_def inj_on_def is_snd_cpy_def' the_vertex_of_snd_cpy)
+  qed(auto intro: crossing_and_fst_or_snd_cpy_exclusive)
+  moreover have "sum (mwmcpc G w) {e | e. e\<in> M \<and> crossing e } 
+           = card (get_crossing M)*4*penalty G w "
+    by(auto simp add:  min_weight_max_card_costs_to_min_perfect_costs_def 
+                       get_crossing_def comm_monoid_add_class.sum.cong[OF refl if_P])
+  moreover have "sum (mwmcpc G w) M = 
+      sum (mwmcpc G w) {e |e. e \<in> M \<and> is_fst_cpy e} +
+      sum (mwmcpc G w) {e |e. e \<in> M \<and> is_snd_cpy e}+
+      sum (mwmcpc G w) {e |e. e \<in> M \<and> crossing e}"
+  proof(subst comm_monoid_add_class.sum.union_disjoint[symmetric], goal_cases)
+    case 3
+    show ?case
+      using assms 
+      by(auto simp add: is_fst_cpy_def' is_snd_cpy_def' dest: fst_and_snd_same_empty(1))
+  next
+    case 4
+    show ?case
+    proof(subst comm_monoid_add_class.sum.union_disjoint[symmetric], goal_cases)
+      case 4
+      show ?case 
+        by(auto intro!: arg_cong[of _ _ "sum (mwmcpc G w)"]
+                 intro: e_cpy_ptwise_connected_cases)
+    qed (insert assms, auto  dest!: crossing_and_fst_or_snd_cpy_exclusive)
+  qed (insert assms, auto)
+  ultimately show ?thesis 
+    by simp
+qed
+
+lemma card_crossing_is_card_unmatched_fst:
+  assumes "perfect_matching (two_cpys_ptwise_connected G) M"
+  shows "card (get_crossing M) = card (Vs G - Vs (get_fst_only M))"
+proof-
+  note M_prop = perfect_matchingD[OF assms(1)]
+  show ?thesis
+proof(rule bij_betw_same_card[of "\<lambda> x. {fst_cpy x, snd_cpy x}", symmetric],
+      unfold bij_betw_def, rule, goal_cases)
+  case 1
+  show ?case
+    by(auto intro: inj_onI)
+  case 2
+  show ?case
+  proof(rule, all \<open>rule\<close>, goal_cases)
+    case (1 e)
+    then obtain v where v: "v \<in> Vs G" "v \<notin> Vs (get_fst_only M)" "e = {fst_cpy v, snd_cpy v}" by auto
+    hence "fst_cpy v \<in> Vs (two_cpys_ptwise_connected G)"
+      by (simp add: Vs_of_fst_cpy two_cpys_ptwise_connected_def vs_union)
+    then obtain e' where e': "fst_cpy v \<in> e'" "e' \<in> M" 
+      using  M_prop(3)  vs_member[of "fst_cpy v"] by auto
+    moreover have "e' = e"
+      using M_prop(1) e'(1,2)  v 
+       by(auto dest!: spec[of "\<lambda> x. _ x\<or> v \<notin> x" "the_vertex ` e'"]
+            simp add:  get_fst_only_def is_fst_cpy_def' vs_member image_iff
+           elim!: fst_cpy_in_e_in_two_cpys_ptwise_connected_cases[OF e'(1), of G])
+     thus ?case 
+       using v(3)  e'(2)
+       by(auto intro!: in_corssingI crossing_both_copies e'(1,2))
+  next
+    case (2 e)
+    then obtain x where e: "e = {fst_cpy x, snd_cpy x}" "e \<in> M" 
+      using M_prop(1)
+      by(auto elim!: in_corssingE 
+              intro: in_two_cpys_ptwise_connectedE[of e G] 
+               dest: not_crossing_snd_cpy(2) not_crossing_fst_cpy(2))
+    moreover have  "x \<notin> Vs (get_fst_only M)"
+    proof(rule ccontr, goal_cases)
+      case 1
+      then obtain e' where e': "x \<in> the_vertex ` e'" "e' \<in> M" "is_fst_cpy e'" 
+        by(auto simp add: get_fst_only_def vs_member)
+      hence "e \<noteq> e'" 
+        using "2" crossing_and_fst_or_snd_cpy_exclusive(1) in_corssingD(2) by auto
+      moreover have "fst_cpy x \<in> e \<inter> e'" 
+        using e'(1,3) e(1) 
+        by(auto simp add: is_fst_cpy_def')
+      ultimately show False
+        using M_prop(2) e'(2) e(2) 
+        by(auto elim!: matchingE)
+    qed
+    moreover have "x \<in> Vs G" 
+      by(auto intro!: imageI[of "fst_cpy x" _ the_vertex, simplified] 
+            simp add: M_prop(3) edges_are_Vs[of "fst_cpy x" "snd_cpy x" M, 
+                          simplified e(1)[symmetric], OF e(2)]
+                      the_vertex_of_Vs_ptwsie_connected_is_Vs[of G, symmetric])
+    ultimately show ?case
+      by auto
+  qed
+qed
+qed
+
+lemma card_crossing_is_card_unmatched_snd:
+  assumes "perfect_matching (two_cpys_ptwise_connected G) M"
+  shows "card (get_crossing M) = card ( Vs G - Vs (get_snd_only M))"
+proof-
+  note M_prop = perfect_matchingD[OF assms(1)]
+  show ?thesis
+proof(rule bij_betw_same_card[of "\<lambda> x. {fst_cpy x, snd_cpy x}", symmetric],
+      unfold bij_betw_def, rule, goal_cases)
+  case 1
+  show ?case
+    by(auto intro: inj_onI)
+  case 2
+  show ?case
+  proof(rule, all \<open>rule\<close>, goal_cases)
+    case (1 e)
+    then obtain v where v: "v \<in> Vs G" "v \<notin> Vs (get_snd_only M)" "e = {fst_cpy v, snd_cpy v}" by auto
+    hence "snd_cpy v \<in> Vs (two_cpys_ptwise_connected G)"
+      by (simp add: Vs_of_snd_cpy two_cpys_ptwise_connected_def vs_union)
+    then obtain e' where e': "snd_cpy v \<in> e'" "e' \<in> M" 
+      using  M_prop(3)  vs_member[of "snd_cpy v"] by auto
+    moreover have "e' = e"
+      using M_prop(1) e'(1,2)  v 
+       by(auto dest!: spec[of "\<lambda> x. _ x\<or> v \<notin> x" "the_vertex ` e'"]
+            simp add:  get_snd_only_def is_snd_cpy_def' vs_member image_iff
+           elim!: snd_cpy_in_e_in_two_cpys_ptwise_connected_cases[OF e'(1), of G])
+     thus ?case                   
+       using v(3)  e'(2)
+       by(auto intro!: in_corssingI crossing_both_copies e'(1,2))
+  next
+    case (2 e)
+    then obtain x where e: "e = {fst_cpy x, snd_cpy x}" "e \<in> M" 
+      using M_prop(1)
+      by(auto elim!: in_corssingE 
+              intro: in_two_cpys_ptwise_connectedE[of e G] 
+               dest: not_crossing_snd_cpy(2) not_crossing_fst_cpy(2))
+    moreover have  "x \<notin> Vs (get_snd_only M)"
+    proof(rule ccontr, goal_cases)
+      case 1
+      then obtain e' where e': "x \<in> the_vertex ` e'" "e' \<in> M" "is_snd_cpy e'" 
+        by(auto simp add: get_snd_only_def vs_member)
+      hence "e \<noteq> e'" 
+        using "2" crossing_and_fst_or_snd_cpy_exclusive(2) in_corssingD(2) by auto
+      moreover have "snd_cpy x \<in> e \<inter> e'" 
+        using e'(1,3) e(1) 
+        by(auto simp add: is_snd_cpy_def')
+      ultimately show False
+        using M_prop(2) e'(2) e(2) 
+        by(auto elim!: matchingE)
+    qed
+    moreover have "x \<in> Vs G" 
+      by(auto intro!: imageI[of "snd_cpy x" _ the_vertex, simplified] 
+            simp add: M_prop(3) edges_are_Vs_2[of "fst_cpy x" "snd_cpy x" M, 
+                          simplified e(1)[symmetric], OF e(2)]
+                      the_vertex_of_Vs_ptwsie_connected_is_Vs[of G, symmetric])
+    ultimately show ?case
+      by auto
+  qed
+qed
+qed
+  
+lemma weight_of_extend_matching_max_card:
+  assumes "finite M" "finite (Vs G)" "{} \<notin> M"
+  shows  "sum (mwmcpc G w) (extend_matching G M) 
+          = 2* sum w M + (card (Vs G - Vs M))*4*penalty G w"
+proof-
+  have "sum (mwmcpc G w) (extend_matching G M) =
+    2* sum w M + real (card (get_crossing (extend_matching G M))) * 4*penalty G w"
+  using assms
+   by(auto simp add: weight_big_matching_split_max_card[of "extend_matching G M", of G w] 
+                    finite_extend_matching empty_not_in_extend_matching
+                    get_fst_only_of_extend_matching get_snd_only_of_extend_matching)
+  moreover have "card (get_crossing (extend_matching G M)) = card (Vs G - Vs M)"
+    by(auto simp add: get_crossing_def extend_matching_def bij_betw_def crossing_edge_inj_on
+             crossing_both_copies
+            intro!: bij_betw_same_card[of "\<lambda> x. {fst_cpy x, snd_cpy x}", symmetric]
+             dest!: not_crossing_fst_cpy(2) not_crossing_snd_cpy(2))
+  ultimately show ?thesis 
+    by simp
+qed
+
+lemma mwmcpc_in_two_cpys_ptwise_connected_fst_card_eq_snd_card:
+  assumes "perfect_matching (two_cpys_ptwise_connected G) M"
+          "graph_abs G"
+     shows "card (get_fst_only M) = card (get_snd_only M)"  
+proof-
+  have "matching (get_fst_only M)"
+    using assms(1) get_fst_only_of_matching perfect_matchingD(2) by auto
+  moreover have "matching (get_snd_only M)"
+    using assms(1) get_snd_only_of_matching perfect_matchingD(2) by auto
+  moreover have "get_fst_only M \<subseteq> G" 
+    by (simp add: assms(1) get_fst_only_of_two_cpys_ptwise_connected_subset perfect_matchingD(1))
+  moreover have "get_snd_only M \<subseteq> G"
+    by (simp add: assms(1) get_snd_only_of_two_cpys_ptwise_connected_subset perfect_matchingD(1))
+  moreover have  "card (Vs G - Vs (get_fst_only M)) = card (Vs G - Vs (get_snd_only M))"
+      using assms(1) card_crossing_is_card_unmatched_fst card_crossing_is_card_unmatched_snd
+      by fastforce  
+ultimately show ?thesis
+  by(auto simp add: same_matching_card[of G] assms(2) )
+qed
+
+lemma  not_max_card_matching_not_min_weight_perfect:
+  assumes "perfect_matching (two_cpys_ptwise_connected G) M"
+       "graph_matching G M'" "card M' > card (get_fst_only M)"
+         "graph_abs G"
+ shows "sum (mwmcpc G w) (extend_matching G M') < sum (mwmcpc G w) M"
+proof-
+  note M_props = perfect_matchingD[OF assms(1)]
+  have graph_abs_ext_G: "graph_abs (two_cpys_ptwise_connected G)"
+    by (simp add: assms(4) graph_abs_two_copies)
+  hence graph_abs_M:"graph_abs M" 
+    using M_props(1) graph_abs_mono by auto
+  have graph_invar_G: "graph_invar G"
+    using assms(4) graph_abs_def by auto
+  have finite_M: "finite M"
+    using M_props(1) finite_subset graph_abs.finite_E graph_abs_ext_G by blast
+  have empty_nin_M: "{} \<notin> M" 
+    using graph_abs_M graph_abs_no_empty by auto
+  have weight_split_M:
+     "sum (mwmcpc G w) M = sum w (get_fst_only M) + sum w (get_snd_only M) +
+          real (card (get_crossing M)) * 4*penalty G w"
+    using weight_big_matching_split_max_card[of M]
+    by(auto simp add: finite_M empty_nin_M)
+  have matching_fst: "graph_matching G (get_fst_only M)"
+     using M_props(1,2) get_fst_only_of_graph_matching by blast
+  have matching_snd: "graph_matching G (get_snd_only M)"
+    using M_props(1,2) get_snd_only_of_graph_matching by blast
+  have weight_M_bounds:
+     "sum (mwmcpc G w) M < real (card (get_crossing M)) * 4* penalty G w + 2*penalty G w"
+      "sum (mwmcpc G w) M > real (card (get_crossing M)) * 4* penalty G w - 2*penalty G w"
+    using weight_of_matching_abs_less[OF graph_invar_G matching_fst, of w]
+          weight_of_matching_abs_less[OF graph_invar_G matching_snd, of w] 
+    by(auto simp add: weight_split_M)
+  have card_crossing_M: "card (get_crossing M) = card (Vs G - Vs (get_fst_only M))"
+    using assms(1) by(auto intro!: card_crossing_is_card_unmatched_fst)
+  have finite_M':"finite M'"
+    using assms(3) linorder_not_less by fastforce
+  have empty_nin_M: "{} \<notin> M'"
+    using assms(2,4) graph_abs_no_empty(1) by auto
+  have finite_Vs_M': "finite (Vs M')"
+    using assms(2,4) graph_abs.finite_Vs graph_abs_mono by auto
+  have weight_split_M': "sum (mwmcpc G w) (extend_matching G M') = 
+          2 * sum w M' + card (Vs G - Vs M') *4* penalty G w"
+    using assms(2) graph_invar_G empty_nin_M
+    by(intro weight_of_extend_matching_max_card)
+      (auto simp add: finite_M' graph_invar_G)
+  have weight_M'_bounds:
+     "sum (mwmcpc G w) (extend_matching G M') <
+            card (Vs G - Vs M') * 4*penalty G w + 2*penalty G w"
+      "sum (mwmcpc G w) (extend_matching G M') >
+              card (Vs G - Vs M') * 4*penalty G w - 2*penalty G w"
+    using weight_of_matching_abs_less[OF graph_invar_G assms(2), of w] 
+    by(auto simp add: weight_split_M')
+  have finite_Vs_fst_M: "finite (Vs (get_fst_only M))"
+    using graph_invar_G graph_invar_subset matching_fst by auto
+  have "graph_abs (get_fst_only M)"
+    using assms(4) graph_abs_mono matching_fst by auto
+  moreover have "graph_abs M'"
+    using assms(2,4) graph_abs_mono by auto
+  ultimately have "card (Vs (get_fst_only M)) < card (Vs M')"
+    using assms(2,3)
+    by(simp add: graph_abs.matching_card_vs[symmetric] matching_fst)
+  moreover have "card (Vs M') \<le> card (Vs G)" 
+    by (simp add: Vs_subset assms(2) card_mono graph_invar_G)
+  ultimately have unmatched_diff: "card (Vs G - Vs M') < card (Vs G - Vs (get_fst_only M))"
+    by (simp add: card_Vs_diff[OF _ finite_Vs_M'] assms(2) card_Vs_diff finite_Vs_fst_M  matching_fst)
+  hence upper_bound_leq_lower_bound:
+        "card (Vs G - Vs M') * 4*penalty G w + 4 * penalty G w \<le>
+                card (get_crossing M) *4* penalty G w "
+  proof-
+    have "card (Vs G - Vs M') * 4*penalty G w + 4 * penalty G w = 
+          Suc (card (Vs G - Vs M')) * 4*penalty G w " 
+     by (auto simp add: algebra_simps)
+   moreover have  "... \<le> card (Vs G - Vs (get_fst_only M)) * 4*penalty G w" 
+     using graph_invar_G graph_invar_finite penalty_gtr_0 unmatched_diff by fastforce
+   ultimately show ?thesis
+     by(simp add: card_crossing_M)
+ qed
+  show ?thesis
+    using weight_M'_bounds(1) weight_M_bounds(2) unmatched_diff upper_bound_leq_lower_bound
+    by(auto simp add: algebra_simps)
+qed
+
+lemma mwmcpc_in_two_cpys_ptwise_connected_fst_geq_snd:
+  assumes "perfect_matching (two_cpys_ptwise_connected G) M"
+           "sum w (get_fst_only M) < sum w (get_snd_only M)"
+           "graph_abs G"
+    shows  "sum (mwmcpc G w) (extend_matching G (get_fst_only M)) < sum (mwmcpc G w) M" (is ?th1)
+           "perfect_matching (two_cpys_ptwise_connected G) 
+                   (extend_matching G (get_fst_only M))" (is ?th2)
+proof-
+  note M_props = perfect_matchingD[OF assms(1)]
+  have graph_abs_ext_G: "graph_abs (two_cpys_ptwise_connected G)"
+    by (simp add: assms(3) graph_abs_two_copies)
+  hence graph_abs_M:"graph_abs M" 
+    using M_props(1) graph_abs_mono by auto
+  have graph_invar_G: "graph_invar G"
+    using assms(3) graph_abs_def by auto
+  have finite_M: "finite M"
+    using M_props(1) finite_subset graph_abs.finite_E graph_abs_ext_G by blast
+  have empty_nin_M: "{} \<notin> M" 
+    using graph_abs_M graph_abs_no_empty by auto
+  have weight_split_M:
+     "sum (mwmcpc G w) M = sum w (get_fst_only M) + sum w (get_snd_only M) +
+          real (card (get_crossing M)) * 4*penalty G w"
+    using weight_big_matching_split_max_card[of M]
+    by(auto simp add: finite_M empty_nin_M)
+  have matching_fst: "graph_matching G (get_fst_only M)"
+    using M_props(1,2) get_fst_only_of_graph_matching by blast
+  have extended_fst_weight_split:
+    "sum (mwmcpc G w) (extend_matching G (get_fst_only M)) =
+      2 * sum w (get_fst_only M) + real (card (Vs G - Vs (get_fst_only M)) * 4) * penalty G w"
+    by(rule weight_of_extend_matching_max_card[of "get_fst_only M" G w])
+      (auto simp add: finite_M get_fst_only_finite  graph_invar_G
+             empty_nin_M get_fst_only_contains_empty)
+  moreover have "card (get_crossing M) = card (Vs G - Vs (get_fst_only M))"
+    by(auto intro!: card_crossing_is_card_unmatched_fst assms(1))
+  ultimately show ?th1
+    by (auto simp add: algebra_simps assms(2) weight_split_M)
+  show ?th2
+    by (simp add: matching_fst perfect_matching_extend_matching)
+qed
+
+lemma mwmcpc_in_two_cpys_ptwise_connected_fst_leq_snd:
+  assumes "perfect_matching (two_cpys_ptwise_connected G) M"
+           "sum w (get_fst_only M) > sum w (get_snd_only M)"
+           "graph_abs G"
+    shows  "sum (mwmcpc G w) (extend_matching G (get_snd_only M)) < sum (mwmcpc G w) M" (is ?th1)
+           "perfect_matching (two_cpys_ptwise_connected G) 
+                   (extend_matching G (get_snd_only M))" (is ?th2)
+proof-
+  note M_props = perfect_matchingD[OF assms(1)]
+  have graph_abs_ext_G: "graph_abs (two_cpys_ptwise_connected G)"
+    by (simp add: assms(3) graph_abs_two_copies)
+  hence graph_abs_M:"graph_abs M" 
+    using M_props(1) graph_abs_mono by auto
+  have graph_invar_G: "graph_invar G"
+    using assms(3) graph_abs_def by auto
+  have finite_M: "finite M"
+    using M_props(1) finite_subset graph_abs.finite_E graph_abs_ext_G by blast
+  have empty_nin_M: "{} \<notin> M" 
+    using graph_abs_M graph_abs_no_empty by auto
+  have weight_split_M:
+     "sum (mwmcpc G w) M = sum w (get_fst_only M) + sum w (get_snd_only M) +
+          real (card (get_crossing M)) * 4*penalty G w"
+    using weight_big_matching_split_max_card[of M]
+    by(auto simp add: finite_M empty_nin_M)
+  have matching_snd: "graph_matching G (get_snd_only M)"
+    using M_props(1,2) get_snd_only_of_graph_matching by blast
+  have extended_snd_weight_split:
+    "sum (mwmcpc G w) (extend_matching G (get_snd_only M)) =
+      2 * sum w (get_snd_only M) + real (card (Vs G - Vs (get_snd_only M)) * 4) * penalty G w"
+    by(rule weight_of_extend_matching_max_card[of "get_snd_only M" G w])
+      (auto simp add: finite_M get_snd_only_finite  graph_invar_G
+             empty_nin_M get_snd_only_contains_empty)
+  moreover have "card (get_crossing M) = card (Vs G - Vs (get_snd_only M))"
+    by(auto intro!: card_crossing_is_card_unmatched_snd assms(1))
+  ultimately show ?th1
+    by (auto simp add: algebra_simps assms(2) weight_split_M)
+  show ?th2
+    by (simp add: matching_snd perfect_matching_extend_matching)
+qed
+
+theorem min_weight_max_card_to_min_weight_perfect_general:
+  assumes "graph_abs G" 
+          "min_weight_perfect_matching (two_cpys_ptwise_connected G) (mwmcpc G w) M"
+  shows   "min_weight_max_card_matching G w (get_fst_only M)"
+          "min_weight_max_card_matching G w (get_snd_only M)"
+proof-
+  note M_props = min_weight_perfect_matchingD[OF assms(2)]
+                 perfect_matchingD(1,2)[OF min_weight_perfect_matchingD(1)[OF assms(2)]]
+  have graph_matching_fst: "graph_matching G (get_fst_only M)"
+    using M_props(3,4) get_fst_only_of_graph_matching by blast
+  have graph_matching_snd: "graph_matching G (get_snd_only M)"
+    using M_props(3,4) get_snd_only_of_graph_matching by blast
+  have finite_M: "finite M" 
+    using M_props(3) assms(1) finite_subset graph_abs.finite_E graph_abs_two_copies by blast
+  have empty_nin_M: "{} \<notin> M" 
+    using M_props(3) assms(1) graph_abs_no_empty(2) graph_abs_two_copies by auto
+  have max_card_matching_fst: "max_card_matching G (get_fst_only M)"
+  proof(rule ccontr, goal_cases)
+    case 1
+    then obtain M' where M':"card M' > card (get_fst_only M)" "graph_matching G M'"
+      using graph_matching_fst linorder_not_less 
+      by(auto simp add: max_card_matching_def)
+    have "sum (mwmcpc G w) (extend_matching G M') < sum (mwmcpc G w) M"
+      by(auto intro!: not_max_card_matching_not_min_weight_perfect M_props(1) M'(2,1) assms(1))
+    moreover have "perfect_matching  (two_cpys_ptwise_connected G) (extend_matching G M')"
+      by (simp add: M'(2) perfect_matching_extend_matching)
+    ultimately have 
+      "\<not> min_weight_perfect_matching (two_cpys_ptwise_connected G) (mwmcpc G w) M"
+      by(auto simp add: min_weight_perfect_matching_def)
+    thus False
+      using assms(2) 
+      by simp
+  qed
+  moreover have same_cards: "card (get_fst_only M) = card (get_snd_only M)"
+    by(auto intro!: mwmcpc_in_two_cpys_ptwise_connected_fst_card_eq_snd_card assms(1) M_props(1))
+  ultimately have max_card_matching_snd: "max_card_matching G (get_snd_only M)"
+    using graph_matching_snd max_card_matching_cardI by auto
+  have fst_snd_same_weight: "sum w  (get_fst_only M) = sum w  (get_snd_only M)"
+  proof(rule ccontr, goal_cases)
+    case 1
+    hence  "\<not> min_weight_perfect_matching (two_cpys_ptwise_connected G) (mwmcpc G w) M"
+      using mwmcpc_in_two_cpys_ptwise_connected_fst_leq_snd[OF M_props(1) _ assms(1), of w]
+            mwmcpc_in_two_cpys_ptwise_connected_fst_geq_snd[OF M_props(1) _ assms(1), of w]
+            M_props(1)
+      by(fastforce simp add:  min_weight_perfect_matching_def)
+    thus False
+      using assms(2) by simp
+  qed
+  show fst_min_weight_max_card: 
+     "min_weight_max_card_matching G w (get_fst_only M)"
+  proof(rule ccontr, goal_cases)
+    case 1
+    then obtain M' where M':"max_card_matching G M'" "sum w M' < sum w (get_fst_only M)"
+      using max_card_matching_fst 
+      by(auto simp add: min_weight_max_card_matching_def)
+    note M'_props = max_card_matchingD[OF M'(1)]
+    have M'_more_props: "finite M'" "finite (Vs G)" "{} \<notin> M'" 
+      using M'_props assms(1) finite_subset graph_abs.finite_E graph_abs_mono[OF assms(1)]
+      by (auto simp add: graph_abs.finite_Vs intro!: graph_abs_no_empty(2)[of M'])
+    have "sum (mwmcpc G w) (extend_matching G M') = 
+          2 * sum w M' + real (card (Vs G - Vs M') * 4) * penalty G w"
+      by(intro weight_of_extend_matching_max_card[of M' G w] M'_more_props)
+    moreover have "card (Vs G - Vs M') = card (Vs G - Vs (get_fst_only M))"
+      by(auto intro!: max_card_matchings_same_number_unmatched
+            simp add: max_card_matching_fst M'(1) assms(1))
+     moreover have weight_split_M:
+     "sum (mwmcpc G w) M = sum w (get_fst_only M) + sum w (get_snd_only M) +
+          real (card (get_crossing M)) * 4*penalty G w"
+        using weight_big_matching_split_max_card[of M]
+        by(auto simp add: finite_M empty_nin_M)
+      moreover have "card (get_crossing M) =  card (Vs G - Vs (get_fst_only M))" 
+        using M_props(1) card_crossing_is_card_unmatched_fst by blast
+      ultimately have "sum (mwmcpc G w) (extend_matching G M') < sum (mwmcpc G w) M"
+        using M'(2)
+        by(auto simp add: fst_snd_same_weight same_cards)
+      moreover have "perfect_matching (two_cpys_ptwise_connected G)(extend_matching G M')" 
+        by (simp add: M'_props perfect_matching_extend_matching)
+      ultimately have "\<not> min_weight_perfect_matching (two_cpys_ptwise_connected G) (mwmcpc G w) M"
+        by(auto simp add: min_weight_perfect_matching_def)
+      thus False
+        using assms(2)
+        by simp
+    qed
+    thus "min_weight_max_card_matching G w (get_snd_only M)"
+      by (simp add: fst_snd_same_weight max_card_matching_snd min_weight_max_card_matching_def)
+  qed
 
 end
