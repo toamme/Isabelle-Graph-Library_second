@@ -293,7 +293,10 @@ lemma DFS_imperative'_absrl:
   definition "iam_graph_from_list \<equiv> iam_graph.from_list_impl"
   
   
-  export_code iam_dfs_imp iam_dfs_initial_state iam_graph_from_list  checking SML_imp
+export_code iam_dfs_imp iam_dfs_initial_state iam_graph_from_list 
+
+in SML_imp module_name exported file_prefix DFS_imperative
+(* checking SML_imp*)
 
   ML_val \<open>
     val noi = @{code nat_of_integer}
