@@ -1,4 +1,4 @@
-theory Bipartite_Matchings_Reductions
+theory Weighted_Matchings_Reductions
   imports Primal_Dual_Bipartite_Matching.Matching_LP  Hungarian_Method_Top_Loop
 begin
 (*-Do the moves
@@ -238,6 +238,34 @@ lemma min_weight_max_card_matchingI:
   "min_weight_max_card_matching E w M \<Longrightarrow> max_card_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M"
   by(auto simp add: min_weight_max_card_matching_def)
 
+lemmas max_card_matchingDs = conjunct1[OF max_card_matchingD]
+                             conjunct1[OF conjunct2[OF max_card_matchingD]]
+                             mp[OF spec[OF conjunct2[OF conjunct2[OF max_card_matchingD]]]]
+
+lemma max_card_matching_subgraphD:
+  assumes "max_card_matching G M"
+  shows "\<And>e. e \<in> M \<Longrightarrow> e \<in> G"
+  using assms
+  by (auto dest: max_card_matchingD)
+
+lemma weighted_matchings_over_coinciding_weights:
+  assumes "\<And> e. e \<in> G \<Longrightarrow> w' e = w e"
+  shows  "max_weight_matching G w M \<longleftrightarrow> max_weight_matching G w' M"
+         "min_weight_matching G w M \<longleftrightarrow> min_weight_matching G w' M"
+         "max_weight_perfect_matching G w M \<longleftrightarrow> max_weight_perfect_matching G w' M"
+         "min_weight_perfect_matching G w M \<longleftrightarrow> min_weight_perfect_matching G w' M"
+         "max_weight_max_card_matching G w M \<longleftrightarrow> max_weight_max_card_matching G w' M"
+         "min_weight_max_card_matching G w M \<longleftrightarrow> min_weight_max_card_matching G w' M" 
+  using assms
+  by(auto elim!: max_weight_matchingE min_weight_matchingE
+                 max_weight_perfect_matchingE min_weight_perfect_matchingE
+                 max_weight_max_card_matchingE min_weight_max_card_matchingE
+         intro!: max_weight_matchingI min_weight_matchingI
+                 max_weight_perfect_matchingI min_weight_perfect_matchingI
+                 max_weight_max_card_matchingI min_weight_max_card_matchingI
+      simp add: comm_monoid_add_class.sum.cong[OF refl, of _ w' w] subsetD
+                perfect_matching_subgraphD max_card_matching_subgraphD)
+
 lemma 
   assumes "finite G"
   shows finite_number_of_matchings: "finite (Collect (graph_matching G))"
@@ -398,9 +426,10 @@ lemma max_unit_weight_max_card_matching:
 
 subsubsection \<open>Maximum Weight (Maximum Cardinality) to Minimum Weight Perfect (Bipartite)\<close>
 
-datatype 'v bp_vertex_wrapper = old_vertex (the_vertex: 'v) | new_vertex nat
+datatype 'v bp_vertex_wrapper = 
+  is_old_bp_vertex: old_vertex (the_vertex: 'v) | is_new_bp_vertex: new_vertex nat
 
-definition "bp_perfected_G G L R= 
+definition "bp_perfected_G L R= 
   {{old_vertex u, old_vertex v} | u v. u \<in> L \<and> v \<in> R} \<union>
    {{new_vertex i, old_vertex v} | i v. i < card R - card L \<and> v \<in> R} \<union>
    {{old_vertex u, new_vertex i} | i u. i < card L - card R \<and> u \<in> L}"
@@ -410,6 +439,46 @@ definition "bp_perfected_L L R=
 
 definition "bp_perfected_R L R= 
   old_vertex ` R \<union> {new_vertex i | i . i < card L - card R}"
+
+lemma bp_perfected_G_def':
+ "bp_perfected_G L R = {{u, v} | u v. u \<in> bp_perfected_L L R \<and> v \<in> bp_perfected_R L R}"
+  by(auto simp add: Vs_def bp_perfected_G_def bp_perfected_L_def bp_perfected_R_def)
+
+(*TODO MOVE*)
+lemma Vs_of_edges_connecting_two_sets:
+  "\<lbrakk> X \<noteq> {}; Y \<noteq> {}\<rbrakk> \<Longrightarrow> Vs ({{u, v} | u v. u\<in> X \<and> v \<in> Y}) = X \<union> Y"
+  by(auto simp add: Vs_def)
+
+lemma Vs_of_edges_connecting_two_sets_subs:
+  "Vs ({{u, v} | u v. u\<in> X \<and> v \<in> Y}) \<subseteq> X \<union> Y"
+  by(auto simp add: Vs_def)
+
+lemma bp_perfected_Vs_are:
+  "\<lbrakk>L\<noteq>{}; R \<noteq> {}\<rbrakk> \<Longrightarrow> Vs (bp_perfected_G L R) = bp_perfected_L L R \<union> bp_perfected_R L R"
+  unfolding bp_perfected_G_def'
+  by(subst Vs_of_edges_connecting_two_sets)
+    (auto simp add: bp_perfected_L_def bp_perfected_R_def)
+
+lemma bp_perfected_Vs_subs:
+  "Vs (bp_perfected_G L R) \<subseteq> bp_perfected_L L R \<union> bp_perfected_R L R"
+  using Vs_of_edges_connecting_two_sets_subs
+  unfolding bp_perfected_G_def' 
+  by fast
+
+lemma bipartite_Vs_of_complete_union_L_R:
+      "\<lbrakk>bipartite G L R; L \<union> R  \<subseteq> Vs G\<rbrakk> \<Longrightarrow>
+       Vs (bp_perfected_G L R) = bp_perfected_L L R \<union> bp_perfected_R L R"
+  apply(cases "L = {}")
+  subgoal
+    by(auto simp add: bp_perfected_G_def' bp_perfected_L_def bp_perfected_R_def
+           bipartite_empty_part_iff_empty)
+  apply(cases "R = {}")
+  subgoal
+    by(auto simp add: bp_perfected_G_def' bp_perfected_L_def bp_perfected_R_def
+           bipartite_empty_part_iff_empty dest: bipartite_commute)
+  subgoal
+   by(rule bp_perfected_Vs_are)
+  done
 
 definition "complete_bipartite G L R = 
    (bipartite G L R \<and> (\<forall> u \<in> L. \<forall> v \<in> R. {u, v} \<in> G))"
@@ -456,7 +525,7 @@ lemma perfected_vertices_empty_same:
 
 lemma balanced_complete_bipartite_perfected:
   assumes "bipartite G L R" "finite L" "finite R"
-  shows "balanced_complete_bipartite (bp_perfected_G G L R)
+  shows "balanced_complete_bipartite (bp_perfected_G L R)
               (bp_perfected_L L R)  (bp_perfected_R L R)" (is ?th1)
     and balanced_complete_bipartite_perfected_side_cards:
     "card (bp_perfected_L L R) = max (card L) (card R)"
@@ -884,7 +953,7 @@ lemma graph_matching_bigger_graph:
   by auto
 
 lemma finite_G_finite_completion:
-  "\<lbrakk>finite G; finite L; finite R\<rbrakk> \<Longrightarrow> finite (bp_perfected_G G L R)"
+  "\<lbrakk>finite G; finite L; finite R\<rbrakk> \<Longrightarrow> finite (bp_perfected_G L R)"
 proof(unfold bp_perfected_G_def, rule finite_UnI, rule finite_UnI, goal_cases)
   case 1
   thus ?case
@@ -930,7 +999,7 @@ lemma finite_G: "finite G"
   using bipartite_G finite_L finite_R finite_Vs_then_finite finite_parts_bipartite_graph_invar
   by auto
 
-abbreviation "G' \<equiv> bp_perfected_G G L R"
+abbreviation "G' \<equiv> bp_perfected_G L R"
 abbreviation "L' \<equiv> bp_perfected_L L R"
 abbreviation "R' \<equiv> bp_perfected_R L R"
 abbreviation "w' \<equiv> bp_min_costs_to_min_perfect_costs G w"
@@ -1228,15 +1297,15 @@ lemma int_minus_leq:"a \<le> b \<Longrightarrow> int b - int a = int ( b- a)"
   by auto
 
 lemma G'_bipartite: "bipartite G' L' R'"
-  by (simp add: balanced_complete_bipartiteD(1) balanced_complete_bipartite_perfected bipartite_G
-      complete_bipartiteD(1) finite_L finite_R)
+  using balanced_complete_bipartiteD(1) balanced_complete_bipartite_perfected(1) bipartite_G
+    complete_bipartiteD(1) finite_L finite_R by blast
 
 lemma graph_abs_G': "graph_abs G'"
   by(auto intro!: bipartite_to_graph_abs G'_bipartite finite_G')
 
 lemma complete_bipartite_G': "complete_bipartite G' L' R'"
-  by (simp add: balanced_complete_bipartiteD(1) balanced_complete_bipartite_perfected(1)
-      bipartite_G finite_L finite_R)
+  using balanced_complete_bipartiteD(1) balanced_complete_bipartite_perfected(1) bipartite_G finite_L
+    finite_R by blast
 
 lemma L'_R'_same_empty:"L' = {} \<longleftrightarrow> R' = {}"
   by (simp add: finite_L finite_R perfected_vertices_empty_same)
@@ -1316,7 +1385,7 @@ lemma graph_invarG: "graph_invar G"
 lemma "(a::real)*b - a* c = a*(b-c)"
   by (simp add: right_diff_distrib)
 
-lemma min_weight_perfect_fives_min_weight_max_card_matching:
+lemma min_weight_perfect_gives_min_weight_max_card_matching:
   assumes "min_weight_perfect_matching G' w'' M"
   shows  "min_weight_max_card_matching G w (project_to_old M \<inter> G)"
 proof-

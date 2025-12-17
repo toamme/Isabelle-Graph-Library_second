@@ -123,6 +123,10 @@ lemma bipartite_ends_and_lengths:
 definition "pick_one e = (SOME v. v \<in> e)"
 definition "pick_another e = (SOME v. v \<in> e \<and> v \<noteq> pick_one e)"
 
+lemma pick_one_of_singleton:
+  "e = {u} \<Longrightarrow> pick_one e = u"
+  by (simp add: pick_one_def)
+
 lemma pick_one_and_another_props:
   assumes "\<exists> u v. e = {u, v} \<and> u \<noteq> v" 
   shows   "pick_one e \<in> e" "pick_another e \<in> e"

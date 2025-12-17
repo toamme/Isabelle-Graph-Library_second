@@ -20,9 +20,10 @@ theories
 	Primal_Dual_Path_Search
 	Hungarian_Method_Top_Loop
 	Hungarian_Method_Instantiation
-	Hungarian_Example
-	Bipartite_Matchings_Reductions
-	
+	Weighted_Matchings_Reductions
+	WBP_Matching_Reductions_Exec
+	WBP_Matching_Exec
+	Hungarian_Example	
 
 document_files
   "root.tex"

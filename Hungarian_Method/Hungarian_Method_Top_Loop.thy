@@ -789,5 +789,24 @@ next
       by(auto intro!: min_perfect_if_algo_says_so simp add: M_is)
   qed
 
+lemma hungarian_final_invar:
+  "hungarian = Some M \<Longrightarrow> matching_invar M"
+proof(goal_cases)
+  case 1
+  hence "result (hungarian_loop initial_state) = success" 
+      and same_cards:"card_L = card_R"
+      and M_is: "M = buddies (hungarian_loop initial_state)"
+      using 1 initial_state_hungarian_dom
+      by(auto simp add: hungarian_def Let_def result.split[of "\<lambda> x. x = Some _"]
+                        if_split[of "\<lambda> x. x = Some _"] initial_state_loops_same 
+                 intro: result.exhaust[of "result (hungarian_loop initial_state)"]
+                  dest: final_flag) 
+    hence "hungarian_loop_succ_cond (hungarian_loop initial_state)" 
+      using if_succ_flag_then_succ initial_state_hungarian_dom by blast
+    thus ?case
+      using loop_on_initial_state_invar
+      by(auto simp add: M_is elim!: state_invarE)
+  qed
+
 end
 end

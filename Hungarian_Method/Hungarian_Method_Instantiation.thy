@@ -450,11 +450,10 @@ assumes G: "bipartite G (vset_to_set left) (vset_to_set right)"
   "(vset_to_set left) \<union> (vset_to_set right) \<subseteq> Vs G"
 
 "\<And> v N. \<lbrakk>v \<in> vset_to_set left;right_neighbs v= Some N\<rbrakk> 
-                 \<Longrightarrow> vset_invar N"
+                 \<Longrightarrow> vset_inv N"
 "\<And> v .  v \<in> vset_to_set left 
                      \<Longrightarrow> \<exists> N .right_neighbs v= Some N \<and>
                             vset_to_set N = {u | u. {v, u} \<in> G}"
-"\<And> u v. {u, v} \<in> G \<Longrightarrow> edge_costs u v = edge_costs v u"
 begin
 
 lemmas parent = 
@@ -541,6 +540,10 @@ interpretation  satisfied_simple:
 
 abbreviation "\<ww> \<equiv> (\<lambda> e. edge_costs (pick_one e) (pick_another e))"
 
+context
+  assumes symmetric_weights: "\<And> u v. {u, v} \<in> G \<Longrightarrow> edge_costs u v = edge_costs v u"
+begin
+
 lemma w_is_edge_costs: 
   assumes"{u, v} \<in> G" 
   shows  "\<ww> {u, v} = edge_costs u v"
@@ -550,7 +553,7 @@ proof-
       (auto simp add: doubleton_eq_iff)
   thus ?thesis
     using  pick_one_and_another_props(3)[of "{u, v}", OF exI[of _ u]]
-    by(auto simp add: doubleton_eq_iff  G(7)[OF assms])
+    by(auto simp add: doubleton_eq_iff symmetric_weights[OF assms])
 qed
 
 lemma feasible_init:
@@ -710,9 +713,8 @@ next
   have \<M>_is: "pd_path_search_spec.\<M> (lookup M) =
              matching_abstract M" 
     by(force simp add: matching_abstract_def pd_path_search_spec.\<M>_def
-        matching_augmentation_spec.\<M>_def[OF aug_a_matching.matching_augmentation_spec_axioms]
+        matching_augmentation_spec.\<M>_def'[OF aug_a_matching.matching_augmentation_spec_axioms]
         doubleton_eq_iff) 
-
   interpret pd_path_search: primal_dual_path_search
     (*the graph*)
     where G = G
@@ -800,17 +802,17 @@ next
            edge_costs u v" for u v
       by(auto dest!: set_mp[OF path_search_precondD(4)]
           simp add: tight_subgraph_def doubleton_eq_iff
-          w_is_edge_costs \<M>_is G(7))
+          w_is_edge_costs \<M>_is symmetric_weights)
     have help5: "dom (lookup \<pi>) \<subseteq> L \<union> R"
       using path_search_precondD(2)  G(1) bipartite_vs_subset by blast
     note help6 = symmetric_buddiesD[OF 
         matching_invarD(2)[OF path_search_precondD(1)]]
     show ?case
-      apply(rule primal_dual_path_search_axioms.intro G(1,2,3,7) help1 help2
+      apply(rule primal_dual_path_search_axioms.intro G(1,2,3) symmetric_weights help1 help2
           help3 | assumption)+
       by(unfold \<M>_is help6| intro help4 conjunct1[OF path_search_precondD(2)]
           potential best_even_neighbour vset missed help5 fold_rbt_as_needed' vset_is_empty
-          path_search_precondD(3)[simplified aug_a_matching.\<M>_def] filter_rbt_as_needed
+          path_search_precondD(3)[simplified aug_a_matching.\<M>_def'] filter_rbt_as_needed
         | assumption)+
   qed
   have search_path_is:
@@ -894,6 +896,15 @@ qed
 
 lemmas hungarian_correctness = hungarian_top_loop.hungarian_correctness
   [folded hungarian_def]
-end
+   hungarian_top_loop.hungarian_final_invar [folded hungarian_def]
 
+lemma hungarian_symmetric:
+  assumes "hungarian left right edge_costs right_neighbs lookup RBT_Map.update = Some M"
+  shows   "lookup M u = Some v \<longleftrightarrow> lookup M v = Some u"
+  using assms
+  by(auto dest!: hungarian_correctness(3)
+     simp add: aug_a_matching.invar_matchingD(2) aug_a_matching.symmetric_buddiesD)
+ 
+end
+end
 end

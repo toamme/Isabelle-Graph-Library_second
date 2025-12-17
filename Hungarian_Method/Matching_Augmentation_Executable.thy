@@ -170,6 +170,13 @@ lemma "UD D = G"
   by blast
 
 end
+(*TODO MOVE*)
+definition "dpairs_of_map m = {(x, y) | x y. m x = Some y}"
+definition "upairs_of_map m = {{x, y} | x y. m x = Some y}"
+
+lemma upairs_dpairs_of_map:
+ "upairs_of_map m = UD (dpairs_of_map m)"
+  by(auto simp add: upairs_of_map_def dpairs_of_map_def UD_def)
 
 locale matching_augmentation_spec =
   buddy_map: Map buddy_empty buddy_upd buddy_delete buddy_lookup buddy_invar
@@ -187,8 +194,12 @@ fun augment_impl
     in augment_impl M' vs)"
 
 lemmas [code] = augment_impl.simps
-definition "\<M> M = {{u, v} | u v. buddy_lookup M u = Some v}"
-definition "\<M>_dir M = {(u, v) | u v. buddy_lookup M u = Some v}"
+definition "\<M> M = upairs_of_map (buddy_lookup M)"
+definition "\<M>_dir M = dpairs_of_map (buddy_lookup M)"
+
+
+lemmas \<M>_def' = \<M>_def[simplified upairs_of_map_def]
+lemmas \<M>_dir_def' = \<M>_dir_def[simplified dpairs_of_map_def]
 
 definition "symmetric_buddies M = (\<forall> u v. buddy_lookup M u = Some v \<longleftrightarrow> buddy_lookup M v = Some u)"
 
@@ -217,11 +228,11 @@ and no_self_loop_buddyI:
 
 lemma no_self_loop_buddy_dblton_graph:
  "no_self_loop_buddy M \<Longrightarrow> dblton_graph (\<M> M)"
-  by(force intro!: dblton_graphI elim!: no_self_loop_buddyE simp add: \<M>_def doubleton_eq_iff)
+  by(force intro!: dblton_graphI elim!: no_self_loop_buddyE simp add: \<M>_def' doubleton_eq_iff)
 
 lemma no_self_loop_buddy_and_\<M>_dir:
   "no_self_loop_buddy M \<longleftrightarrow> (\<nexists> x. (x,x) \<in> \<M>_dir M)"
-  by(auto simp add: no_self_loop_buddy_def \<M>_dir_def)
+  by(auto simp add: no_self_loop_buddy_def \<M>_dir_def')
 
 definition "invar_matching G M = 
   (buddy_invar M \<and> symmetric_buddies M \<and> no_self_loop_buddy M \<and>
@@ -265,7 +276,7 @@ lemma \<M>_dir_one_upd_change:
                                 \<union> {(u, v), (v, u)}"
          "buddy_lookup M' = (buddy_lookup M) (u \<mapsto> v, v \<mapsto> u)"
   using assms(1)
-  by(auto simp add: assms(2) \<M>_dir_def buddies(2,3) 
+  by(auto simp add: assms(2) \<M>_dir_def' buddies(2,3) 
                     if_split[of "\<lambda> x. x = Some _" "_ = _" "Some _"])
 
 lemma augment_impl_effect:
@@ -358,20 +369,20 @@ lemma symmetric_buddy_matching:
   assumes "symmetric_buddies M" "no_self_loop_buddy M" 
   shows "matching (\<M> M)"
   using assms
-  apply(auto simp add: symmetric_buddies_def \<M>_def matching_def no_self_loop_buddy_def)
+  apply(auto simp add: symmetric_buddies_def \<M>_def' matching_def no_self_loop_buddy_def)
   by (metis option.sel)+
 
 lemma \<M>_\<M>_dir_UD:
   shows "\<M> M = UD (\<M>_dir M)"
-  by(auto simp add: \<M>_def \<M>_dir_def UD_def)
+  by(auto simp add: \<M>_def' \<M>_dir_def' UD_def)
 
 lemma symmetric_digraph_iff_symmetric_buddies:
   "symmetric_buddies M  \<longleftrightarrow> symmetric_digraph (\<M>_dir M)"
-  by(auto simp add: symmetric_buddies_def symmetric_digraph_def \<M>_dir_def)
+  by(auto simp add: symmetric_buddies_def symmetric_digraph_def \<M>_dir_def')
 
 lemma symmetric_buddies_unique:
  "\<lbrakk>symmetric_buddies M; {u, v} \<in> \<M> M; {u, v'} \<in> \<M> M\<rbrakk> \<Longrightarrow> v = v'"
-  by(auto simp add: \<M>_def symmetric_buddies_def doubleton_eq_iff)
+  by(auto simp add: \<M>_def' symmetric_buddies_def doubleton_eq_iff)
 
 lemma 
   assumes "buddy_invar M"
@@ -395,7 +406,7 @@ proof-
     case (1 e)
     then obtain u v where uv: "e = (u, v)" "u \<in> set p" "buddy_lookup M u = Some v" by auto
     hence uv_in_M: "{u, v} \<in> \<M> M"
-      using \<M>_def by blast
+      using \<M>_def' by blast
     have "{u, v} \<in> set (edges_of_path p)"
     proof-
       have h0: "length p < 2 \<Longrightarrow> False" 
@@ -443,13 +454,13 @@ proof-
      qed
      thus ?case
        using uv_in_M
-       by (simp add: \<M>_dir_def uv(1,3))
+       by (simp add: \<M>_dir_def' uv(1,3))
    next
      case (2 e)
      then obtain u v where uv: "e = (u, v)" "{u, v} \<in> set (edges_of_path p)" "(u, v) \<in> \<M>_dir M"
        by auto
      hence "u \<in> set p" "buddy_lookup M u = Some v"
-       by (auto intro: v_in_edge_in_path simp add: \<M>_dir_def)
+       by (auto intro: v_in_edge_in_path simp add: \<M>_dir_def')
      thus ?case
        by(simp add: uv(1))
    qed
@@ -550,7 +561,7 @@ lemma empty_matching_props:
 "invar_matching G buddy_empty"
 "\<M> buddy_empty = {}"
    by(auto intro!: invar_matchingI symmetric_buddiesI no_self_loop_buddyI 
-         simp add: buddies \<M>_def)
+         simp add: buddies \<M>_def')
 
 end
 

@@ -1,11 +1,9 @@
 theory Hungarian_Example
   imports Hungarian_Method_Instantiation  Directed_Set_Graphs.Pair_Graph_RBT
-          "HOL-Library.Product_Lexorder"
+         WBP_Matching_Exec
 begin
 
-section \<open>HM on Example Graph\<close>
-
-hide_const right 
+section \<open>6 Matchings on Bipartite Example Graph\<close>
 
 definition "edges_and_costs = [(0::nat, 1::nat, 1::real), (0,3, -10), 
 (0,5, 2/3), (0,7, 1/87), (2,5, -12), (2,9, 100), (2,1, 2.5), (4,5, 2+1/7), 
@@ -34,11 +32,41 @@ definition "left = foldr (\<lambda> x tree. RBT.insert x tree) (map fst edges_an
 definition "right = foldr (\<lambda> x tree. RBT.insert x tree) (map (fst o snd) edges_and_costs) Leaf"
 thm hungarian_def
 
-definition "final_matching = hungarian left right weights (lookup G)
-      lookup update"
+definition "final_min_perfect_matching 
+    = compute_min_weight_perfect_matching left right weights (lookup G)"
 
-value "final_matching"
+value "final_min_perfect_matching"
+value "if final_min_perfect_matching = None 
+        then Nil else inorder (the final_min_perfect_matching)"
 
-value "inorder (the final_matching)"
+definition "final_max_perfect_matching 
+    = compute_max_weight_perfect_matching left right weights (lookup G)"
 
+value "final_max_perfect_matching"
+value "if final_max_perfect_matching = None 
+        then Nil else inorder (the final_max_perfect_matching)"
+
+definition "final_min_matching 
+    = compute_min_weight_matching left right weights (lookup G)"
+
+value "final_min_matching"
+value "inorder final_min_matching"
+
+definition "final_max_matching 
+    = compute_max_weight_matching left right weights (lookup G)"
+
+value "final_max_matching"
+value "inorder final_max_matching"
+
+definition "final_min_max_matching 
+    = compute_min_weight_max_card_matching left right weights (lookup G)"
+
+value "final_min_max_matching"
+value "inorder final_min_max_matching"
+
+definition "final_max_max_matching 
+    = compute_max_weight_max_card_matching left right weights (lookup G)"
+
+value "final_max_max_matching"
+value "inorder final_max_max_matching"
 end
