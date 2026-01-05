@@ -7,8 +7,8 @@ subsection \<open>Setup\<close>
 
 locale 
 maintain_forest_spec = 
- algo_spec where fst="fst::'edge_type \<Rightarrow> 'a" and 
-                 get_from_set = "get_from_set::('edge_type \<Rightarrow> bool) \<Rightarrow> 'd \<Rightarrow> 'edge_type option" and 
+ algo_spec where fst="fst::'edge \<Rightarrow> 'a" and 
+                 get_from_set = "get_from_set::('edge \<Rightarrow> bool) \<Rightarrow> 'd \<Rightarrow> 'edge option" and 
                  empty_forest = "empty_forest :: 'c" and 
                  \<E>_impl = "\<E>_impl :: 'd"
  for fst get_from_set empty_forest \<E>_impl+
@@ -155,7 +155,7 @@ end
 
 locale 
 maintain_forest = 
- maintain_forest_spec where fst ="fst::'edge_type \<Rightarrow> 'a" +
+ maintain_forest_spec where fst ="fst::'edge \<Rightarrow> 'a" +
 
  algo where fst = fst  for fst +
 

@@ -29,25 +29,25 @@ text \<open>We fix a finite and non-empty set of directed edges.
       Those arcs get assigned some real-valued costs $c$ and non-negative capacities $u$.\<close>
 
 locale flow_network_spec =
- multigraph_spec where \<E> = "\<E>::'edge_type set" for \<E> +
- fixes \<u>::"'edge_type \<Rightarrow> ereal"
+ multigraph_spec where \<E> = "\<E>::'edge set" for \<E> +
+ fixes \<u>::"'edge \<Rightarrow> ereal"
 
 locale flow_network =
- multigraph where \<E> = "\<E>::'edge_type set" +
- flow_network_spec where \<E> = "\<E>::'edge_type set" for \<E> +
+ multigraph where \<E> = "\<E>::'edge set" +
+ flow_network_spec where \<E> = "\<E>::'edge set" for \<E> +
  assumes u_non_neg: "\<And> e. \<u> e \<ge> 0"
 
-locale cost_flow_spec = flow_network_spec where \<E> = "\<E>::'edge_type set" for \<E>  + 
-  fixes \<c>::"'edge_type \<Rightarrow> real"
+locale cost_flow_spec = flow_network_spec where \<E> = "\<E>::'edge set" for \<E>  + 
+  fixes \<c>::"'edge \<Rightarrow> real"
 
 context 
   flow_network_spec
 begin
 
-definition delta_plus_infty::"'a \<Rightarrow> 'edge_type set" ("\<delta>\<^sup>+\<^sub>\<infinity>") where
+definition delta_plus_infty::"'a \<Rightarrow> 'edge set" ("\<delta>\<^sup>+\<^sub>\<infinity>") where
     "\<delta>\<^sup>+\<^sub>\<infinity> v = {e. e \<in> \<E> \<and> fst e = v \<and> \<u> e = PInfty}"
                                    
-definition delta_minus_infty::"'a \<Rightarrow> 'edge_type set" ("\<delta>\<^sup>-\<^sub>\<infinity>") where
+definition delta_minus_infty::"'a \<Rightarrow> 'edge set" ("\<delta>\<^sup>-\<^sub>\<infinity>") where
     "\<delta>\<^sup>-\<^sub>\<infinity> v =  {e. e \<in> \<E> \<and> snd e = v \<and> \<u> e = PInfty}"
 
 definition infty_edges ("\<E>\<^sub>\<infinity>") where
@@ -86,17 +86,17 @@ context
   flow_network_spec
 begin
 
-definition flow_non_neg::"('edge_type \<Rightarrow> real) \<Rightarrow> bool" ("_ \<ge>\<^sub>F 0") where
+definition flow_non_neg::"('edge \<Rightarrow> real) \<Rightarrow> bool" ("_ \<ge>\<^sub>F 0") where
            "g \<ge>\<^sub>F 0 \<longleftrightarrow> (\<forall> e \<in> \<E>. g e \<ge> 0)"
 
 text \<open>Outgoing flow for a node.\<close>
 
-definition flow_out::"('edge_type \<Rightarrow> real) \<Rightarrow> 'a \<Rightarrow> real" where
+definition flow_out::"('edge \<Rightarrow> real) \<Rightarrow> 'a \<Rightarrow> real" where
            "flow_out g v =  (\<Sum> e \<in> \<delta>\<^sup>+ v. g e) "
 
 text \<open>Ingoing flow for a node.\<close>
 
-definition flow_in::"('edge_type \<Rightarrow> real) \<Rightarrow> 'a \<Rightarrow> real" where
+definition flow_in::"('edge \<Rightarrow> real) \<Rightarrow> 'a \<Rightarrow> real" where
            "flow_in g v =  (\<Sum> e \<in> \<delta>\<^sup>- v. g e) "
 
 text \<open>Absolute value of a flow.\<close>
@@ -136,17 +136,17 @@ context
 begin
 text \<open>The support is the set of all edges with non-zero flow.\<close>
 
-definition "support g = {(e::'edge_type)| e. g e > (0::real) \<and> e \<in> \<E>}"
+definition "support g = {(e::'edge)| e. g e > (0::real) \<and> e \<in> \<E>}"
 
 text \<open>Basically, a flow is a function assigning non-negative reals to edges.
      Then, a vertex's excess is the difference between incoming and outgoing flow.\<close>
 
-definition ex::"('edge_type \<Rightarrow> real) \<Rightarrow> 'a \<Rightarrow> real" ("ex\<^bsub>_\<^esub> _")where
+definition ex::"('edge \<Rightarrow> real) \<Rightarrow> 'a \<Rightarrow> real" ("ex\<^bsub>_\<^esub> _")where
 "ex\<^bsub>f\<^esub> v = (\<Sum> e \<in> \<delta>\<^sup>- v. f e) - (\<Sum> e \<in> \<delta>\<^sup>+ v. f e)"
 
 text \<open>A circulation is a flow with zero excess everywhere.\<close>
 
-definition is_circ::"('edge_type \<Rightarrow> real) \<Rightarrow> bool" where
+definition is_circ::"('edge \<Rightarrow> real) \<Rightarrow> bool" where
 "is_circ g = (\<forall> v \<in> \<V>. ex g v = 0)"
 
 lemma is_circI: 
@@ -155,7 +155,7 @@ lemma is_circI:
 
 text \<open>$f$ is a valid $u$-flow iff all flow values assigned by $f$ are below edge capacities $u$.\<close>
 
-definition  isuflow::"('edge_type \<Rightarrow> real) \<Rightarrow> bool" where
+definition  isuflow::"('edge \<Rightarrow> real) \<Rightarrow> bool" where
 "isuflow f \<longleftrightarrow> (\<forall> e \<in> \<E>. f e \<le> \<u> e \<and> f e \<ge> 0)"
 
 lemma isuflowI: 
@@ -177,7 +177,7 @@ text \<open> Now, we call $f$ a $b$-flow for some balance $b$ iff
 \end{itemize}
 \<close>
 
-definition isbflow::"('edge_type \<Rightarrow> real) \<Rightarrow> ('a \<Rightarrow> real)  \<Rightarrow> bool"  ("_ is _ flow")where
+definition isbflow::"('edge \<Rightarrow> real) \<Rightarrow> ('a \<Rightarrow> real)  \<Rightarrow> bool"  ("_ is _ flow")where
 "f is b flow \<longleftrightarrow> (isuflow f \<and> (\<forall> v \<in> \<V> . (- ex f v) = b v))"
 
 lemma isbflowE:
@@ -199,7 +199,7 @@ definition zero_balance::"('a \<Rightarrow> real) \<Rightarrow> bool" where
 text \<open>We need to talk about paths in the graph alongside which a flow is
  non-negative.\<close>
 
-definition "flowpath (g::'edge_type \<Rightarrow> real) (es::('edge_type list)) \<longleftrightarrow> multigraph_path es \<and>
+definition "flowpath (g::'edge \<Rightarrow> real) (es::('edge list)) \<longleftrightarrow> multigraph_path es \<and>
                           (\<forall> e \<in> set es. g e > 0)"
 
 text \<open>Similarly to other settings we have seen so far, we prove some technical lemmas.\<close>
@@ -354,11 +354,11 @@ context
 begin
 text \<open>We can obtain heads and tails of arcs.\<close>
 
-fun fstv::"'edge_type Redge \<Rightarrow> 'a" where 
+fun fstv::"'edge Redge \<Rightarrow> 'a" where 
     "fstv (F e) = fst e"|
     "fstv (B e) = snd e"
 
-fun sndv::"'edge_type Redge \<Rightarrow> 'a" where 
+fun sndv::"'edge Redge \<Rightarrow> 'a" where 
     "sndv (F e) = snd e"|
     "sndv (B e) = fst e"
 
@@ -368,7 +368,7 @@ text \<open>Similarly, we introduce the notion of residual capacities.
      For backward arcs this is the amount of flow that can be cancelled by
      abrogating the assignment due to $f$.\<close>
 
-fun rcap::"('edge_type \<Rightarrow> real) \<Rightarrow> 'edge_type Redge \<Rightarrow> ereal" ("\<uu>\<^bsub>_\<^esub>_") where 
+fun rcap::"('edge \<Rightarrow> real) \<Rightarrow> 'edge Redge \<Rightarrow> ereal" ("\<uu>\<^bsub>_\<^esub>_") where 
 "\<uu>\<^bsub>f\<^esub> (F e) = \<u> e - f e"|
 "\<uu>\<^bsub>f\<^esub> (B e) = f e"
 
@@ -380,7 +380,7 @@ lemma redge_pair_cases:
 
 text \<open>We can refer to the original edge where the residual arc emerges from.\<close>
 
-fun oedge::"'edge_type Redge \<Rightarrow> 'edge_type" where
+fun oedge::"'edge Redge \<Rightarrow> 'edge" where
  "oedge (F e) = e"|
  "oedge (B e) = e"
 
@@ -390,7 +390,7 @@ lemma oedge_both_redges_image: "oedge ` {F e, B e} = {e}"
 text \<open>We can also generate regular arcs just by omitting the constructors.
      Those are not necessarily contained in $\mathcal{E}$.\<close>
 
-fun to_vertex_pair::"'edge_type Redge \<Rightarrow> 'a \<times> 'a" where
+fun to_vertex_pair::"'edge Redge \<Rightarrow> 'a \<times> 'a" where
  "to_vertex_pair (F e) = make_pair e"|     
  "to_vertex_pair (B e) = prod.swap (make_pair e)"
 end
@@ -430,7 +430,7 @@ begin
 text \<open>For any residual edge, there is a counterpart in the opposite direction.
       A residual arc and its reverse both emerge from the same original edge.\<close>
 
-fun erev::"'edge_type Redge \<Rightarrow> 'edge_type Redge" where
+fun erev::"'edge Redge \<Rightarrow> 'edge Redge" where
 "erev (F e) = (B e)"|
 "erev (B e) = (F e)"
 
@@ -650,7 +650,7 @@ Edge connectivity is enforced by using the $awalk$ predicate from the theories o
 For this we need naked pairs without wrapping constructors.
 \<close>
 
-definition resreach::"('edge_type \<Rightarrow> real)   \<Rightarrow>'a \<Rightarrow> 'a \<Rightarrow> bool" where
+definition resreach::"('edge \<Rightarrow> real)   \<Rightarrow>'a \<Rightarrow> 'a \<Rightarrow> bool" where
        "resreach f u v = (\<exists> p. awalk (to_vertex_pair ` \<EE>) u (map to_vertex_pair p) v 
                             \<and> Rcap f (set p) > 0 \<and> p \<noteq> [] \<and> set p \<subseteq> \<EE>)"
 
@@ -1242,7 +1242,7 @@ text \<open>Since graph arcs from $\mathcal{E}$ get some costs assigned, we lift
      and thus, the costs are reduced according to $c$.
 \<close>
 
-fun \<cc>::"'edge_type Redge \<Rightarrow> real" where
+fun \<cc>::"'edge Redge \<Rightarrow> real" where
 "\<cc> (F e) = \<c> e"|
 "\<cc> (B e) = - \<c> e"
 
@@ -1251,6 +1251,6 @@ lemma erev_costs: " \<cc> (erev e) = - \<cc> e" for e
 end
 
 locale cost_flow_network= 
-flow_network where \<E> = "\<E>::'edge_type set" +
-cost_flow_spec where \<E> = "\<E>::'edge_type set" for \<E>
+flow_network where \<E> = "\<E>::'edge set" +
+cost_flow_spec where \<E> = "\<E>::'edge set" for \<E>
 end

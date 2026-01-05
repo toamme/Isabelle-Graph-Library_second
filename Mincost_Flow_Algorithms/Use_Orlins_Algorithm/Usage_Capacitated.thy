@@ -95,14 +95,14 @@ qed
 end
 
 locale with_capacity =
-fixes fst::"('edge_type::linorder) \<Rightarrow> ('a::linorder)"
-and snd::"('edge_type::linorder) \<Rightarrow> ('a::linorder)"
-and create_edge::"'a \<Rightarrow> 'a \<Rightarrow> 'edge_type"
-and \<E>_impl::"'edge_type list"
+fixes fst::"('edge::linorder) \<Rightarrow> ('a::linorder)"
+and snd::"('edge::linorder) \<Rightarrow> ('a::linorder)"
+and create_edge::"'a \<Rightarrow> 'a \<Rightarrow> 'edge"
+and \<E>_impl::"'edge list"
 and \<c>_impl:: "'c_type"
-and \<u>_impl:: "(('edge_type::linorder \<times> ereal) \<times> color) tree"
+and \<u>_impl:: "(('edge::linorder \<times> ereal) \<times> color) tree"
 and \<b>_impl:: "(('a::linorder \<times> real) \<times> color) tree"
-and c_lookup::"'c_type \<Rightarrow> 'edge_type \<Rightarrow> real option"
+and c_lookup::"'c_type \<Rightarrow> 'edge \<Rightarrow> real option"
 begin
 
 definition "\<E>_impl_infty = (filter (\<lambda> e. the (flow_lookup \<u>_impl e) = PInfty) \<E>_impl)"
@@ -111,7 +111,7 @@ definition "\<E>_impl_finite = (filter (\<lambda> e. the (flow_lookup \<u>_impl 
 
 definition "\<E>1_impl = map inedge \<E>_impl_finite"
 definition "\<E>2_impl = map outedge \<E>_impl_finite"
-definition "\<E>3_impl = map (vtovedge::'edge_type \<Rightarrow> ('a, 'edge_type) hitchcock_edge) \<E>_impl_infty"
+definition "\<E>3_impl = map (vtovedge::'edge \<Rightarrow> ('a, 'edge) hitchcock_edge) \<E>_impl_infty"
 definition "\<E>'_impl = \<E>1_impl@\<E>2_impl@\<E>3_impl"
 
 definition "\<c>'_impl = \<c>_impl"
@@ -121,7 +121,7 @@ definition "c_lookup' c e = (case e of inedge d \<Rightarrow> Some 0 |
                                        vtovedge d \<Rightarrow> c_lookup c d |
                                        dummy _ _ \<Rightarrow> None)"
 
-definition "b_lifted = foldr (\<lambda> x tree. bal_update ((vertex::'a \<Rightarrow> ('a, 'edge_type) hitchcock_wrapper) x) (the (bal_lookup \<b>_impl x)) tree) 
+definition "b_lifted = foldr (\<lambda> x tree. bal_update ((vertex::'a \<Rightarrow> ('a, 'edge) hitchcock_wrapper) x) (the (bal_lookup \<b>_impl x)) tree) 
             (vs fst snd \<E>_impl) Leaf"
 
 definition " vertices_done = foldr (\<lambda> xy tree. let u = the (flow_lookup \<u>_impl xy) in
@@ -130,7 +130,7 @@ definition " vertices_done = foldr (\<lambda> xy tree. let u = the (flow_lookup 
             \<E>_impl_finite b_lifted"
 
 definition "\<b>'_impl = foldr (\<lambda> e tree. 
-                        bal_update ((edge::'edge_type \<Rightarrow> ('a, 'edge_type) hitchcock_wrapper) e) 
+                        bal_update ((edge::'edge \<Rightarrow> ('a, 'edge) hitchcock_wrapper) e) 
                                (real_of_ereal (the (flow_lookup \<u>_impl e))) tree) \<E>_impl_finite vertices_done"
 
 
@@ -179,7 +179,7 @@ lemma bal_lookup_fold:
     (auto split: hitchcock_wrapper.split simp add: bal_invar_fold bal_map.map_update)
 
 locale with_capacity_proofs =
-with_capacity where fst = "fst::'edge_type::linorder \<Rightarrow> 'a::linorder"
+with_capacity where fst = "fst::'edge::linorder \<Rightarrow> 'a::linorder"
 and create_edge = create_edge 
 and \<E>_impl = \<E>_impl
 and \<u>_impl = \<u>_impl +
@@ -767,11 +767,11 @@ end
 datatype cost_dummy = cost_dummy
 
 locale solve_maxflow =
-fixes fst::"('edge_type::linorder) \<Rightarrow> ('a::linorder)"
-and snd::"('edge_type::linorder) \<Rightarrow> ('a::linorder)"
-and create_edge::"'a \<Rightarrow> 'a \<Rightarrow> 'edge_type"
-and \<E>_impl::"'edge_type list"
-and \<u>_impl:: "(('edge_type::linorder \<times> ereal) \<times> color) tree"
+fixes fst::"('edge::linorder) \<Rightarrow> ('a::linorder)"
+and snd::"('edge::linorder) \<Rightarrow> ('a::linorder)"
+and create_edge::"'a \<Rightarrow> 'a \<Rightarrow> 'edge"
+and \<E>_impl::"'edge list"
+and \<u>_impl:: "(('edge::linorder \<times> ereal) \<times> color) tree"
 and s::'a
 and t::'a
 begin
@@ -780,7 +780,7 @@ definition "\<E>_impl' = map old_edge \<E>_impl @ [new_edge (create_edge t s)]"
 
 definition "\<c>_impl' = cost_dummy"
 
-definition "c_lookup' c (e::'edge_type edge_wrapper) = (case e of old_edge _ \<Rightarrow> Some (0::real) |
+definition "c_lookup' c (e::'edge edge_wrapper) = (case e of old_edge _ \<Rightarrow> Some (0::real) |
                                        new_edge _ \<Rightarrow> Some (-1))"
 
 definition "\<b>_impl' = foldr (\<lambda> x tree. bal_update x 0 tree) (vs fst snd \<E>_impl) Leaf"
@@ -842,8 +842,8 @@ lemma capacity_bflow_cong:
   by(simp add: flow_network_spec.isbflow_def  flow_network_spec.isuflow_def)
 
 locale solve_maxflow_proofs =
-solve_maxflow where fst = "fst::'edge_type::linorder \<Rightarrow> 'a::linorder"
-and snd = "snd::'edge_type::linorder \<Rightarrow> 'a::linorder"
+solve_maxflow where fst = "fst::'edge::linorder \<Rightarrow> 'a::linorder"
+and snd = "snd::'edge::linorder \<Rightarrow> 'a::linorder"
 and create_edge = create_edge 
 and \<E>_impl = \<E>_impl
 and \<u>_impl = \<u>_impl +

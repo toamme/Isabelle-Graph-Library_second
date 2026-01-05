@@ -16,7 +16,7 @@ locale orlins_spec =
   and not_blocked_empty = not_blocked_empty
   and conv_empty = conv_empty
 
- for fst::"'edge_type \<Rightarrow> 'a" and flow_empty::'e and bal_empty::'f and 
+ for fst::"'edge \<Rightarrow> 'a" and flow_empty::'e and bal_empty::'f and 
      rep_comp_empty::'g and not_blocked_empty::'i and conv_empty::'h+
 
 fixes init_flow :: "'e"

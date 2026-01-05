@@ -5,7 +5,7 @@ theory Maintain_Forest_Time
 begin
 
 locale maintain_forest_time =
-maintain_forest where fst = fst for fst::"'edge_type \<Rightarrow> 'a"+ 
+maintain_forest where fst = fst for fst::"'edge \<Rightarrow> 'a"+ 
 fixes t\<^sub>F\<^sub>C::nat and t\<^sub>F\<^sub>B::nat and t\<^sub>F\<^sub>u\<^sub>f::nat 
 begin
 function (domintros) maintain_forest_time::"('e, 'f, 'c,'h, 'd, 'g, 'i) Algo_state 

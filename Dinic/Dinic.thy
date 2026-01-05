@@ -126,7 +126,7 @@ lemma invar_basicE:
 end
 
 locale dinic =
-dinic_spec where fst = "fst::'edge_type \<Rightarrow> 'v" +
+dinic_spec where fst = "fst::'edge \<Rightarrow> 'v" +
 flow_network where fst = fst for fst +
 assumes find_blocking_flow:
        "\<And> f. flow_invar f \<Longrightarrow> find_blocking_flow f = None

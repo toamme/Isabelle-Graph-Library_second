@@ -341,7 +341,7 @@ proof(cases "Abs f > 0", goal_cases)
   define css' where "css' = map (map (get_old_edge) o prod.fst) css_ws_cycles "
   define cws where "cws = map  prod.snd css_ws_cycles"
   define get_s_t_path where
-    "get_s_t_path (P::('edge_type) edge_wrapper list)
+    "get_s_t_path (P::('edge) edge_wrapper list)
                     = (let first1 = takeWhile is_old P;
                            first2 = dropWhile is_old P;
                            second = dropWhile (\<lambda> e. \<not> is_old e) first2

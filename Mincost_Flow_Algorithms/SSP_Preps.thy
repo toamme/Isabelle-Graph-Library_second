@@ -8,7 +8,7 @@ text \<open>For indicating results we introduce markers $success$ and $failiure$
  $notyetterm$ emblematizes that the computation was not completed yet.\<close>
 
 datatype return = success | failure | notyetterm
-record ('b, 'edge_type) Algo_state = current_flow::"'edge_type \<Rightarrow> real" 
+record ('b, 'edge) Algo_state = current_flow::"'edge \<Rightarrow> real" 
                        balance::"'b \<Rightarrow> real" 
                        return::return
 
@@ -17,7 +17,7 @@ The following tiny locale is later used as a basis for the other locales promise
 \<close>
 
 locale algo = cost_flow_network where fst = fst
-  for fst::"'edge_type \<Rightarrow> 'a" +
+  for fst::"'edge \<Rightarrow> 'a" +
   fixes \<b>::"'a \<Rightarrow> real"
    assumes integral_u:  "\<And> e. e\<in> \<E> \<Longrightarrow> \<exists> n::nat. \<u> e = real n \<or> \<u> e = PInfty"
    and   integral_b:  "\<And> v. v\<in> \<V> \<Longrightarrow> \<exists> n::int. \<b> v =  n"

@@ -5,7 +5,7 @@ theory Send_Flow_Time
 begin
 
 locale send_flow_time =
-send_flow where fst = fst for fst::"'edge_type \<Rightarrow> 'a"+
+send_flow where fst = fst for fst::"'edge \<Rightarrow> 'a"+
 fixes t\<^sub>S\<^sub>C::nat and t\<^sub>S\<^sub>B::nat and t\<^sub>S\<^sub>u\<^sub>f::nat and t\<^sub>S\<^sub>F::nat
 begin
 

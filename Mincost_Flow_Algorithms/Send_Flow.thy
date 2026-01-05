@@ -8,16 +8,16 @@ subsection \<open>Setup\<close>
 
 locale send_flow_spec = 
   algo_spec where fst = fst and 
-  get_from_set= "get_from_set ::('edge_type \<Rightarrow> bool) \<Rightarrow> 'd \<Rightarrow> 'edge_type option"
+  get_from_set= "get_from_set ::('edge \<Rightarrow> bool) \<Rightarrow> 'd \<Rightarrow> 'edge option"
   and flow_empty = "flow_empty::'e" and bal_empty = "bal_empty::'f" and rep_comp_empty = "rep_comp_empty::'g"
   and conv_empty = "conv_empty::'h" and not_blocked_empty = "not_blocked_empty::'i"
-for fst::"'edge_type \<Rightarrow> 'a" and get_from_set and 
+for fst::"'edge \<Rightarrow> 'a" and get_from_set and 
     flow_empty and bal_empty and rep_comp_empty and conv_empty and not_blocked_empty +
 
 fixes get_source_target_path_a
-  ::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state  \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'edge_type Redge list) option" 
+  ::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state  \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'edge Redge list) option" 
   and get_source_target_path_b
-  ::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state  \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'edge_type Redge list) option" 
+  ::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state  \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'edge Redge list) option" 
   and get_source::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state \<Rightarrow> 'a option"
   and get_target::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state \<Rightarrow> 'a option"
   and test_all_vertices_zero_balance::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state \<Rightarrow> bool"

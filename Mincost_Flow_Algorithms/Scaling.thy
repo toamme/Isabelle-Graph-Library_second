@@ -65,10 +65,10 @@ In fact, the axiom for $k > 0$ is never referred to.
 \end{itemize}
 \<close>
 
-locale SSP = algo where fst = fst for fst::"'edge_type \<Rightarrow> 'a" +
+locale SSP = algo where fst = fst for fst::"'edge \<Rightarrow> 'a" +
   fixes L::nat and
         get_source_target_path
-            ::"('edge_type \<Rightarrow> real) \<Rightarrow> ('a \<Rightarrow> real)  \<Rightarrow> ('a \<times> 'a \<times> 'edge_type Redge list) option"
+            ::"('edge \<Rightarrow> real) \<Rightarrow> ('a \<Rightarrow> real)  \<Rightarrow> ('a \<times> 'a \<times> 'edge Redge list) option"
    assumes get_source_target_path_axioms:
      " \<And> b f s t P . get_source_target_path f b = Some (s,t,P) \<Longrightarrow>
                      s \<in> \<V>"
@@ -109,7 +109,7 @@ By this, functions with non-trivial termination arguments may be defined.
 
 subsubsection \<open>Function Definition and Setup\<close>
 
-function  (domintros) SSP::"('a, 'edge_type) Algo_state \<Rightarrow> ('a, 'edge_type) Algo_state" where
+function  (domintros) SSP::"('a, 'edge) Algo_state \<Rightarrow> ('a, 'edge) Algo_state" where
 "SSP state = 
   (let b = balance state; f = current_flow state in
   (if zero_balance b then state \<lparr>return := success\<rparr> 
@@ -1090,9 +1090,9 @@ We use this for showing the third invariant for the initial state.
 \<close>
 
 locale Scaling = 
-algo where fst = fst for fst::"'edge_type \<Rightarrow> 'a"+
+algo where fst = fst for fst::"'edge \<Rightarrow> 'a"+
 fixes get_source_target_path
-            ::"nat \<Rightarrow> ('edge_type \<Rightarrow> real) \<Rightarrow> ('a \<Rightarrow> real)  \<Rightarrow> ('a \<times> 'a \<times> 'edge_type Redge list) option"
+            ::"nat \<Rightarrow> ('edge \<Rightarrow> real) \<Rightarrow> ('a \<Rightarrow> real)  \<Rightarrow> ('a \<times> 'a \<times> 'edge Redge list) option"
    assumes get_source_target_path_axioms:
      " \<And> b f s t P (k::nat). get_source_target_path k f b = Some (s,t,P) \<Longrightarrow>
                      s \<in> \<V>"
@@ -1147,7 +1147,7 @@ Please note that due to the locale approach, the threshold variable $L$
 is not needed to be incorporated into the program state.
 \<close>
 
-function  (domintros) Scaling::"nat \<Rightarrow> ('a, 'edge_type) Algo_state \<Rightarrow> ('a, 'edge_type) Algo_state" where
+function  (domintros) Scaling::"nat \<Rightarrow> ('a, 'edge) Algo_state \<Rightarrow> ('a, 'edge) Algo_state" where
 "Scaling l state = (let state' = ssp (2^l-1) state in 
                    (case return state' of
                      success \<Rightarrow> state' 

@@ -18,7 +18,7 @@ Please note that for this definition we just require connectivity and
 disregard residual capacities for now.
 \<close>
 
-definition prepath::" ('edge_type Redge) list \<Rightarrow> bool" where
+definition prepath::" ('edge Redge) list \<Rightarrow> bool" where
        "prepath p  = (awalk UNIV (fstv (hd p)) (map to_vertex_pair p) (sndv (last p)) 
                              \<and> p \<noteq> [] )"
 
@@ -220,7 +220,7 @@ subsection \<open>Augmenting Paths\<close>
 
 text \<open>In addition to $prepath$, an \textit{augmenting path} requires strictly positive residual capacities.\<close>
 
-definition augpath::"('edge_type \<Rightarrow> real)   \<Rightarrow> ('edge_type Redge) list \<Rightarrow> bool" where
+definition augpath::"('edge \<Rightarrow> real)   \<Rightarrow> ('edge Redge) list \<Rightarrow> bool" where
        "augpath f p  = (prepath p \<and> Rcap f (set p) > 0 )"
 
 lemma augpathI: "prepath p \<Longrightarrow> Rcap f (set p) > 0 \<Longrightarrow> augpath f p"
@@ -409,7 +409,7 @@ qed
 
 text \<open>Reachability by a path with at least $cap$ residual capacity.\<close>
 
-definition resreach_cap::"('edge_type \<Rightarrow> real) \<Rightarrow> nat \<Rightarrow>'a \<Rightarrow> 'a \<Rightarrow> bool" where
+definition resreach_cap::"('edge \<Rightarrow> real) \<Rightarrow> nat \<Rightarrow>'a \<Rightarrow> 'a \<Rightarrow> bool" where
        "resreach_cap f cap u v = (\<exists> p. awalk (to_vertex_pair ` \<EE>) u (map to_vertex_pair p) v 
                             \<and> Rcap f (set p) > (real cap) \<and> p \<noteq> [] \<and> set p \<subseteq> \<EE>)"
 end
@@ -426,7 +426,7 @@ text \<open>For a plethora of flow computing algorithms the notion of \textit{au
 
 text \<open>First, let us consider the augmentation of a single arc.\<close>
 
-fun augment_edge::"('edge_type  \<Rightarrow> real) \<Rightarrow> real \<Rightarrow>'edge_type Redge \<Rightarrow> ('edge_type \<Rightarrow> real)" where
+fun augment_edge::"('edge  \<Rightarrow> real) \<Rightarrow> real \<Rightarrow>'edge Redge \<Rightarrow> ('edge \<Rightarrow> real)" where
 "augment_edge f \<gamma> e = (\<lambda> d. 
      if d = oedge e then
             (case e of F d \<Rightarrow> f d + \<gamma> |
@@ -451,7 +451,7 @@ context
 begin
 text \<open>The augmentation along a path is defined as the sequentially preformed augmentation of the edges.\<close>
 
-fun augment_edges::"('edge_type \<Rightarrow> real) \<Rightarrow> real \<Rightarrow>('edge_type Redge) list \<Rightarrow> ('edge_type \<Rightarrow> real)" where
+fun augment_edges::"('edge \<Rightarrow> real) \<Rightarrow> real \<Rightarrow>('edge Redge) list \<Rightarrow> ('edge \<Rightarrow> real)" where
 "augment_edges f \<gamma> [] = f"|
 "augment_edges f \<gamma> (e#es) = augment_edge (augment_edges f \<gamma> es) \<gamma> e"
 
@@ -460,7 +460,7 @@ lemma augment_edges_fold: "augment_edges f \<gamma> es = foldr (\<lambda> e f. a
 
 text \<open>For convenience during inductions, fist single edge augment, then recursion\<close>
 
-fun augment_edges'::"('edge_type \<Rightarrow> real) \<Rightarrow> real \<Rightarrow>('edge_type Redge) list \<Rightarrow> ('edge_type \<Rightarrow> real)" where
+fun augment_edges'::"('edge \<Rightarrow> real) \<Rightarrow> real \<Rightarrow>('edge Redge) list \<Rightarrow> ('edge \<Rightarrow> real)" where
 "augment_edges' f \<gamma> [] = f"|
 "augment_edges' f \<gamma> (e#es) = augment_edges' (augment_edge f \<gamma> e) \<gamma> es"
 

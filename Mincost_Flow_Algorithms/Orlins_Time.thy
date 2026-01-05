@@ -8,7 +8,7 @@ locale orlins_time =
  maintain_forest_time where fst = fst + 
  send_flow_time where fst = fst + 
  orlins where fst = fst 
-for fst::"'edge_type \<Rightarrow> 'a"+
+for fst::"'edge \<Rightarrow> 'a"+
 fixes t\<^sub>O\<^sub>C::nat and  t\<^sub>O\<^sub>B::nat
 begin  
 

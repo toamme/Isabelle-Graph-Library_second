@@ -8,10 +8,10 @@ text \<open>Due to termination issues, we now have to restrict to integer capaci
 
 locale SSP = cost_flow_network where fst = fst + 
              algo where fst = fst
-           for fst::"'edge_type \<Rightarrow>'a"+
+           for fst::"'edge \<Rightarrow>'a"+
   fixes get_source::"('a \<Rightarrow> real) \<Rightarrow> 'a option" and
-        get_reachable_target::"('edge_type \<Rightarrow> real) \<Rightarrow> ('a \<Rightarrow> real)\<Rightarrow> 'a \<Rightarrow> 'a option" and
-        get_min_augpath::"('edge_type \<Rightarrow> real) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> (('edge_type Redge) list)"
+        get_reachable_target::"('edge \<Rightarrow> real) \<Rightarrow> ('a \<Rightarrow> real)\<Rightarrow> 'a \<Rightarrow> 'a option" and
+        get_min_augpath::"('edge \<Rightarrow> real) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> (('edge Redge) list)"
   assumes integral_u:  "\<And> e. e \<in> \<E> \<Longrightarrow> \<exists> n::nat. \<u> e = real n"
    and    integral_b:  "\<And> v. v\<in> \<V> \<Longrightarrow> \<exists> n::int. \<b> v =  n"
    and   is_balance_b: "is_balance \<b>"
@@ -33,7 +33,7 @@ locale SSP = cost_flow_network where fst = fst +
                                      foldr (\<lambda> e acc. acc + \<c> e) C 0 < 0"
 begin
 
-function  (domintros) SSP::"('a, 'edge_type) Algo_state \<Rightarrow> ('a, 'edge_type) Algo_state" where
+function  (domintros) SSP::"('a, 'edge) Algo_state \<Rightarrow> ('a, 'edge) Algo_state" where
 "SSP state = 
   (let b = balance state; f = current_flow state in
   (if zero_balance b then state \<lparr>return := success\<rparr> 

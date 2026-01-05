@@ -22,7 +22,7 @@ text \<open>For a vertex with some outgoing flow we try to find a list of succes
 The natural number indicates a maximum number of iterations.
 \<close>
 
-fun find_cycle::" ('edge_type \<Rightarrow> real) \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'a list" where
+fun find_cycle::" ('edge \<Rightarrow> real) \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'a list" where
 "find_cycle g 0 v= [v]"|
 "find_cycle g (Suc n) v = v#(if (\<exists> e \<in> \<E>. g e > 0 \<and> fst e = v) then 
                                  (let e = (SOME e.  g e > 0  \<and> fst e = v \<and> e \<in>\<E>) 

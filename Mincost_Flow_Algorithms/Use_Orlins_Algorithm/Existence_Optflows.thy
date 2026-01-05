@@ -7,7 +7,7 @@ hide_const \<E>_impl es \<c>_impl \<b>_impl \<u>_impl \<b>
 
 locale cost_flow_network_flow_existence
 = cost_flow_network 
-where fst = fst for fst:: "('edge_type::linorder) \<Rightarrow> ('a::linorder)"
+where fst = fst for fst:: "('edge::linorder) \<Rightarrow> ('a::linorder)"
 begin
 
 lemma es_exist: "\<exists> es. set es = \<E> \<and> distinct es"
@@ -198,7 +198,7 @@ end
 
 locale flow_network_max_flow_existence
 = flow_network 
-where fst = fst for fst:: "('edge_type::linorder) \<Rightarrow> ('a::linorder)"
+where fst = fst for fst:: "('edge::linorder) \<Rightarrow> ('a::linorder)"
 begin
 
 context 

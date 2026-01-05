@@ -7,7 +7,7 @@ section \<open>Reduction: Eliminating Capacities from a Flow Network\<close>
 
 subsection \<open>Mixed-Capacity Graphs\<close>
 
-datatype ('a, 'edge_type) hitchcock_wrapper = edge 'edge_type | vertex 'a
+datatype ('a, 'edge) hitchcock_wrapper = edge 'edge | vertex 'a
 
 fun edge_of where
   "edge_of (edge e) = e"
@@ -15,8 +15,8 @@ fun edge_of where
 fun vertex_of where
   "vertex_of (vertex x) = x"
 
-datatype ('a, 'edge_type) hitchcock_edge = outedge 'edge_type | inedge 'edge_type | vtovedge 'edge_type |
-  dummy "('a, 'edge_type) hitchcock_wrapper" "('a, 'edge_type) hitchcock_wrapper"
+datatype ('a, 'edge) hitchcock_edge = outedge 'edge | inedge 'edge | vtovedge 'edge |
+  dummy "('a, 'edge) hitchcock_wrapper" "('a, 'edge) hitchcock_wrapper"
 
 fun get_edge where
   "get_edge (outedge e) = e"|
@@ -65,7 +65,7 @@ definition "old_f_gen \<E> \<u> f' = (\<lambda> e. if e \<in> flow_network_spec.
 
 theorem reduction_of_mincost_flow_to_hitchcock_general:
   fixes \<c> \<b> D
-  assumes "flow_network fstv sndv create_edge (\<u>::'edge_type \<Rightarrow> ereal) \<E>"
+  assumes "flow_network fstv sndv create_edge (\<u>::'edge \<Rightarrow> ereal) \<E>"
   defines "make_pair \<equiv> multigraph_spec.make_pair fstv sndv"
   defines "fstv' \<equiv> new_fstv_gen fstv"
   defines "sndv' \<equiv> new_sndv_gen fstv sndv"
@@ -511,7 +511,7 @@ proof-
         using assms(2)
         by (force simp add:  \<E>1_def \<c>'_def )
       have costs_E3_are: "(\<Sum>e\<in>\<E>3. f' e * \<c>' e) = 
-        (\<Sum>x\<in>{(vtovedge e)::('a, 'edge_type) hitchcock_edge |e. e \<in> flow_network_spec.infty_edges \<E> \<u>}.
+        (\<Sum>x\<in>{(vtovedge e)::('a, 'edge) hitchcock_edge |e. e \<in> flow_network_spec.infty_edges \<E> \<u>}.
          f (get_edge x) * \<c> (get_edge x))"
         unfolding \<E>1_def \<E>2_def \<c>'_def case1(2) \<E>3_def Let_def f_of_double_if_cond_same 
         apply(subst (1) sum_if_not_P_not_Q_but_R)
