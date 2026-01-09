@@ -276,22 +276,22 @@ lemma b_impl_props: "dom (bal_lookup (b_impl b)) = \<V> " "(\<forall> v \<in> \<
   using  b_impl_exists[simplified sym[OF some_eq_ex]] 
   by (auto simp add: b_impl_def) force
 
-lemma solve_maxflow_proofs: "solve_maxflow_proofs s t fst snd create_edge \<E>_impl \<u>_impl \<E> (the_default PInfty \<circ> flow_lookup \<u>_impl)"
-  apply(rule solve_maxflow_proofs.intro[OF flow_network_impl], rule solve_maxflow_proofs_axioms.intro)
+lemma solve_max_flow_proofs: "solve_max_flow_proofs s t fst snd create_edge \<E>_impl \<u>_impl \<E> (the_default PInfty \<circ> flow_lookup \<u>_impl)"
+  apply(rule solve_max_flow_proofs.intro[OF flow_network_impl], rule solve_max_flow_proofs_axioms.intro)
   by(auto simp add: \<E>_impl_prop \<u>_impl_props set_invar_def to_set_def s_in_V t_in_V s_neq_t)
 
 
-interpretation algo_locale: solve_maxflow_proofs
+interpretation algo_locale: solve_max_flow_proofs
   where  fst = fst and snd = snd and create_edge = create_edge
   and \<E>_impl = \<E>_impl and \<u>_impl = \<u>_impl and \<E> = \<E>
   and \<u> = "the_default PInfty \<circ> flow_lookup \<u>_impl" 
-  using solve_maxflow_proofs by simp
+  using solve_max_flow_proofs by simp
 
 lemma algo_locale_isbflow_def:"algo_locale.isbflow f b =
                    flow_network_spec.isbflow fst snd \<E> (the_default PInfty \<circ> flow_lookup \<u>_impl) f b"
   by auto
 
-lemma to_maxflow_from_algo: "algo_locale.is_s_t_flow f s t \<Longrightarrow> f is s--t flow"
+lemma to_max_flow_from_algo: "algo_locale.is_s_t_flow f s t \<Longrightarrow> f is s--t flow"
 proof(goal_cases)
   case 1
   hence all_props:"algo_locale.isuflow f" "algo_locale.ex f s \<le> 0"
@@ -432,15 +432,15 @@ next
   hence two': "\<not> has_infty_st_path local.make_pair \<E> (the_default PInfty \<circ> flow_lookup \<u>_impl) s t"
     using \<u>_impl_props(2) 
     by(force intro!: not_has_infty_st_pathI elim!: not_has_infty_st_pathE simp add: the_default_def)
-  have success:"return (solve_maxflow.final_state_maxflow fst snd create_edge \<E>_impl \<u>_impl s t) = success"
+  have success:"return (solve_max_flow.final_state_max_flow fst snd create_edge \<E>_impl \<u>_impl s t) = success"
     using algo_locale.correctness_of_implementation(2,3)[OF two'] return.exhaust by blast
   have max_flow_algo:"algo_locale.is_max_flow s t
- (abstract_flow_map (solve_maxflow.final_flow_impl_maxflow_original fst snd create_edge \<E>_impl \<u>_impl s t))"
+ (abstract_flow_map (solve_max_flow.final_flow_impl_max_flow_original fst snd create_edge \<E>_impl \<u>_impl s t))"
     using algo_locale.correctness_of_implementation(1)[OF two' success] by simp
   have "is_max_flow s t
- (abstract_flow_map (solve_maxflow.final_flow_impl_maxflow_original fst snd create_edge \<E>_impl \<u>_impl s t))"
+ (abstract_flow_map (solve_max_flow.final_flow_impl_max_flow_original fst snd create_edge \<E>_impl \<u>_impl s t))"
     using  max_flow_algo to_alog_max_flow
-        to_maxflow_from_algo
+        to_max_flow_from_algo
     by(auto elim!: flow_network_spec.is_max_flowE intro!: is_max_flowI)
   thus ?case by auto
 qed

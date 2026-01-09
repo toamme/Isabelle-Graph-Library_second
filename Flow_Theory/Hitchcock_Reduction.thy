@@ -63,7 +63,7 @@ definition "new_f_gen fstv \<E> \<u>  f = (\<lambda> e'. (let e = edge_of (new_f
 definition "old_f_gen \<E> \<u> f' = (\<lambda> e. if e \<in> flow_network_spec.infty_edges \<E> \<u> then f' (vtovedge e)
                     else  f' (outedge e))"
 
-theorem reduction_of_mincost_flow_to_hitchcock_general:
+theorem reduction_of_min_cost_flow_to_hitchcock_general:
   fixes \<c> \<b> D
   assumes "flow_network fstv sndv create_edge (\<u>::'edge \<Rightarrow> ereal) \<E>"
   defines "make_pair \<equiv> multigraph_spec.make_pair fstv sndv"
@@ -1071,7 +1071,7 @@ definition "new_f \<E> \<u> f = (\<lambda> e'. (let e = edge_of (fst e')
 
 definition "old_f f' = (\<lambda> e. f' (edge e, vertex (snd e)))"
 
-theorem reduction_of_mincost_flow_to_hitchcock:
+theorem reduction_of_min_cost_flow_to_hitchcock:
   fixes \<c> \<b>
   assumes "flow_network fst snd Pair (ereal o \<u>) \<E>"
   assumes "\<nexists> x. (x,x) \<in> \<E>"
