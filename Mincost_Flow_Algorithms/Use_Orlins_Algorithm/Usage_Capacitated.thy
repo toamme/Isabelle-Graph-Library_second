@@ -95,14 +95,14 @@ qed
 end
 
 locale with_capacity =
-fixes fst::"('edge_type::linorder) \<Rightarrow> ('a::linorder)"
-and snd::"('edge_type::linorder) \<Rightarrow> ('a::linorder)"
-and create_edge::"'a \<Rightarrow> 'a \<Rightarrow> 'edge_type"
-and \<E>_impl::"'edge_type list"
+fixes fst::"('edge::linorder) \<Rightarrow> ('a::linorder)"
+and snd::"('edge::linorder) \<Rightarrow> ('a::linorder)"
+and create_edge::"'a \<Rightarrow> 'a \<Rightarrow> 'edge"
+and \<E>_impl::"'edge list"
 and \<c>_impl:: "'c_type"
-and \<u>_impl:: "(('edge_type::linorder \<times> ereal) \<times> color) tree"
+and \<u>_impl:: "(('edge::linorder \<times> ereal) \<times> color) tree"
 and \<b>_impl:: "(('a::linorder \<times> real) \<times> color) tree"
-and c_lookup::"'c_type \<Rightarrow> 'edge_type \<Rightarrow> real option"
+and c_lookup::"'c_type \<Rightarrow> 'edge \<Rightarrow> real option"
 begin
 
 definition "\<E>_impl_infty = (filter (\<lambda> e. the (flow_lookup \<u>_impl e) = PInfty) \<E>_impl)"
@@ -111,7 +111,7 @@ definition "\<E>_impl_finite = (filter (\<lambda> e. the (flow_lookup \<u>_impl 
 
 definition "\<E>1_impl = map inedge \<E>_impl_finite"
 definition "\<E>2_impl = map outedge \<E>_impl_finite"
-definition "\<E>3_impl = map (vtovedge::'edge_type \<Rightarrow> ('a, 'edge_type) hitchcock_edge) \<E>_impl_infty"
+definition "\<E>3_impl = map (vtovedge::'edge \<Rightarrow> ('a, 'edge) hitchcock_edge) \<E>_impl_infty"
 definition "\<E>'_impl = \<E>1_impl@\<E>2_impl@\<E>3_impl"
 
 definition "\<c>'_impl = \<c>_impl"
@@ -121,7 +121,7 @@ definition "c_lookup' c e = (case e of inedge d \<Rightarrow> Some 0 |
                                        vtovedge d \<Rightarrow> c_lookup c d |
                                        dummy _ _ \<Rightarrow> None)"
 
-definition "b_lifted = foldr (\<lambda> x tree. bal_update ((vertex::'a \<Rightarrow> ('a, 'edge_type) hitchcock_wrapper) x) (the (bal_lookup \<b>_impl x)) tree) 
+definition "b_lifted = foldr (\<lambda> x tree. bal_update ((vertex::'a \<Rightarrow> ('a, 'edge) hitchcock_wrapper) x) (the (bal_lookup \<b>_impl x)) tree) 
             (vs fst snd \<E>_impl) Leaf"
 
 definition " vertices_done = foldr (\<lambda> xy tree. let u = the (flow_lookup \<u>_impl xy) in
@@ -130,7 +130,7 @@ definition " vertices_done = foldr (\<lambda> xy tree. let u = the (flow_lookup 
             \<E>_impl_finite b_lifted"
 
 definition "\<b>'_impl = foldr (\<lambda> e tree. 
-                        bal_update ((edge::'edge_type \<Rightarrow> ('a, 'edge_type) hitchcock_wrapper) e) 
+                        bal_update ((edge::'edge \<Rightarrow> ('a, 'edge) hitchcock_wrapper) e) 
                                (real_of_ereal (the (flow_lookup \<u>_impl e))) tree) \<E>_impl_finite vertices_done"
 
 
@@ -179,7 +179,7 @@ lemma bal_lookup_fold:
     (auto split: hitchcock_wrapper.split simp add: bal_invar_fold bal_map.map_update)
 
 locale with_capacity_proofs =
-with_capacity where fst = "fst::'edge_type::linorder \<Rightarrow> 'a::linorder"
+with_capacity where fst = "fst::'edge::linorder \<Rightarrow> 'a::linorder"
 and create_edge = create_edge 
 and \<E>_impl = \<E>_impl
 and \<u>_impl = \<u>_impl +
@@ -615,7 +615,7 @@ proof(rule no_cycle_condI, goal_cases)
              simp add: function_generation.\<E>_def[OF function_generation]
                 add.commute[of _ "_ \<c>'_impl c_lookup' _"])
   hence "has_neg_infty_cycle local.make_pair \<E> \<c> \<u>"
-  using sym[OF reduction_of_mincost_flow_to_hitchcock_general(4)[OF flow_network_axioms, of "(dom (c_lookup \<c>_impl))" \<c>]]
+  using sym[OF reduction_of_min_cost_flow_to_hitchcock_general(4)[OF flow_network_axioms, of "(dom (c_lookup \<c>_impl))" \<c>]]
   unfolding  sym[OF E1_impl_are]  sym[OF E2_impl_are]  sym[OF E3_impl_are] 
             collapse_union_ofE1E2E3 function_generation.\<E>_def[OF function_generation]
             new_gen_c_unfold 
@@ -629,7 +629,7 @@ corollary correctness_of_implementation_success:
         is_Opt \<b> (abstract_flow_map (final_flow_impl_original))"
     apply(rule is_Opt_cong[of "old_f_gen \<E> \<u> (abstract_flow_map final_flow_impl_cap)"
                                 , OF  old_f_gen_final_flow_impl_original_cong refl], simp)
-    apply(rule reduction_of_mincost_flow_to_hitchcock_general(5)[OF flow_network_axioms refl, of "(dom (c_lookup \<c>_impl))" \<c> \<b>])
+    apply(rule reduction_of_min_cost_flow_to_hitchcock_general(5)[OF flow_network_axioms refl, of "(dom (c_lookup \<c>_impl))" \<c> \<b>])
     apply(unfold final_flow_impl_cap_def sym[OF E1_impl_are] sym[OF E2_impl_are] sym[OF E3_impl_are]
               collapse_union_ofE1E2E3 \<u>_def  function_generation.\<u>_def[OF function_generation])
     apply(unfold new_gen_c_unfold)
@@ -650,7 +650,7 @@ proof(rule nexistsI, goal_cases)
         (new_f_gen fst \<E> \<u>  f)
         (selection_functions.\<b> \<b>'_impl)"
     apply(rule cost_flow_spec.isbflow_cong[OF refl])
-    using V_new_graph   conjunct1[OF reduction_of_mincost_flow_to_hitchcock_general(2)[OF flow_network_axioms 
+    using V_new_graph   conjunct1[OF reduction_of_min_cost_flow_to_hitchcock_general(2)[OF flow_network_axioms 
                          1(2) refl, of "(\<lambda> _. 0)"]]
     by(auto intro: new_b_domain_cong 
          simp add: sym[OF E1_impl_are] sym[OF E2_impl_are] sym[OF E3_impl_are] collapse_union_ofE1E2E3)
@@ -766,12 +766,12 @@ end
 
 datatype cost_dummy = cost_dummy
 
-locale solve_maxflow =
-fixes fst::"('edge_type::linorder) \<Rightarrow> ('a::linorder)"
-and snd::"('edge_type::linorder) \<Rightarrow> ('a::linorder)"
-and create_edge::"'a \<Rightarrow> 'a \<Rightarrow> 'edge_type"
-and \<E>_impl::"'edge_type list"
-and \<u>_impl:: "(('edge_type::linorder \<times> ereal) \<times> color) tree"
+locale solve_max_flow =
+fixes fst::"('edge::linorder) \<Rightarrow> ('a::linorder)"
+and snd::"('edge::linorder) \<Rightarrow> ('a::linorder)"
+and create_edge::"'a \<Rightarrow> 'a \<Rightarrow> 'edge"
+and \<E>_impl::"'edge list"
+and \<u>_impl:: "(('edge::linorder \<times> ereal) \<times> color) tree"
 and s::'a
 and t::'a
 begin
@@ -780,7 +780,7 @@ definition "\<E>_impl' = map old_edge \<E>_impl @ [new_edge (create_edge t s)]"
 
 definition "\<c>_impl' = cost_dummy"
 
-definition "c_lookup' c (e::'edge_type edge_wrapper) = (case e of old_edge _ \<Rightarrow> Some (0::real) |
+definition "c_lookup' c (e::'edge edge_wrapper) = (case e of old_edge _ \<Rightarrow> Some (0::real) |
                                        new_edge _ \<Rightarrow> Some (-1))"
 
 definition "\<b>_impl' = foldr (\<lambda> x tree. bal_update x 0 tree) (vs fst snd \<E>_impl) Leaf"
@@ -790,23 +790,23 @@ definition "u_sum = foldr (\<lambda> e acc. acc + the (flow_lookup \<u>_impl e))
 definition "\<u>_impl' = flow_update (new_edge (create_edge t s)) u_sum 
                     (foldr (\<lambda> e tree. flow_update (old_edge e) (the (flow_lookup \<u>_impl e)) tree) \<E>_impl Leaf)"
 
-definition "final_state_maxflow = final_state_cap 
+definition "final_state_max_flow = final_state_cap 
 (\<lambda> e. case e of old_edge e \<Rightarrow> fst e | new_edge e \<Rightarrow> fst e)
 (\<lambda> e. case e of old_edge e \<Rightarrow> snd e | new_edge e \<Rightarrow> snd e)
 \<E>_impl' \<c>_impl' \<u>_impl' \<b>_impl' c_lookup'"
 
-definition "final_flow_impl_maxflow =  final_flow_impl_original 
+definition "final_flow_impl_max_flow =  final_flow_impl_original 
 (\<lambda> e. case e of old_edge e \<Rightarrow> fst e | new_edge e \<Rightarrow> fst e)
 (\<lambda> e. case e of old_edge e \<Rightarrow> snd e | new_edge e \<Rightarrow> snd e)
 \<E>_impl' \<c>_impl' \<u>_impl' \<b>_impl' c_lookup'"
 
-definition "final_flow_impl_maxflow_original = 
+definition "final_flow_impl_max_flow_original = 
             ( foldr (\<lambda> e tree. flow_update e 
-                        (the_default 0 (flow_lookup final_flow_impl_maxflow (old_edge e))) tree) 
+                        (the_default 0 (flow_lookup final_flow_impl_max_flow (old_edge e))) tree) 
                          \<E>_impl flow_empty)"
 end
 
-global_interpretation solve_maxflow_by_orlins: solve_maxflow where
+global_interpretation solve_max_flow_by_orlins: solve_max_flow where
     fst = fst 
 and snd = snd
 and create_edge = create_edge
@@ -815,9 +815,9 @@ and \<u>_impl = \<u>_impl
 and s = s
 and t = t
 for fst snd create_edge \<E>_impl \<u>_impl s t
-defines final_state_maxflow = solve_maxflow.final_state_maxflow
-and final_flow_impl_maxflow = solve_maxflow.final_flow_impl_maxflow
-and final_flow_impl_maxflow_original = solve_maxflow.final_flow_impl_maxflow_original
+defines final_state_max_flow = solve_max_flow.final_state_max_flow
+and final_flow_impl_max_flow = solve_max_flow.final_flow_impl_max_flow
+and final_flow_impl_max_flow_original = solve_max_flow.final_flow_impl_max_flow_original
   done
 
 lemma capacity_Opt_cong:
@@ -841,9 +841,9 @@ lemma capacity_bflow_cong:
   using assms(3,4)
   by(simp add: flow_network_spec.isbflow_def  flow_network_spec.isuflow_def)
 
-locale solve_maxflow_proofs =
-solve_maxflow where fst = "fst::'edge_type::linorder \<Rightarrow> 'a::linorder"
-and snd = "snd::'edge_type::linorder \<Rightarrow> 'a::linorder"
+locale solve_max_flow_proofs =
+solve_max_flow where fst = "fst::'edge::linorder \<Rightarrow> 'a::linorder"
+and snd = "snd::'edge::linorder \<Rightarrow> 'a::linorder"
 and create_edge = create_edge 
 and \<E>_impl = \<E>_impl
 and \<u>_impl = \<u>_impl +
@@ -876,15 +876,15 @@ lemma in_E_same_cap:"e \<in> set \<E>_impl \<Longrightarrow> flow_lookup \<u>_im
   by(force intro: flow_invar_fold[OF flow_invar_Leaf] 
         simp add: flow_map.invar_update dom_def Es_are to_set_def flow_lookup_fold[OF flow_invar_Leaf])+
 
-lemma dom_final_flow_impl_maxflow:"dom (flow_lookup final_flow_impl_maxflow) = set \<E>_impl'"
-  by(simp add: final_flow_impl_maxflow_def flow_with_capacity.dom_final_flow_impl_original)
+lemma dom_final_flow_impl_max_flow:"dom (flow_lookup final_flow_impl_max_flow) = set \<E>_impl'"
+  by(simp add: final_flow_impl_max_flow_def flow_with_capacity.dom_final_flow_impl_original)
 
-lemma abstract_flows_are:"abstract_flow_map final_flow_impl_maxflow_original =
-(\<lambda>e. abstract_flow_map final_flow_impl_maxflow (old_edge e))"
-  using dom_final_flow_impl_maxflow
+lemma abstract_flows_are:"abstract_flow_map final_flow_impl_max_flow_original =
+(\<lambda>e. abstract_flow_map final_flow_impl_max_flow (old_edge e))"
+  using dom_final_flow_impl_max_flow
   by (fastforce simp add: flow_lookup_fold flow_map.invar_empty the_default_def
             flow_map.map_empty \<E>_impl'_def dom_def abstract_real_map_def
-             final_flow_impl_maxflow_original_def abstract_flow_map_def)
+             final_flow_impl_max_flow_original_def abstract_flow_map_def)
 
 lemma multigraph': "multigraph (prod.fst \<circ> make_pair') (prod.snd \<circ> make_pair') create_edge' (set \<E>_impl')" 
   by(auto intro!: multigraph.intro simp add: finite_E  fst_create_edge snd_create_edge \<E>_impl'_def)
@@ -1082,17 +1082,17 @@ lemma "\<u>' =  (\<lambda>e. case flow_lookup \<u>_impl' e of None \<Rightarrow>
   using \<u>'_def capacity_aux_rewrite by auto
 
 lemma correctness_of_implementation_success:
- "return final_state_maxflow = success \<Longrightarrow> is_max_flow s t (abstract_flow_map final_flow_impl_maxflow_original)"
-  apply(rule maxflow_to_mincost_flow_reduction(4)[OF s_in_V t_in_V s_neq_t _ abstract_flows_are])+
+ "return final_state_max_flow = success \<Longrightarrow> is_max_flow s t (abstract_flow_map final_flow_impl_max_flow_original)"
+  apply(rule max_flow_to_min_cost_flow_reduction(4)[OF s_in_V t_in_V s_neq_t _ abstract_flows_are])+
   apply(subst E'_are)
   apply(rule capacity_Opt_cong[OF  cost_flow_network2 cost_flow_network1  capacity_cong], simp)
   apply(rule cost_flow_spec.is_Opt_cong[OF refl, of _ _ _ "the_default 0 o bal_lookup \<b>_impl'"])
    apply(rule b_impl'_0_cong)
   apply(simp add: E'_are make_pair'_is(1))
-  unfolding final_flow_impl_maxflow_def fst'_def2(2) snd'_def2(2) final_flow_impl_original_def
+  unfolding final_flow_impl_max_flow_def fst'_def2(2) snd'_def2(2) final_flow_impl_original_def
   apply(rule with_capacity_proofs.correctness_of_implementation_success[OF with_capacity_proofs])
   using no_infinite_cycle
-  by(auto simp add: final_state_maxflow_def final_state_cap_def \<E>_impl'_def fst'_def2(1) 
+  by(auto simp add: final_state_max_flow_def final_state_cap_def \<E>_impl'_def fst'_def2(1) 
      snd'_def2(1) \<c>'_def \<c>_impl'_def \<u>'_def with_capacity_proofs.cs_are[OF  with_capacity_proofs]
     with_capacity_proofs.us_are[OF  with_capacity_proofs]
     capacity_aux_rewrite make_pair'_is(2))
@@ -1100,7 +1100,7 @@ lemma correctness_of_implementation_success:
 notation is_s_t_flow ( "_ is _ -- _ flow")
 
 lemma correctness_of_implementation_infeasible:
- "return final_state_maxflow = infeasible \<Longrightarrow> False"
+ "return final_state_max_flow = infeasible \<Longrightarrow> False"
 proof(rule ccontr,  goal_cases)
   case 1
   have f_prop: "(\<lambda> x. 0) is s -- t flow" 
@@ -1121,12 +1121,12 @@ next
   case 2
   thus ?case
     using "1"(1)
-    by(simp add: final_state_cap_def fst'_def2(1) local.final_state_maxflow_def snd'_def2(1))
+    by(simp add: final_state_cap_def fst'_def2(1) local.final_state_max_flow_def snd'_def2(1))
 qed
    have a:"flow_network_spec.isbflow fst' snd' 
           (set \<E>_impl') (\<lambda>e. case e of old_edge e \<Rightarrow> \<u> e | new_edge b \<Rightarrow> sum \<u> \<E>)
        (\<lambda>e. case e of old_edge e \<Rightarrow> (\<lambda> x. 0) e | new_edge b \<Rightarrow> ex (\<lambda> x. 0) t) (\<lambda>e. 0)"
-     using maxflow_to_mincost_flow_reduction(1)[OF s_in_V t_in_V s_neq_t f_prop refl] E'_are by auto
+     using max_flow_to_min_cost_flow_reduction(1)[OF s_in_V t_in_V s_neq_t f_prop refl] E'_are by auto
    have b:"flow_network_spec.isbflow fst' snd' (set \<E>_impl')
           (\<lambda>e. case flow_lookup \<u>_impl' e of None \<Rightarrow> PInfty |
         Some x \<Rightarrow> case e of old_edge e \<Rightarrow> \<u> e | new_edge b \<Rightarrow> sum \<u> \<E>) 
@@ -1146,7 +1146,7 @@ qed
  qed
 
 lemma correctness_of_implementation_excluded_case:
- "return final_state_maxflow = notyetterm \<Longrightarrow> False"
+ "return final_state_max_flow = notyetterm \<Longrightarrow> False"
   using  no_infinite_cycle[simplified \<c>'_def o_apply c_lookup'_def \<u>'_def edge_wrapper.case_distrib[of the]
                                            option.sel \<E>_impl'_def]  make_pair'_is(1) 
     no_infinite_cycle
@@ -1156,7 +1156,7 @@ lemma correctness_of_implementation_excluded_case:
   by (intro with_capacity_proofs.correctness_of_implementation_excluded_case[of snd' \<c>_impl' \<b>_impl' c_lookup' fst'
                           create_edge' \<E>_impl' \<u>_impl' _  _ _ "the_default 0 \<circ> bal_lookup \<b>_impl'"])
      (auto simp add:  final_state_cap_def \<c>'_def \<c>_impl'_def \<u>'_def fst'_def2(2)
-             final_state_maxflow_def   snd'_def2(2) )
+             final_state_max_flow_def   snd'_def2(2) )
  
 lemmas correctness_of_implementation = correctness_of_implementation_success
                                        correctness_of_implementation_infeasible
@@ -1165,8 +1165,8 @@ lemmas correctness_of_implementation = correctness_of_implementation_success
 end
 end
  
-value "final_state_maxflow fst snd Pair \<E>_impl \<u>_impl 1 3"
-value "final_flow_impl_maxflow fst snd Pair \<E>_impl \<u>_impl 1 3"
-value "final_flow_impl_maxflow_original fst snd Pair \<E>_impl \<u>_impl 1 3"
-value "inorder  (final_flow_impl_maxflow_original fst snd Pair \<E>_impl \<u>_impl 1 3)" 
+value "final_state_max_flow fst snd Pair \<E>_impl \<u>_impl 1 3"
+value "final_flow_impl_max_flow fst snd Pair \<E>_impl \<u>_impl 1 3"
+value "final_flow_impl_max_flow_original fst snd Pair \<E>_impl \<u>_impl 1 3"
+value "inorder  (final_flow_impl_max_flow_original fst snd Pair \<E>_impl \<u>_impl 1 3)" 
 end

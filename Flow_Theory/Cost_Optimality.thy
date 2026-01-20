@@ -265,7 +265,7 @@ begin
 
 text \<open>Difference between flows.\<close>
 
-fun difference::"('edge_type \<Rightarrow> real) \<Rightarrow> ('edge_type \<Rightarrow> real) \<Rightarrow> ('edge_type Redge \<Rightarrow> real)" where
+fun difference::"('edge \<Rightarrow> real) \<Rightarrow> ('edge \<Rightarrow> real) \<Rightarrow> ('edge Redge \<Rightarrow> real)" where
 "difference f' f (F e) = max 0 (f' e - f e)"|
 "difference f' f (B e) = max 0 (f e - f' e)"
 

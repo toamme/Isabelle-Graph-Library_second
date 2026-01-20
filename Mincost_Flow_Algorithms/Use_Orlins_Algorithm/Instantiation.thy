@@ -62,12 +62,12 @@ definition "not_blocked_invar = (\<lambda>t. M.invar t \<and>  rbt_red t)"
 definition "rep_comp_upd_all = (update_all :: ('a \<Rightarrow> 'a \<times> nat \<Rightarrow> 'a \<times> nat)
    \<Rightarrow> (('a \<times> 'a \<times> nat) \<times> color) tree
       \<Rightarrow> (('a \<times> 'a \<times> nat) \<times> color) tree)"
-definition "not_blocked_upd_all = (update_all :: ('edge_type \<Rightarrow> bool \<Rightarrow> bool)
-   \<Rightarrow> (('edge_type \<times> bool) \<times> color) tree
-      \<Rightarrow> (('edge_type \<times> bool) \<times> color) tree)"
-definition "flow_update_all = (update_all :: ('edge_type \<Rightarrow> real \<Rightarrow> real)
-   \<Rightarrow> (('edge_type \<times> real) \<times> color) tree
-      \<Rightarrow> (('edge_type \<times> real) \<times> color) tree)"
+definition "not_blocked_upd_all = (update_all :: ('edge \<Rightarrow> bool \<Rightarrow> bool)
+   \<Rightarrow> (('edge \<times> bool) \<times> color) tree
+      \<Rightarrow> (('edge \<times> bool) \<times> color) tree)"
+definition "flow_update_all = (update_all :: ('edge \<Rightarrow> real \<Rightarrow> real)
+   \<Rightarrow> (('edge \<times> real) \<times> color) tree
+      \<Rightarrow> (('edge \<times> real) \<times> color) tree)"
 
 lemma  rep_comp_upd_all: 
     "\<And> rep f. rep_comp_invar rep \<Longrightarrow> (\<And> x. x \<in> dom (rep_comp_lookup rep) 
@@ -140,7 +140,7 @@ lemmas Pair_Graph_Specs_satisfied = Pair_Graph_Specs_satisfied.Pair_Graph_Specs_
 
 lemmas Set2_satisfied = dfs.set_ops.Set2_axioms
 
-definition "realising_edges_empty = (vset_empty::((('a ::linorder\<times> 'a) \<times> ('edge_type list)) \<times> color) tree)"
+definition "realising_edges_empty = (vset_empty::((('a ::linorder\<times> 'a) \<times> ('edge list)) \<times> color) tree)"
 definition "realising_edges_update = update"
 definition "realising_edges_delete = RBT_Map.delete"
 definition "realising_edges_lookup = lookup"
@@ -161,16 +161,16 @@ lemmas bellman_ford_spec = bellford.bellman_ford_spec_axioms
 
 locale function_generation =
 
- Map_realising: Map realising_edges_empty "realising_edges_update::(('a)\<times> 'a) \<Rightarrow> 'edge_type list \<Rightarrow> 'realising_type \<Rightarrow> 'realising_type"
+ Map_realising: Map realising_edges_empty "realising_edges_update::(('a)\<times> 'a) \<Rightarrow> 'edge list \<Rightarrow> 'realising_type \<Rightarrow> 'realising_type"
                     realising_edges_delete realising_edges_lookup realising_edges_invar +
 
  Map_bal: Map bal_empty "bal_update::'a \<Rightarrow> real \<Rightarrow> 'bal_impl \<Rightarrow> 'bal_impl" 
               bal_delete bal_lookup bal_invar +
 
- Map_flow: Map "flow_empty::'flow_impl" "flow_update::'edge_type \<Rightarrow> real \<Rightarrow> 'flow_impl \<Rightarrow> 'flow_impl"
+ Map_flow: Map "flow_empty::'flow_impl" "flow_update::'edge \<Rightarrow> real \<Rightarrow> 'flow_impl \<Rightarrow> 'flow_impl"
                 flow_delete flow_lookup flow_invar +
 
- Map_not_blocked: Map not_blocked_empty "not_blocked_update::'edge_type \<Rightarrow> bool \<Rightarrow> 'nb_impl \<Rightarrow> 'nb_impl" 
+ Map_not_blocked: Map not_blocked_empty "not_blocked_update::'edge \<Rightarrow> bool \<Rightarrow> 'nb_impl \<Rightarrow> 'nb_impl" 
                       not_blocked_delete not_blocked_lookup not_blocked_invar +
 
  Map rep_comp_empty "rep_comp_update::'a \<Rightarrow> ('a \<times> nat) \<Rightarrow> 'rcomp_impl \<Rightarrow> 'rcomp_impl" rep_comp_delete 
@@ -208,20 +208,20 @@ rep_comp_delete
 rep_comp_lookup 
 rep_comp_invar+
 
-fixes \<E>_impl::'edge_type_set_impl 
-and to_list:: "'edge_type_set_impl \<Rightarrow> 'edge_type list"
-and fst::"'edge_type \<Rightarrow> ('a::linorder)" 
-and snd::"'edge_type \<Rightarrow> 'a"
-and create_edge::"'a \<Rightarrow> 'a \<Rightarrow> 'edge_type"
+fixes \<E>_impl::'edge_set_impl 
+and to_list:: "'edge_set_impl \<Rightarrow> 'edge list"
+and fst::"'edge \<Rightarrow> ('a::linorder)" 
+and snd::"'edge \<Rightarrow> 'a"
+and create_edge::"'a \<Rightarrow> 'a \<Rightarrow> 'edge"
 and \<c>_impl::'c_impl
 and  \<b>_impl::'bal_impl
-and to_set::"'edge_type_set_impl \<Rightarrow> 'edge_type set"
-and c_lookup::"'c_impl \<Rightarrow> 'edge_type \<Rightarrow> real option"
+and to_set::"'edge_set_impl \<Rightarrow> 'edge set"
+and c_lookup::"'c_impl \<Rightarrow> 'edge \<Rightarrow> real option"
 begin
 
 definition "make_pair e \<equiv> (fst e, snd e)"
 
-definition "\<u> = (\<lambda> e::'edge_type. PInfty)"  
+definition "\<u> = (\<lambda> e::'edge. PInfty)"  
 definition "\<c> e = (case (c_lookup \<c>_impl e)  of Some c \<Rightarrow> c | None \<Rightarrow> 0)"
 definition \<E> where "\<E> = to_set \<E>_impl"
 definition "N = length (remdups (map fst (to_list \<E>_impl) @ map snd  (to_list \<E>_impl)))"
@@ -283,7 +283,7 @@ definition "find_cheapest_backward f nb list e c=
                                    else (beste, bestc)) list (e, c)"
                                    
                                    
-definition "get_edge_and_costs_forward nb (f::'edge_type \<Rightarrow> real) = 
+definition "get_edge_and_costs_forward nb (f::'edge \<Rightarrow> real) = 
                           (\<lambda> u v. (let ingoing_edges = (case (realising_edges_lookup realising_edges (u, v)) of
                                      None \<Rightarrow> []|
                                      Some list \<Rightarrow> list);
@@ -297,7 +297,7 @@ definition "get_edge_and_costs_forward nb (f::'edge_type \<Rightarrow> real) =
                   in (if cf \<le> cb then (F ef, cf) else (B eb, cb))))"
                       
                       
-definition "get_edge_and_costs_backward nb (f::'edge_type \<Rightarrow> real) = 
+definition "get_edge_and_costs_backward nb (f::'edge \<Rightarrow> real) = 
                           (\<lambda> v u. (let ingoing_edges = (case (realising_edges_lookup realising_edges (u, v)) of
                                      None \<Rightarrow> []|
                                      Some list \<Rightarrow> list);
@@ -310,11 +310,11 @@ definition "get_edge_and_costs_backward nb (f::'edge_type \<Rightarrow> real) =
                             (create_edge v u) PInfty
                   in (if cf \<le> cb then (F ef, cf) else (B eb, cb))))"
 
-definition "bellman_ford_forward nb (f::'edge_type \<Rightarrow> real) s =
+definition "bellman_ford_forward nb (f::'edge \<Rightarrow> real) s =
          bellman_ford_algo (\<lambda> u v. prod.snd (get_edge_and_costs_forward nb f u v)) es (length vs - 1)
                                     (bellman_ford_init_algo vs s)"
 
-definition "bellman_ford_backward nb (f::'edge_type \<Rightarrow> real) s =
+definition "bellman_ford_backward nb (f::'edge \<Rightarrow> real) s =
          bellman_ford_algo (\<lambda> u v. prod.snd (get_edge_and_costs_backward nb f u v)) es (length vs - 1)
                                     (bellman_ford_init_algo vs s)"
                                     
@@ -508,7 +508,7 @@ global_interpretation selection_functions: function_generation
     and \<c>_impl = \<c>_impl
     and c_lookup = c_lookup
 for fst snd create_edge \<E>_impl \<b>_impl \<c>_impl and 
-    c_lookup::"'c_impl \<Rightarrow> 'edge_type::linorder \<Rightarrow> real option"
+    c_lookup::"'c_impl \<Rightarrow> 'edge::linorder \<Rightarrow> real option"
 defines get_source_target_path_a= selection_functions.get_source_target_path_a
     and get_source_target_path_b =  selection_functions.get_source_target_path_b
     and get_source = selection_functions.get_source
@@ -759,16 +759,16 @@ hide_const RBT.B
 locale function_generation_proof = 
 
 function_generation where 
-          to_set =" to_set:: 'edge_type_set_impl \<Rightarrow> 'edge_type set"
-      and fst = "fst :: ('edge_type::linorder) \<Rightarrow> ('a::linorder)"
-      and snd = "snd :: ('edge_type::linorder) \<Rightarrow> 'a"
-      and not_blocked_update = "not_blocked_update ::'edge_type \<Rightarrow> bool \<Rightarrow> 'not_blocked_impl\<Rightarrow> 'not_blocked_impl"
-      and flow_update =  "flow_update::'edge_type \<Rightarrow> real \<Rightarrow> 'f_impl \<Rightarrow> 'f_impl"
+          to_set =" to_set:: 'edge_set_impl \<Rightarrow> 'edge set"
+      and fst = "fst :: ('edge::linorder) \<Rightarrow> ('a::linorder)"
+      and snd = "snd :: ('edge::linorder) \<Rightarrow> 'a"
+      and not_blocked_update = "not_blocked_update ::'edge \<Rightarrow> bool \<Rightarrow> 'not_blocked_impl\<Rightarrow> 'not_blocked_impl"
+      and flow_update =  "flow_update::'edge \<Rightarrow> real \<Rightarrow> 'f_impl \<Rightarrow> 'f_impl"
       and bal_update = "bal_update:: 'a \<Rightarrow> real \<Rightarrow> 'b_impl \<Rightarrow> 'b_impl" 
       and rep_comp_update="rep_comp_update:: 'a \<Rightarrow> 'a \<times> nat \<Rightarrow> 'r_comp_impl\<Rightarrow> 'r_comp_impl"+
 
 Set_with_predicate  where 
-          get_from_set="get_from_set::('edge_type \<Rightarrow> bool) \<Rightarrow>  'edge_type_set_impl \<Rightarrow> 'edge_type option"
+          get_from_set="get_from_set::('edge \<Rightarrow> bool) \<Rightarrow>  'edge_set_impl \<Rightarrow> 'edge option"
       and to_set =to_set +
 
 multigraph: multigraph fst snd create_edge \<E>+
@@ -778,10 +778,10 @@ Set_with_predicate: Set_with_predicate get_from_set filter are_all set_invar to_
 rep_comp_maper: Map  rep_comp_empty "rep_comp_update::'a \<Rightarrow> ('a \<times> nat) \<Rightarrow> 'r_comp_impl \<Rightarrow> 'r_comp_impl"
                      rep_comp_delete rep_comp_lookup rep_comp_invar +
 
-conv_map: Map  conv_empty "conv_update::'a \<times> 'a \<Rightarrow> 'edge_type Redge \<Rightarrow> 'conv_impl \<Rightarrow> 'conv_impl"
+conv_map: Map  conv_empty "conv_update::'a \<times> 'a \<Rightarrow> 'edge Redge \<Rightarrow> 'conv_impl \<Rightarrow> 'conv_impl"
                conv_delete conv_lookup conv_invar +
 
-not_blocked_map: Map not_blocked_empty "not_blocked_update::'edge_type \<Rightarrow> bool \<Rightarrow> 'not_blocked_impl\<Rightarrow> 'not_blocked_impl"
+not_blocked_map: Map not_blocked_empty "not_blocked_update::'edge \<Rightarrow> bool \<Rightarrow> 'not_blocked_impl\<Rightarrow> 'not_blocked_impl"
                      not_blocked_delete not_blocked_lookup not_blocked_invar +
 
 rep_comp_iterator: Map_iterator rep_comp_invar rep_comp_lookup rep_comp_upd_all+
@@ -4558,11 +4558,11 @@ definition "final_flow_impl fst snd create_edge \<E>_impl \<c>_impl \<b>_impl c_
 definition "abstract_flow_map = algo_spec.abstract_flow_map flow_lookup"
 
 locale correctness_of_algo =
-  fixes fst snd::"('edge_type::linorder) \<Rightarrow> ('a::linorder)"
+  fixes fst snd::"('edge::linorder) \<Rightarrow> ('a::linorder)"
   and \<c>_impl:: 'c_impl
-  and  \<E>_impl::"('edge_type::linorder) list" and create_edge 
+  and  \<E>_impl::"('edge::linorder) list" and create_edge 
   and \<b>_impl:: "(('a::linorder \<times> real) \<times> color) tree"
-  and c_lookup::"'c_impl \<Rightarrow> 'edge_type \<Rightarrow> real option"
+  and c_lookup::"'c_impl \<Rightarrow> 'edge \<Rightarrow> real option"
 
 assumes \<E>_impl_basic: "set_invar \<E>_impl" " bal_invar (\<b>_impl)"
   and  Vs_is_bal_dom: "dVs (multigraph_spec.make_pair fst snd ` to_set \<E>_impl) = dom (bal_lookup \<b>_impl)"

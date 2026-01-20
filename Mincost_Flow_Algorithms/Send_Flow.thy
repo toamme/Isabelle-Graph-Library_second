@@ -8,16 +8,16 @@ subsection \<open>Setup\<close>
 
 locale send_flow_spec = 
   algo_spec where fst = fst and 
-  get_from_set= "get_from_set ::('edge_type \<Rightarrow> bool) \<Rightarrow> 'd \<Rightarrow> 'edge_type option"
+  get_from_set= "get_from_set ::('edge \<Rightarrow> bool) \<Rightarrow> 'd \<Rightarrow> 'edge option"
   and flow_empty = "flow_empty::'e" and bal_empty = "bal_empty::'f" and rep_comp_empty = "rep_comp_empty::'g"
   and conv_empty = "conv_empty::'h" and not_blocked_empty = "not_blocked_empty::'i"
-for fst::"'edge_type \<Rightarrow> 'a" and get_from_set and 
+for fst::"'edge \<Rightarrow> 'a" and get_from_set and 
     flow_empty and bal_empty and rep_comp_empty and conv_empty and not_blocked_empty +
 
 fixes get_source_target_path_a
-  ::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state  \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'edge_type Redge list) option" 
+  ::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state  \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'edge Redge list) option" 
   and get_source_target_path_b
-  ::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state  \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'edge_type Redge list) option" 
+  ::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state  \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'edge Redge list) option" 
   and get_source::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state \<Rightarrow> 'a option"
   and get_target::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state \<Rightarrow> 'a option"
   and test_all_vertices_zero_balance::"('e, 'f, 'c, 'h, 'd, 'g, 'i) Algo_state \<Rightarrow> bool"
@@ -2564,7 +2564,7 @@ proof-
     by auto
 qed
 
-theorem send_flow_flow_Phi[send_flow_results]:
+theorem send_flow_Phi[send_flow_results]:
   assumes "underlying_invars state" "invar_gamma state"
           "implementation_invar state"
           "invar_integral state"
@@ -2576,7 +2576,7 @@ theorem send_flow_flow_Phi[send_flow_results]:
     send_flow_termination
   by auto
 
-lemma send_flow_flow_Phi_final[send_flow_results]:
+lemma send_flow_Phi_final[send_flow_results]:
   assumes "underlying_invars state" "invar_gamma state"
           "implementation_invar state"
           "invar_integral state"
@@ -2584,9 +2584,9 @@ lemma send_flow_flow_Phi_final[send_flow_results]:
           "invar_above_6Ngamma state"
           "state' = send_flow state"
   shows   "a_current_flow  state' e \<ge> a_current_flow state e - \<Phi> state*current_\<gamma> state'"
-  using send_flow_flow_Phi[of state state' e] Phi_nonneg[of state] assms
+  using send_flow_Phi[of state state' e] Phi_nonneg[of state] assms
     invar_gammaE send_flow_invar_gamma_pres Phi_nonneg  
-    send_flow_flow_Phi[of state state' e] 
+    send_flow_Phi[of state state' e] 
     send_flow_termination
   by(smt mult_less_cancel_right_disj of_int_le_iff)
 

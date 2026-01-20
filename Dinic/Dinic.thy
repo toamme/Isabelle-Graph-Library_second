@@ -126,7 +126,7 @@ lemma invar_basicE:
 end
 
 locale dinic =
-dinic_spec where fst = "fst::'edge_type \<Rightarrow> 'v" +
+dinic_spec where fst = "fst::'edge \<Rightarrow> 'v" +
 flow_network where fst = fst for fst +
 assumes find_blocking_flow:
        "\<And> f. flow_invar f \<Longrightarrow> find_blocking_flow f = None
@@ -293,7 +293,7 @@ lemma dinic_ret_cond_max_flow:
   apply(rule invar_flowE[OF assms(2)])
   apply(rule invar_basicE[OF assms(3)])
   using find_blocking_flow(1)
-  by (auto intro:  no_maxflow_resreach
+  by (auto intro:  no_max_flow_resreach
             elim: is_s_t_flowE invar_basicE[OF assms(3)])
 
 lemma dinic_final_max_flow_general:

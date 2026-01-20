@@ -102,7 +102,7 @@ lemma consist_conv_inj:"consist E conv \<Longrightarrow> a \<in> E \<Longrightar
 
 end
 
-locale alg = cost_flow_spec  where fst=fst for fst::"'edge_type \<Rightarrow> 'a"+ 
+locale alg = cost_flow_spec  where fst=fst for fst::"'edge \<Rightarrow> 'a"+ 
   fixes edge_map_update:: "'a \<Rightarrow> 'edge_vset \<Rightarrow> 'edges \<Rightarrow> 'edges" 
     and vset_empty :: "'vset"  ("\<emptyset>\<^sub>N") 
     and vset_delete :: "'a \<Rightarrow> 'vset \<Rightarrow> 'vset" 
@@ -319,27 +319,27 @@ end
 
 locale 
 algo_spec = 
- alg where fst="fst::'edge_type \<Rightarrow> 'a" +  
+ alg where fst="fst::'edge \<Rightarrow> 'v" +  
 
  Set_with_predicate
-     where get_from_set = "get_from_set::('edge_type \<Rightarrow> bool) \<Rightarrow> 'e \<Rightarrow> 'edge_type option"  +
+     where get_from_set = "get_from_set::('edge \<Rightarrow> bool) \<Rightarrow> 'e \<Rightarrow> 'edge option"  +
 
  adj_map_specs: Adj_Map_Specs2 
-     where  update =  "edge_map_update::'a \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> 'd" +
+     where  update =  "edge_map_update::'v \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> 'd" +
 
- flow_map: map_update_all flow_empty "flow_update::'edge_type \<Rightarrow> real \<Rightarrow> 'f_impl \<Rightarrow> 'f_impl"
+ flow_map: map_update_all flow_empty "flow_update::'edge \<Rightarrow> real \<Rightarrow> 'f_impl \<Rightarrow> 'f_impl"
                           flow_delete flow_lookup flow_invar flow_update_all+
 
- bal_map: Map  bal_empty "bal_update:: 'a \<Rightarrow> real \<Rightarrow> 'b_impl \<Rightarrow> 'b_impl" 
+ bal_map: Map  bal_empty "bal_update:: 'v \<Rightarrow> real \<Rightarrow> 'b_impl \<Rightarrow> 'b_impl" 
                bal_delete bal_lookup bal_invar +
 
- rep_comp_map: map_update_all rep_comp_empty "rep_comp_update::'a \<Rightarrow> ('a \<times> nat) \<Rightarrow> 'r_comp_impl \<Rightarrow> 'r_comp_impl"
+ rep_comp_map: map_update_all rep_comp_empty "rep_comp_update::'v \<Rightarrow> ('v \<times> nat) \<Rightarrow> 'r_comp_impl \<Rightarrow> 'r_comp_impl"
                               rep_comp_delete rep_comp_lookup rep_comp_invar rep_comp_upd_all +
 
- conv_map: Map  conv_empty "conv_update::('a \<times> 'a) \<Rightarrow> 'edge_type Redge \<Rightarrow> 'conv_impl \<Rightarrow> 'conv_impl"
+ conv_map: Map  conv_empty "conv_update::('v \<times> 'v) \<Rightarrow> 'edge Redge \<Rightarrow> 'conv_impl \<Rightarrow> 'conv_impl"
                 conv_delete conv_lookup conv_invar +
 
- not_blocked_map: map_update_all  not_blocked_empty "not_blocked_update::'edge_type \<Rightarrow> bool \<Rightarrow> 'not_blocked_impl\<Rightarrow> 'not_blocked_impl"
+ not_blocked_map: map_update_all  not_blocked_empty "not_blocked_update::'edge \<Rightarrow> bool \<Rightarrow> 'not_blocked_impl\<Rightarrow> 'not_blocked_impl"
                                   not_blocked_delete not_blocked_lookup not_blocked_invar not_blocked_upd_all
 for flow_empty 
     flow_update 
@@ -378,8 +378,8 @@ for flow_empty
     not_blocked_upd_all 
 
     get_from_set  +
-fixes \<b>::"'a \<Rightarrow> real" and  
-      get_max::"('a \<Rightarrow> real \<Rightarrow> real) \<Rightarrow> 'b_impl \<Rightarrow> real" and 
+fixes \<b>::"'v \<Rightarrow> real" and  
+      get_max::"('v \<Rightarrow> real \<Rightarrow> real) \<Rightarrow> 'b_impl \<Rightarrow> real" and 
       \<epsilon>::real and 
       \<E>_impl::'e and 
       empty_forest::"'d" and 
@@ -445,12 +445,12 @@ definition "move_balance b x y = (let bx = abstract_bal_map  b x;
                                           (bal_update x 0 (bal_update y (bx + by) b)))"
 
 
-fun augment_edge_impl::"'f_impl \<Rightarrow> real \<Rightarrow>'edge_type Redge \<Rightarrow> 'f_impl" where
+fun augment_edge_impl::"'f_impl \<Rightarrow> real \<Rightarrow>'edge Redge \<Rightarrow> 'f_impl" where
 "augment_edge_impl f \<gamma> e = 
   ((case e of F e \<Rightarrow> flow_update e ((abstract_flow_map  f e) + \<gamma>) f |
               B e \<Rightarrow> flow_update e ((abstract_flow_map f e) - \<gamma>) f))"
    
-fun augment_edges_impl::"'f_impl\<Rightarrow> real \<Rightarrow>('edge_type Redge) list \<Rightarrow> 'f_impl" where
+fun augment_edges_impl::"'f_impl\<Rightarrow> real \<Rightarrow>('edge Redge) list \<Rightarrow> 'f_impl" where
 "augment_edges_impl f \<gamma> [] = f"|
 "augment_edges_impl f \<gamma> (e#es) = augment_edge_impl (augment_edges_impl f \<gamma> es) \<gamma> e"
 
@@ -1190,51 +1190,51 @@ and  orlins_entryD:
   "\<lbrakk>orlins_entry state; v \<in> \<V>\<rbrakk> \<Longrightarrow> \<bar> a_balance state v \<bar> \<le> (1 - \<epsilon>) * current_\<gamma> state"
   by(auto simp add: orlins_entry_def)
 
-definition "invarA_1 (thr::real) (state::('f_impl, 'b_impl, 'd, 'conv_impl, 'e, 'r_comp_impl, 'not_blocked_impl) Algo_state) =
+definition "invar_F1 (thr::real) (state::('f_impl, 'b_impl, 'd, 'conv_impl, 'e, 'r_comp_impl, 'not_blocked_impl) Algo_state) =
              (\<forall> v \<in> \<V>. \<bar> a_balance state v \<bar> \<le> 
                                   thr * card (connected_component (to_graph (\<FF> state)) v))"
 
-lemma invarA_1E:
-  "\<lbrakk>invarA_1 (thr::real) state;
+lemma invar_F1E:
+  "\<lbrakk>invar_F1 (thr::real) state;
    ((\<And> v. v \<in> \<V> \<Longrightarrow> \<bar> a_balance state v \<bar> \<le> 
                      thr * card (connected_component (to_graph (\<FF> state)) v)) \<Longrightarrow> P)\<rbrakk>
   \<Longrightarrow> P"
-  by(auto simp add: invarA_1_def)
+  by(auto simp add: invar_F1_def)
 
-lemma invarA_1I:
+lemma invar_F1I:
   "(\<And> v. v \<in> \<V> \<Longrightarrow> \<bar> a_balance state v \<bar> \<le> 
      (thr::real) * card (connected_component (to_graph (\<FF> state)) v)) \<Longrightarrow>
-  invarA_1 thr state"
-  by(auto simp add: invarA_1_def)
+  invar_F1 thr state"
+  by(auto simp add: invar_F1_def)
 
-lemma invarA_1D:
-  "\<lbrakk>invarA_1 (thr::real) state; v \<in> \<V>\<rbrakk>
+lemma invar_F1D:
+  "\<lbrakk>invar_F1 (thr::real) state; v \<in> \<V>\<rbrakk>
    \<Longrightarrow> \<bar>a_balance state v\<bar> \<le> thr * card (connected_component (to_graph (\<FF> state)) v)"
-  by(auto simp add: invarA_1_def)
+  by(auto simp add: invar_F1_def)
 
-definition "invarA_2 (thr1::real) (thr2::real) state = 
+definition "invar_F2 (thr1::real) (thr2::real) state = 
                    (\<forall> e \<in> \<F> state.
                                (a_current_flow state) e > thr1 - thr2 * 
                                 card (connected_component (to_graph (\<FF> state)) (fst e)))"
 
-lemma invarA_2E: 
-  "\<lbrakk>invarA_2 (thr1::real) (thr2::real) state;
+lemma invar_F2E: 
+  "\<lbrakk>invar_F2 (thr1::real) (thr2::real) state;
    ((\<And> e.  e \<in> \<F> state \<Longrightarrow> (a_current_flow state) e > thr1 - thr2 * 
              card (connected_component (to_graph (\<FF> state)) (fst e))) \<Longrightarrow> P)\<rbrakk>
    \<Longrightarrow> P"
-  by(auto simp add: invarA_2_def)
+  by(auto simp add: invar_F2_def)
 
-lemma invarA_2I: 
+lemma invar_F2I: 
   "(\<And> e. e \<in> \<F> state \<Longrightarrow> (a_current_flow state) e > (thr1::real) - (thr2::real) * 
              card (connected_component (to_graph (\<FF> state)) (fst e)))
-  \<Longrightarrow> invarA_2 (thr1::real) (thr2::real) state"
-  by(auto simp add: invarA_2_def) 
+  \<Longrightarrow> invar_F2 (thr1::real) (thr2::real) state"
+  by(auto simp add: invar_F2_def) 
 
-lemma invarA_2D: 
-  "\<lbrakk>invarA_2 (thr1::real) (thr2::real) state; e \<in> \<F> state\<rbrakk> 
+lemma invar_F2D: 
+  "\<lbrakk>invar_F2 (thr1::real) (thr2::real) state; e \<in> \<F> state\<rbrakk> 
      \<Longrightarrow> (a_current_flow state) e > thr1 - thr2 * 
              card (connected_component (to_graph (\<FF> state)) (fst e))"
-  by(auto simp add: invarA_2_def)
+  by(auto simp add: invar_F2_def)
 
 lemma invar_isOpt_gamma_change:
 "invar_isOptflow state \<Longrightarrow> invar_isOptflow (state \<lparr>current_\<gamma> :=gamma \<rparr>)"
@@ -1290,13 +1290,13 @@ locale
 algo =  
  cost_flow_network where fst = fst +
 
- algo_spec where fst=fst and edge_map_update = "edge_map_update::'a \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> 'd"+  
+ algo_spec where fst=fst and edge_map_update = "edge_map_update::'v \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> 'd"+  
 
  Set_with_predicate +
 
- Adj_Map_Specs2 where  update =  "edge_map_update::'a \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> 'd"
+ Adj_Map_Specs2 where  update =  "edge_map_update::'v \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> 'd"
 
-for fst::"'edge_type \<Rightarrow> 'a" and edge_map_update +
+for fst::"'edge \<Rightarrow> 'v" and edge_map_update +
 assumes       infinite_u:  "\<And> e. \<u> e = PInfty" and 
                  \<epsilon>_axiom: "0 < \<epsilon>" "\<epsilon> \<le> 1 / 2" "\<epsilon> \<le> 1/ (real (card \<V>))" "\<epsilon> < 1/2" and 
     conservative_weights: "\<not> has_neg_cycle make_pair \<E> \<c>" and 

@@ -3,10 +3,10 @@ theory Multigraph
 begin
 
 locale multigraph_spec =
-  fixes \<E>::"'edge_type set"
-and fst::"'edge_type \<Rightarrow> 'a"
-and snd::"'edge_type \<Rightarrow> 'a"
-and create_edge:: "'a \<Rightarrow> 'a \<Rightarrow> 'edge_type"
+  fixes \<E>::"'edge set"
+and fst::"'edge \<Rightarrow> 'a"
+and snd::"'edge \<Rightarrow> 'a"
+and create_edge:: "'a \<Rightarrow> 'a \<Rightarrow> 'edge"
 begin
 
 definition "make_pair e = (fst e, snd e)"
@@ -28,24 +28,24 @@ definition E_sym::"('a \<times> 'a) set \<Rightarrow> ('a \<times> 'a) set" ("_\
 
 text \<open>We define operators for denoting incoming and outgoing arcs of a vertex.\<close>
 
-definition delta_plus::"'a \<Rightarrow> 'edge_type set" ("\<delta>\<^sup>+") where
+definition delta_plus::"'a \<Rightarrow> 'edge set" ("\<delta>\<^sup>+") where
     "\<delta>\<^sup>+ v = {e. e \<in> \<E> \<and> fst e = v}"
                                    
-definition delta_minus::"'a \<Rightarrow> 'edge_type set" ("\<delta>\<^sup>-") where
+definition delta_minus::"'a \<Rightarrow> 'edge set" ("\<delta>\<^sup>-") where
     "\<delta>\<^sup>- v =  {e. e \<in> \<E> \<and> snd e = v}"
 
 text \<open>Same for sets of vertices.\<close>
 
-definition Delta_plus::"'a set \<Rightarrow>  'edge_type set" ("\<Delta>\<^sup>+") where
+definition Delta_plus::"'a set \<Rightarrow>  'edge set" ("\<Delta>\<^sup>+") where
     "\<Delta>\<^sup>+ X = {e. e \<in> \<E> \<and> fst e \<in> X \<and> snd e \<notin> X}"
 
-definition Delta_minus::"'a set \<Rightarrow>  'edge_type set" ("\<Delta>\<^sup>-") where
+definition Delta_minus::"'a set \<Rightarrow>  'edge set" ("\<Delta>\<^sup>-") where
     "\<Delta>\<^sup>- X = {e. e \<in> \<E> \<and> snd e \<in> X \<and> fst e \<notin> X}"
 
-definition In_edges::"'a set \<Rightarrow> 'edge_type set" where
+definition In_edges::"'a set \<Rightarrow> 'edge set" where
   "In_edges X = {e. e \<in> \<E> \<and> fst e \<in> X \<and> snd e \<in> X}"
 
-definition "multigraph_path  (es::('edge_type list)) \<longleftrightarrow> (es = [] \<or> (es \<noteq> [] \<and>
+definition "multigraph_path  (es::('edge list)) \<longleftrightarrow> (es = [] \<or> (es \<noteq> [] \<and>
                       awalk UNIV (fst (hd es)) (map make_pair es) (snd (last es))))"
 
 lemma multigraph_pathI: "es = [] \<Longrightarrow> multigraph_path  es"
@@ -95,7 +95,7 @@ lemma in_delta_minusD:
 "e \<in> multigraph_spec.delta_minus E fst x \<Longrightarrow> fst e = x"for fst
   by(auto simp add: multigraph_spec.delta_minus_def)
 
-locale multigraph = multigraph_spec where \<E> = "\<E>::'edge_type set" for \<E> +
+locale multigraph = multigraph_spec where \<E> = "\<E>::'edge set" for \<E> +
 assumes fst_create_edge:"\<And> x y. fst (create_edge x y) = x"
 assumes snd_create_edge:"\<And> x y. snd (create_edge x y) = y"
 assumes finite_E: "finite \<E>" 

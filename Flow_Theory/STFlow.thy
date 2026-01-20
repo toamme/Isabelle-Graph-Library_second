@@ -341,7 +341,7 @@ proof(cases "Abs f > 0", goal_cases)
   define css' where "css' = map (map (get_old_edge) o prod.fst) css_ws_cycles "
   define cws where "cws = map  prod.snd css_ws_cycles"
   define get_s_t_path where
-    "get_s_t_path (P::('edge_type) edge_wrapper list)
+    "get_s_t_path (P::('edge) edge_wrapper list)
                     = (let first1 = takeWhile is_old P;
                            first2 = dropWhile is_old P;
                            second = dropWhile (\<lambda> e. \<not> is_old e) first2
@@ -692,7 +692,7 @@ end
 
 subsection \<open>Maximum Flow and Minimum Cut\<close>
 
-text \<open>As we have a notion of $s$-$t$-flows, we should also formalise the Maxflow-Mincut Theorem\<close>
+text \<open>As we have a notion of $s$-$t$-flows, we should also formalise the Max-Flow-Min-Cut Theorem\<close>
 
 context 
   flow_network_spec
@@ -759,8 +759,8 @@ next
         simp add: dVs_def )
 qed
 
-lemma mincut_exists:
-  obtains mincut where  "is_min_cut s t mincut"
+lemma min_cut_exists:
+  obtains min_cut where  "is_min_cut s t min_cut"
 proof(goal_cases)
   case 1
   have finite_number_of_cuts_finite:"finite {X . is_s_t_cut s t X}"
@@ -773,7 +773,7 @@ proof(goal_cases)
     using finite_imageI[OF finite_number_of_cuts_finite, of Cap] finite_number_of_cuts_pos
     by( auto intro: linorder_class.Min_in simp add: mincap_def image_Collect[symmetric])
   then obtain X where X_prop: "Cap X = mincap" "is_s_t_cut s t X" by auto
-  have mincut: "is_min_cut s t X" 
+  have min_cut: "is_min_cut s t X" 
     using X_prop finite_imageI[OF finite_number_of_cuts_finite, of Cap]
     by(auto intro!: Min.coboundedI  simp add: image_Collect[symmetric] is_min_cut_def mincap_def )
   thus ?thesis
@@ -822,13 +822,13 @@ proof-
   show ?thesis 
   proof(rule notI, goal_cases)
     case 1
-    note maxflow=this
+    note max_flow=this
     show ?case 
     proof(rule ccontr, goal_cases)
       case 1
       then obtain p where p_prop: "augpath f p" "fstv (hd p) = s" "sndv (last p) = t" "set p \<subseteq> \<EE>"
         "p \<noteq> []"
-        using resreach_imp_augpath[of f s t] s_neq_t maxflow
+        using resreach_imp_augpath[of f s t] s_neq_t max_flow
         by(auto simp add: augpath_def prepath_def)
       then obtain q where q_prop: "augpath f q" "fstv (hd q) = s" "sndv (last q) = t" "set q \<subseteq> \<EE>"
         "distinct q" "q \<noteq> []"
@@ -854,7 +854,7 @@ proof-
         using bflow' \<open>0 < \<gamma>\<close> props(2) props(6) s_in_V s_neq_t t_in_V 
         by (auto simp add: is_s_t_flow_def isbflow_def)
       ultimately show False 
-        using maxflow  assms by(auto simp add: is_max_flow_def)
+        using max_flow  assms by(auto simp add: is_max_flow_def)
     qed
   qed
 qed
@@ -891,13 +891,13 @@ proof-
   finally show ?thesis1 by simp
 qed
 
-lemma sends_min_cut_then_maxflow:
+lemma sends_min_cut_then_max_flow:
   assumes "is_s_t_flow f s t" "ex f t = Cap X" "is_min_cut s t X"
   shows "is_max_flow s t f"
   using assms  ereal_less_eq(3) ex_less_cut_cap 
   by (fastforce intro!: is_max_flowI elim!:  is_min_cutE)
 
-lemma no_maxflow_resreach_standard_proof:
+lemma no_max_flow_resreach_standard_proof:
   assumes "is_s_t_flow f s t " "\<not> resreach f s t"
   shows   "is_max_flow s t f"
 proof-
@@ -912,7 +912,7 @@ proof-
     using Rescut_around_in_V[OF props(2), of f] t_not_in_Rescut props(3)
     by(auto simp add: Rescut_def is_s_t_cut_def)
   obtain X where X_exists: "is_min_cut s t X"
-    using mincut_exists by auto
+    using min_cut_exists by auto
   from rescut_s_t_cut have a1:"ex f t = (\<Sum>x\<in>Rescut f s. ereal (- ex\<^bsub>f\<^esub> x))"
     using assms(1) by(fastforce intro!: stcut_ex simp add: is_max_flow_def)
   also have a4:"... = Cap (Rescut f s)"
@@ -929,36 +929,36 @@ proof-
     by auto
   thus ?thesis 
     using X_exists assms(1) 
-    by(auto intro!: sends_min_cut_then_maxflow)
+    by(auto intro!: sends_min_cut_then_max_flow)
 qed
 
-lemma maxflow_iff_not_resreach:
+lemma max_flow_iff_not_resreach:
   assumes "is_s_t_flow f s t " 
   shows   "is_max_flow s t f \<longleftrightarrow> \<not> resreach f s t"
-  using assms max_flow_no_augpath no_maxflow_resreach_standard_proof by blast
+  using assms max_flow_no_augpath no_max_flow_resreach_standard_proof by blast
 
-lemma Rescut_mincut_maxflow:
+lemma Rescut_min_cut_max_flow:
   assumes "is_s_t_flow f s t"
     "is_min_cut s t (Rescut f s)"
   shows "is_max_flow s t f" 
-  using assms(2) maxflow_iff_not_resreach[OF assms(1)]
+  using assms(2) max_flow_iff_not_resreach[OF assms(1)]
   by(auto simp add: is_min_cut_def is_s_t_cut_def Rescut_def)
 
-lemma Rescut_of_maxflow_is_mincut:
+lemma Rescut_of_max_flow_is_min_cut:
   assumes "is_max_flow s t f"
   shows "is_min_cut s t (Rescut f s)"
 proof-
   have stflow: "is_s_t_flow f s t" 
     using assms by(auto elim: is_max_flowE)
-  obtain X where mincutX:"is_min_cut s t X"
-    using mincut_exists by auto
+  obtain X where min_cutX:"is_min_cut s t X"
+    using min_cut_exists by auto
   have s_in_Rescut_f_s: "s \<in> Rescut f s"
     using assms is_s_t_cutE max_flow_Rescut_s_t_cut by blast
   have "(\<Sum>x\<in>Rescut f s. ereal (if x = s then ex\<^bsub>f\<^esub> t else if x = t then - ex\<^bsub>f\<^esub> t else 0)) =
     ereal (ex\<^bsub>f\<^esub> t + 0)"
     using max_flow_Rescut_s_t_cut[OF assms] 
     by(subst insert_Diff[symmetric, OF s_in_Rescut_f_s])
-      (auto intro: is_min_cutE[OF mincutX]
+      (auto intro: is_min_cutE[OF min_cutX]
         elim!:  is_s_t_cutE[of s t "(Rescut f s)"] 
         simp add:  comm_monoid_add_class.sum.neutral 
         comm_monoid_add_class.sum.insert_remove[OF finite_Rescut[OF s_in_V]])
@@ -967,14 +967,14 @@ proof-
     by(subst flow_saturates_res_cut[symmetric, OF _ Rescut_around_in_V[OF s_in_V]])
       (auto intro: s_t_flow_is_ex_bflow[OF stflow])
   then show ?thesis 
-    using max_flow_Rescut_s_t_cut[OF assms]  max_flow_min_cut(1)[OF assms mincutX]
-    by(auto intro: is_min_cutE[OF mincutX] simp add:  is_min_cut_def)
+    using max_flow_Rescut_s_t_cut[OF assms]  max_flow_min_cut(1)[OF assms min_cutX]
+    by(auto intro: is_min_cutE[OF min_cutX] simp add:  is_min_cut_def)
 qed
 
-theorem maxflow_iff_Rescut_is_mincut:
+theorem max_flow_iff_Rescut_is_min_cut:
   assumes "is_s_t_flow f s t" 
   shows   "is_max_flow s t f \<longleftrightarrow> is_min_cut s t (Rescut f s)"
-  using Rescut_mincut_maxflow Rescut_of_maxflow_is_mincut assms by blast
+  using Rescut_min_cut_max_flow Rescut_of_max_flow_is_min_cut assms by blast
 
 subsection \<open>Reduction of Maximum Flow to Minimum Cost Flow\<close>
 
@@ -1032,7 +1032,7 @@ lemma delta_minus_same:
   using s_neq_t create_edge'(2) make_pair' make_pair''(2) 
   by (subst  cost_network_of_network.delta_minus_def)(auto simp add:  delta_minus_def   \<E>'_def snd'_def)
 
-lemma maxflow_to_mincost_flow_reduction:
+lemma max_flow_to_min_cost_flow_reduction:
   "\<And> f f'. \<lbrakk> f is s--t flow;
          f' = (\<lambda> e. case e of old_edge e \<Rightarrow> f e |  _ \<Rightarrow> ex f t)\<rbrakk> \<Longrightarrow>
          cost_network_of_network.isbflow f' (\<lambda> e. 0) \<and> cost_network_of_network.\<C> f' = - ex f t" 
@@ -1204,18 +1204,18 @@ proof-
   qed
 qed
 
-lemma no_maxflow_resreach:
+lemma no_max_flow_resreach:
   assumes "is_s_t_flow f s t " "\<not> resreach f s t"
   shows   "is_max_flow s t f"
 proof-
   note s_t_flow = assms(1)
   define f' where "f' = (\<lambda>e. case e of old_edge e \<Rightarrow> f e | new_edge b \<Rightarrow> ex\<^bsub>f\<^esub> t)"
   show ?thesis
-  proof(rule maxflow_to_mincost_flow_reduction(4)[of f' f])
+  proof(rule max_flow_to_min_cost_flow_reduction(4)[of f' f])
     show "f = (\<lambda>e. f' (old_edge e))" by(simp add: f'_def)
     have bflow_f':"cost_network_of_network.isbflow f' (\<lambda>e. 0)" 
       using s_t_flow_excess_s_t[OF s_t_flow, symmetric] cost_network_of_network.isbflow_def
-        maxflow_to_mincost_flow_reduction(1)[OF s_t_flow refl, 
+        max_flow_to_min_cost_flow_reduction(1)[OF s_t_flow refl, 
           simplified cost_network_of_network.isbflow_def]
         same_Vs_s_t t_in_V  create_edge'  dVs_def 
       by(auto simp add:  \<E>'_def cost_network_of_network.isuflow_def  f'_def 
