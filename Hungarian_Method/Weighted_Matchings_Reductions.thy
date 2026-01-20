@@ -854,7 +854,7 @@ lemma "bp_min_costs_to_min_perfect_costs G w e < 0
       no_new_vertex_old_vertex_new_vertex_image_inverse[of e] 
       intro!: exI[of _ "the_vertex ` e"] | 
       subst no_new_vertex_old_vertex_new_vertex_inverse)+
-
+(*TODO remove*)
 definition "min_w_perfect_to_max_w_matching M w = {e | e. e \<in> M \<and> w e > 0}"
 
 lemma max_weight_matching_unused_edges:
