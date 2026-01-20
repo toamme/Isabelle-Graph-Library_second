@@ -15,6 +15,7 @@ session "Directed_Set_Graphs" = "HOL-Eisbach" +
     Adaptors
 
   theories
+    Tree_Filter
     More_Lists
     Awalk
     enat_misc

@@ -1,6 +1,6 @@
 theory Pair_Graph_RBT
 imports Pair_Graph_Specs "HOL-Data_Structures.RBT_Set" "HOL-Data_Structures.RBT_Map"
-       "Verified_SAT_Based_AI_Planning.Set2_Join_RBT"
+       "Set2_Join_RBT" Tree_Filter
 begin
 
 abbreviation "vset_empty == RBT_Set.empty"
