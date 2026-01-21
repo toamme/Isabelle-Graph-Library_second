@@ -368,6 +368,10 @@ proof-
     using x_prop y_prop(2) assms(2) by auto
   ultimately show ?thesis using x_prop y_prop by simp
 qed
+
+lemma real_of_ereal_of_Min_or_ereal:
+  "\<lbrakk>finite A; A \<noteq> {}\<rbrakk> \<Longrightarrow> real_of_ereal (Min (ereal ` A)) = Min A"
+  by(auto simp add: ereal_Min[symmetric])
  
 lemma  obtain_min:
   assumes "finite A" "A \<noteq> {}"
@@ -545,8 +549,57 @@ lemma is_multiple_multiple:
   "(\<exists> n::nat.  y = (real n) * x) \<Longrightarrow> (\<exists> n::nat. y*2 = (real n) * x )"
   by (metis distrib_left mult.commute mult_2_right of_nat_add)
 
+lemma real_of_plus_distrib: "real (a + b) = real a + real b"
+and real_of_minus_distrib: "a \<ge> b \<Longrightarrow> real (a - b) = real a - real b"
+  by auto
+
 lemma minE: "((a::real) \<le> b \<Longrightarrow> P a) \<Longrightarrow> (b \<le> a \<Longrightarrow> P b) \<Longrightarrow> P (min a b)"
   by linarith
+
+lemma P_of_minI: "\<lbrakk>((a::real) \<le> b \<Longrightarrow> P a); (b \<le> a \<Longrightarrow> P b)\<rbrakk> \<Longrightarrow> P (min a b)"
+and P_of_minE: 
+  "\<lbrakk>P (min a b); \<lbrakk>(a::real) \<le> b; P a\<rbrakk> \<Longrightarrow> Q; \<lbrakk>b \<le> a; P b\<rbrakk> \<Longrightarrow> Q\<rbrakk> \<Longrightarrow> Q"
+and P_of_minI_strict1: "\<lbrakk>(a::real) < b \<Longrightarrow> P a; b \<le> a \<Longrightarrow> P b\<rbrakk> \<Longrightarrow> P (min a b)"
+and P_of_minE_strict2: 
+  "\<lbrakk>P (min a b);\<lbrakk>(a::real) \<le> b; P a\<rbrakk> \<Longrightarrow> Q; \<lbrakk>b < a; P b\<rbrakk> \<Longrightarrow> Q\<rbrakk> \<Longrightarrow> Q"
+for P a b
+  apply linarith+
+  by (smt (verit, best))+
+
+lemma add_non_min_element_Min:
+  "\<lbrakk>finite A; A \<noteq> {}; y \<le> x; y \<in> A; B = insert x A\<rbrakk> \<Longrightarrow> Min B = Min A"
+  by (metis Min.boundedE Min.insert_not_elem insert_absorb min_def order_antisym)
+
+definition "epsilon_multiples (\<epsilon>::real) f X = (\<forall> x \<in> X. \<exists> n::nat. f x = n * \<epsilon>)"
+
+lemma epsilon_multiplesI:
+  "(\<And> x. x \<in> X \<Longrightarrow> \<exists> n::nat. f x = n * (\<epsilon>::real)) \<Longrightarrow> epsilon_multiples \<epsilon> f X"
+  and epsilon_multiplesE:
+  "\<lbrakk>epsilon_multiples (\<epsilon>::real) f X; (\<And> x. x \<in> X \<Longrightarrow> \<exists> n::nat. f x = n * \<epsilon>) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  and epsilon_multiplesD:
+  "\<lbrakk>epsilon_multiples (\<epsilon>::real) f X; x \<in> X\<rbrakk> \<Longrightarrow> \<exists> n::nat. f x = n * \<epsilon>"
+  by(auto simp add: epsilon_multiples_def)
+
+lemma epsilon_multiples_sum: 
+ "\<lbrakk>finite X; epsilon_multiples \<epsilon> f X\<rbrakk> \<Longrightarrow> epsilon_multiples \<epsilon> id {sum f X}"
+proof(induction X rule: finite_induct)
+  case empty
+  then show ?case 
+    by(auto simp add: epsilon_multiples_def)
+next
+  case (insert x X)
+  obtain n where "(n::nat)*\<epsilon> = sum f X"
+    using insert(3,4)
+    by(force simp add: epsilon_multiples_def)
+  moreover obtain n' where "(n'::nat) * \<epsilon> = f x"
+    using insert (4)
+    by(force simp add: epsilon_multiples_def)
+  ultimately have "(n+n') *\<epsilon> = sum f (insert x X)"
+    using insert(2,1)
+    by(auto simp add: comm_monoid_add_class.sum.insert[simplified] algebra_simps)
+  thus ?case 
+    by(auto simp add: epsilon_multiples_def intro!: exI[of _ "n + n'"])
+qed
 
 definition "abstract_real_map mp x = (case mp x of None \<Rightarrow> 0 | Some y \<Rightarrow> y)"
 
@@ -571,6 +624,10 @@ lemma abstract_real_map_outside_dom: "x \<notin> dom mp \<Longrightarrow> abstra
 
 lemma abstract_real_map_in_dom_the: "x \<in> dom mp \<Longrightarrow> abstract_real_map mp x = the (mp x)"
   by(cases "mp x")(auto simp add: abstract_real_map_def dom_if)
+
+lemma abstract_real_map_fun_upd:
+  "abstract_real_map (fun_upd f x (Some y)) = (\<lambda> z. if z = x then y else abstract_real_map f z)"
+  by(auto simp add: abstract_real_map_def)
 
 definition "abstract_bool_map mp = (\<lambda> opt. (case mp opt of None \<Rightarrow> False
                                 | Some x \<Rightarrow> x))"

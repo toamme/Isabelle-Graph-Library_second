@@ -1,153 +1,18 @@
 theory Primal_Dual_Path_Search
   imports Berge_Lemma.Berge Flow_Theory.More_Arith "HOL-Data_Structures.Set_Specs"
-"HOL-Data_Structures.Map_Specs"
-RANKING.More_Graph  Alternating_Forest_Spec Key_Value_Queue_Spec
-Path_Search_Result
+          "HOL-Data_Structures.Map_Specs" RANKING.More_Graph  Alternating_Forest_Spec 
+           Key_Value_Queue_Spec Path_Search_Result
 begin
-(*TODO MOVE*)
 
-lemma pair_eq_fst_snd_eq:
-      "(a, b) = c \<Longrightarrow> a = fst c"
-      "(a, b) = c \<Longrightarrow> b = snd c"
-  by auto
-
-(*TODO MOVE*)
-lemma matchingI:
-  "(\<And>e1 e2. \<lbrakk>e1 \<in> M; e2 \<in> M; e1 \<noteq> e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}) \<Longrightarrow> matching M"
-  by (auto simp: matching_def)
-
-(*TODO MOVE*)
-lemma P_of_minI: 
-"((a::real) \<le> b \<Longrightarrow> P a) \<Longrightarrow> (b \<le> a \<Longrightarrow> P b) \<Longrightarrow> P (min a b)"
-and P_of_minE: 
-"P (min a b) \<Longrightarrow>
- (\<lbrakk>(a::real) \<le> b; P a\<rbrakk> \<Longrightarrow> Q) \<Longrightarrow>
- (\<lbrakk>b \<le> a; P b\<rbrakk> \<Longrightarrow> Q) \<Longrightarrow> Q"
-and P_of_minI_strict1: 
-"((a::real) < b \<Longrightarrow> P a) \<Longrightarrow> (b \<le> a \<Longrightarrow> P b) \<Longrightarrow> P (min a b)"
-and P_of_minE_strict2: 
-"P (min a b) \<Longrightarrow>
- (\<lbrakk>(a::real) \<le> b; P a\<rbrakk> \<Longrightarrow> Q) \<Longrightarrow>
- (\<lbrakk>b < a; P b\<rbrakk> \<Longrightarrow> Q) \<Longrightarrow> Q"
-for P a b
-    apply linarith+
-  by (smt (verit, best))+
-
-lemma abstract_real_map_fun_upd:
-"abstract_real_map (f(a \<mapsto> b)) = 
-(\<lambda> x. if x = a then b 
-      else abstract_real_map f x)"
-  by(auto simp add: abstract_real_map_def)
-
-lemma matching_augmenting_pathI:
- "\<lbrakk>length p \<ge> 2; alt_list (\<lambda>e. e \<notin> M) (\<lambda>e. e \<in> M) (edges_of_path p);
-     hd p \<notin> Vs M; last p \<notin> Vs M\<rbrakk>
-   \<Longrightarrow> matching_augmenting_path M p"
-  by(auto simp add: matching_augmenting_path_def)
-
-lemma in_image_with_fst_eq: "a \<in> fst ` A \<longleftrightarrow> (\<exists> b. (a, b) \<in> A)" 
-  by force
-
-lemma walk_reflexive_cong: "\<lbrakk>u \<in> Vs G; u = u'; u' = u''\<rbrakk> \<Longrightarrow> walk_betw G u [u'] u''"
-  using walk_reflexive by simp
-
-lemma bipartite_even_and_odd_walk:
-  assumes "bipartite G X Y" "x \<in> X"
-          "walk_betw G x p y"
-    shows "odd (length p) \<Longrightarrow> y \<in> X"
-          "even (length p) \<Longrightarrow> y \<in> Y"
-proof-
-  have "(odd (length p) \<longrightarrow> y \<in> X) \<and> (even (length p) \<longrightarrow> y \<in> Y)"
-    using assms(3)
-  proof(induction p arbitrary: y rule: rev_induct)
-    case Nil
-    then show ?case by(simp add: walk_betw_def)
-  next
-    case (snoc x' xs)
-    note IH = this
-    show ?case 
-    proof(cases "even (length (xs@[x]))")
-      case True
-      hence odd: "odd (length xs)" by simp
-      have "\<exists> y'. walk_betw G x xs y' \<and> {y', y} \<in> G"
-        using odd snoc(2) path_2[of G y] path_suff[of G _ "[_, y]"] snoc.prems[simplified walk_betw_def] 
-        by(cases xs rule: rev_cases)
-          (auto intro!: exI[of _ "last xs"] walk_reflexive_cong simp add: walk_pref)
-      then obtain y' where y':"walk_betw G x xs y'" "{y', y} \<in> G"
-        by auto
-      moreover hence "y' \<in> X" 
-        using snoc(1) odd by simp
-      ultimately have "y \<in> Y"
-        using assms(1) bipartite_edgeD(1) by fastforce
-      thus ?thesis
-        using True by fastforce
-    next
-      case False
-      show ?thesis
-      proof(cases xs rule: rev_cases)
-        case Nil
-        hence "y = x" 
-          using IH(2) snoc.prems[simplified walk_betw_def]  
-          by auto
-        then show ?thesis 
-          by (simp add: assms(2) local.Nil)
-      next
-        case (snoc list a)
-      hence even: "even (length xs)"using False  by simp
-      have "\<exists> y'. (walk_betw G x xs y' \<and> {y', y} \<in> G)"
-        using IH(2)  path_suff[of G _ "[_, y]"] 
-             snoc.prems[simplified walk_betw_def] 
-        by(auto intro!: exI[of _ a] simp add: snoc walk_pref)
-      then obtain y' where y':"walk_betw G x xs y'" "{y', y} \<in> G"
-        by auto
-      moreover hence "y' \<in> Y" 
-        using IH(1) even by simp
-      ultimately have "y \<in> X"
-        using assms(1) bipartite_edgeD(2) by fastforce
-      thus ?thesis
-        using False by fastforce
-    qed
-  qed
-qed
-  thus  "odd (length p) \<Longrightarrow> y \<in> X" "even (length p) \<Longrightarrow> y \<in> Y" 
-    by auto
-qed
-
-lemma finite_double_image_of_pairs_in_set_of_sets:
-"finite G \<Longrightarrow> finite {f x y | x y. {x, y} \<in> G}"
-proof(induction G rule: finite_induct)
-  case (insert e F)
-  show ?case 
-  proof(cases "\<exists> x y. e = {x, y}")
-    case True
-    then obtain x y where "e = {x, y}" by auto
-    hence "{f x y | x y. {x, y} \<in> insert e F} = 
-           {f x y | x y. {x, y} \<in> F} \<union> {f x y, f y x}" 
-      by (auto simp add: doubleton_eq_iff)
-    then show ?thesis 
-      using insert by simp
-  next
-    case False
-  hence "{f x y | x y. {x, y} \<in> insert e F} = 
-           {f x y | x y. {x, y} \<in> F}" by auto
-  then show ?thesis
-    using insert by simp
-  qed
-qed simp
- 
-
-lemma add_non_min_element_Min:
-"finite A \<Longrightarrow> A \<noteq> {} \<Longrightarrow> y \<le> x \<Longrightarrow> y \<in> A\<Longrightarrow> B = insert x A \<Longrightarrow> Min B = Min A"
-  by (metis Min.boundedE Min.insert_not_elem insert_absorb min_def order_antisym)
-(*TOTO MOVE*)
-lemma conj_intro:"\<lbrakk>P1;P2;P3;P4;P5;P6\<rbrakk> \<Longrightarrow> P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6" for P1 P2 P3 P4 P5 P6
-      by simp
+lemma conj_intro:
+  "\<lbrakk>P1;P2;P3;P4;P5;P6\<rbrakk> \<Longrightarrow> P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6" for P1 P2 P3 P4 P5 P6
+  by simp
 lemma conjD:"P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P1"
-               "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P2"
-               "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P3"
-               "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P4"
-               "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6  \<Longrightarrow> P5"
-                "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6  \<Longrightarrow> P6"for P1 P2 P3 P4 P5 P6
+            "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P2"
+            "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P3"
+            "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P4"
+            "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6  \<Longrightarrow> P5"
+            "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6  \<Longrightarrow> P6"for P1 P2 P3 P4 P5 P6
   by auto
 
 section \<open>Path Search for Hungarian Method\<close>
@@ -155,24 +20,23 @@ section \<open>Path Search for Hungarian Method\<close>
 subsection \<open>Defining the Function and Setup for Reasoning\<close>
 
 record ('forest, 'ben, 'heap, 'miss, 'v) hungarian_search_state = 
-forest::'forest
-best_even_neighbour::'ben
-heap::'heap
-missed::'miss
-acc::real
-augpath::"('v list) option"
+  forest::'forest
+  best_even_neighbour::'ben
+  heap::'heap
+  missed::'miss
+  acc::real
+  augpath::"('v list) option"
 
 locale primal_dual_path_search_spec = 
-ben_map: Map ben_empty ben_upd ben_delete ben_lookup ben_invar +
-missed_map: Map missed_empty missed_upd missed_delete missed_lookup missed_invar +
-vset: Set vset_empty vset_insert vset_delete vset_isin vset_to_set vset_invar
+ ben_map: Map ben_empty ben_upd ben_delete ben_lookup ben_invar +
+ missed_map: Map missed_empty missed_upd missed_delete missed_lookup missed_invar +
+ vset: Set vset_empty vset_insert vset_delete vset_isin vset_to_set vset_invar
 for ben_empty and  ben_upd::"'v \<Rightarrow> 'v \<Rightarrow> 'ben \<Rightarrow> 'ben"
     and ben_delete ben_lookup ben_invar and
     missed_empty and missed_upd::"'v \<Rightarrow> real \<Rightarrow>'miss \<Rightarrow> 'miss" and 
     missed_delete missed_lookup missed_invar and
     vset_empty vset_insert vset_delete vset_isin and 
-    vset_to_set::"'vset \<Rightarrow> 'v set" and vset_invar
-+
+    vset_to_set::"'vset \<Rightarrow> 'v set" and vset_invar +
   fixes G::"'v set set"
     and edge_costs::"'v \<Rightarrow> 'v \<Rightarrow> real"
     and left::'vset
@@ -192,25 +56,25 @@ for ben_empty and  ben_upd::"'v \<Rightarrow> 'v \<Rightarrow> 'ben \<Rightarrow
     and forest_invar::"'v set set \<Rightarrow> 'forest \<Rightarrow> bool"
     and roots::"'forest \<Rightarrow> 'vset"
 
-   and potential_upd::"'v \<Rightarrow> real \<Rightarrow>'potential \<Rightarrow> 'potential"
-   and potential_lookup::"'potential \<Rightarrow> 'v \<Rightarrow> real option"
-   and potential_invar::"'potential \<Rightarrow> bool"
-   and initial_pot::"'potential"
+    and potential_upd::"'v \<Rightarrow> real \<Rightarrow>'potential \<Rightarrow> 'potential"
+    and potential_lookup::"'potential \<Rightarrow> 'v \<Rightarrow> real option"
+    and potential_invar::"'potential \<Rightarrow> bool"
+    and initial_pot::"'potential"
 
-   and heap_empty::'heap
-   and heap_extract_min::"'heap \<Rightarrow> ('heap \<times> 'v option)"
-   and heap_decrease_key::"'heap \<Rightarrow> 'v \<Rightarrow> real \<Rightarrow> 'heap"
-   and heap_insert::"'heap \<Rightarrow> 'v \<Rightarrow> real \<Rightarrow> 'heap"
-   and heap_invar::"'heap \<Rightarrow> bool"
-   and heap_abstract::"'heap \<Rightarrow> ('v \<times> real) set"
-
-   and vset_iterate_ben::"('ben \<times> 'heap \<Rightarrow> 'v \<Rightarrow> 'ben \<times> 'heap)
-       \<Rightarrow> 'ben \<times> 'heap \<Rightarrow> 'vset \<Rightarrow> 'ben \<times> 'heap"
-   and vset_iterate_pot::"('potential \<Rightarrow> 'v \<Rightarrow> 'potential)
+    and heap_empty::'heap
+    and heap_extract_min::"'heap \<Rightarrow> ('heap \<times> 'v option)"
+    and heap_decrease_key::"'heap \<Rightarrow> 'v \<Rightarrow> real \<Rightarrow> 'heap"
+    and heap_insert::"'heap \<Rightarrow> 'v \<Rightarrow> real \<Rightarrow> 'heap"
+    and heap_invar::"'heap \<Rightarrow> bool"
+    and heap_abstract::"'heap \<Rightarrow> ('v \<times> real) set"
+ 
+    and vset_iterate_ben::"('ben \<times> 'heap \<Rightarrow> 'v \<Rightarrow> 'ben \<times> 'heap)
+        \<Rightarrow> 'ben \<times> 'heap \<Rightarrow> 'vset \<Rightarrow> 'ben \<times> 'heap"
+    and vset_iterate_pot::"('potential \<Rightarrow> 'v \<Rightarrow> 'potential)
       \<Rightarrow> 'potential \<Rightarrow> 'vset \<Rightarrow> 'potential"
-   and vset_filter::"('v \<Rightarrow> bool) \<Rightarrow> 'vset \<Rightarrow> 'vset"
+    and vset_filter::"('v \<Rightarrow> bool) \<Rightarrow> 'vset \<Rightarrow> 'vset"
 
-   and vset_is_empty::"'vset \<Rightarrow> bool"
+    and vset_is_empty::"'vset \<Rightarrow> bool"
 begin
 
 notation edge_costs ("\<w>")
@@ -305,10 +169,10 @@ definition "search_path_loop_fail_cond state =
                         Some r \<Rightarrow> False))"
 
 lemma search_path_loop_fail_condE:
-"search_path_loop_fail_cond state \<Longrightarrow>
-(\<And> queue heap_min. 
+  "search_path_loop_fail_cond state \<Longrightarrow>
+  (\<And> queue heap_min. 
     \<lbrakk> (queue, heap_min) = heap_extract_min (heap state); heap_min = None\<rbrakk> \<Longrightarrow> P)
-\<Longrightarrow> P"
+  \<Longrightarrow> P"
   apply(cases "heap_extract_min (heap state)")
   apply(all \<open>cases "snd (heap_extract_min (heap state))"\<close>)
   by(auto simp add: search_path_loop_fail_cond_def)
@@ -322,11 +186,10 @@ definition "search_path_loop_succ_cond state =
                         Some l' \<Rightarrow> False )))"
 
 lemma search_path_loop_succ_condE:
-"search_path_loop_succ_cond state \<Longrightarrow>
-(\<And> queue heap_min r. 
-    \<lbrakk> (queue, heap_min) = heap_extract_min (heap state); 
-        heap_min = Some r; buddy r = None\<rbrakk> \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "search_path_loop_succ_cond state \<Longrightarrow>
+  (\<And> queue heap_min r. 
+      \<lbrakk>(queue, heap_min) = heap_extract_min (heap state); heap_min = Some r; buddy r = None\<rbrakk> \<Longrightarrow> P)
+  \<Longrightarrow> P"
   apply(cases "heap_extract_min (heap state)")
   apply(all \<open>cases "snd (heap_extract_min (heap state))"\<close>)
   apply(all \<open>cases "buddy (the (snd (heap_extract_min (heap state))))"\<close>)
@@ -339,11 +202,10 @@ definition "search_path_loop_cont_cond state =
                                                    Some l' \<Rightarrow> True)))"
 
 lemma search_path_loop_cont_condE:
-"search_path_loop_cont_cond state \<Longrightarrow>
-(\<And> queue heap_min r l'. 
-    \<lbrakk>  heap_extract_min (heap state) = (queue, heap_min); 
-        heap_min = Some r; buddy r = Some l'\<rbrakk> \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "search_path_loop_cont_cond state \<Longrightarrow>
+  (\<And> queue heap_min r l'. 
+    \<lbrakk>heap_extract_min (heap state) = (queue, heap_min); heap_min = Some r; buddy r = Some l'\<rbrakk> \<Longrightarrow> P)
+  \<Longrightarrow> P"
   apply(cases "heap_extract_min (heap state)")
   apply(all \<open>cases "snd (heap_extract_min (heap state))"\<close>)
   apply(all \<open>cases "buddy (the (snd (heap_extract_min (heap state))))"\<close>)
@@ -427,10 +289,10 @@ qed
 
 lemma search_path_loop_induct:
   assumes "search_path_loop_dom state"
-           "\<And> state. \<lbrakk>search_path_loop_dom state;
+          "\<And> state. \<lbrakk>search_path_loop_dom state;
                       search_path_loop_cont_cond state \<Longrightarrow> P (search_path_loop_cont_upd state)\<rbrakk>
                      \<Longrightarrow> P state"
-  shows "P state"
+   shows "P state"
 proof(induction rule: search_path_loop.pinduct[OF assms(1)])
   case (1 state)
   note IH = this
@@ -462,8 +324,8 @@ qed
 lemma search_path_loop_domintros:
   "search_path_loop_fail_cond state \<Longrightarrow> search_path_loop_dom state"
   "search_path_loop_succ_cond state \<Longrightarrow> search_path_loop_dom state"
-  "\<lbrakk>search_path_loop_cont_cond state; search_path_loop_dom (search_path_loop_cont_upd state)\<rbrakk> \<Longrightarrow>
-   search_path_loop_dom state"
+  "\<lbrakk>search_path_loop_cont_cond state; search_path_loop_dom (search_path_loop_cont_upd state)\<rbrakk> 
+   \<Longrightarrow> search_path_loop_dom state"
 proof(goal_cases)
   case 1
   show ?case 
@@ -491,7 +353,8 @@ next
     apply(all \<open>cases "snd (heap_extract_min (heap state))"\<close>)
     apply(all \<open>cases "buddy (the (snd (heap_extract_min (heap state))))"\<close>)
     using 3
-    by(auto simp add: search_path_loop_cont_cond_def search_path_loop_cont_upd_def Let_def prod.split
+    by(auto simp add: search_path_loop_cont_cond_def search_path_loop_cont_upd_def
+                      Let_def prod.split
                split: option.split prod.split)
 qed
 
@@ -548,17 +411,18 @@ lemma search_path_loop_impl_same:
   apply(subst search_path_loop.psimps, simp)
   apply(subst search_path_loop_impl.simps)
   by (auto simp add: Let_def split: if_split option.split prod.split)
+
 lemmas [code] = 
-search_path_def 
-search_path_loop_impl.simps 
-new_potential_def
-w\<^sub>\<pi>_def
-unmatched_lefts_def
-initial_state_def
-init_best_even_neighbour_def
-update_best_even_neighbours_def
-update_best_even_neighbour_def
-forest_roots_def
+  search_path_def 
+  search_path_loop_impl.simps 
+  new_potential_def
+  w\<^sub>\<pi>_def
+  unmatched_lefts_def
+  initial_state_def
+  init_best_even_neighbour_def
+  update_best_even_neighbours_def
+  update_best_even_neighbour_def
+  forest_roots_def
 end
 
 subsection \<open>Locale for Proofs\<close>
@@ -628,18 +492,17 @@ and vset_is_empty: "\<And> X. vset_invar X \<Longrightarrow> vset_is_empty X \<l
 begin
 
 lemmas vset = 
-vset.invar_empty
-vset.set_empty
-vset.invar_insert
-vset.set_insert
-vset.set_isin
-(*vseta*)
+  vset.invar_empty
+  vset.set_empty
+  vset.invar_insert
+  vset.set_insert
+  vset.set_isin
 
 lemmas missed = 
-missed_map.invar_empty
-missed_map.map_empty
-missed_map.invar_update
-missed_map.map_update
+  missed_map.invar_empty
+  missed_map.map_empty
+  missed_map.invar_update
+  missed_map.map_update
 
 lemmas best_even_neighbour = 
   ben_map.invar_empty
@@ -656,13 +519,14 @@ lemma w\<^sub>\<pi>_non_neg: "{u, v} \<in> G \<Longrightarrow> w\<^sub>\<pi> u v
   using G(7) w\<^sub>\<pi>_def by fastforce
 
 lemma finite_L: "finite L" and finite_R: "finite R"
-  subgoal
-   apply(rule exE[OF vset_iterations(2)[OF G(2)]])
-    by (auto dest: sym[of "set _" L])
-  subgoal
-   apply(rule exE[OF vset_iterations(2)[OF G(3)]])
-    by (auto dest: sym[of "set _" R])
-  done
+proof-
+  show "finite L"
+    by(rule exE[OF vset_iterations(2)[OF G(2)]])
+      (auto dest: sym[of "set _" L])
+  show "finite R"
+    by(rule exE[OF vset_iterations(2)[OF G(3)]])
+      (auto dest: sym[of "set _" R])
+qed
 
 lemma \<M>_is_matching: "matching \<M>"
 proof(rule matchingI, rule ccontr, goal_cases)
@@ -691,8 +555,8 @@ lemma rlist:
   using vset_iterations[OF G(3)] by force
 
 lemma unmatched_lefts_are:
-      "vset_to_set unmatched_lefts = vset_to_set left - Collect (\<lambda> v. buddy v \<noteq> None)"
-    by(auto simp add: unmatched_lefts_def vset_iterations(4)[OF G(2)])
+  "vset_to_set unmatched_lefts = vset_to_set left - Collect (\<lambda> v. buddy v \<noteq> None)"
+  by(auto simp add: unmatched_lefts_def vset_iterations(4)[OF G(2)])
 
 lemma unmatched_lefts:
  "vset_to_set (unmatched_lefts) = L - Vs \<M>"
@@ -726,8 +590,8 @@ lemma unmatched_lefts_in_L: "vset_to_set unmatched_lefts \<subseteq> L"
   using unmatched_lefts by simp
 
 lemma M_verts_by_buddy:
- "x \<in> Vs \<M> \<Longrightarrow> buddy x \<noteq> None"
- "buddy x \<noteq> None \<Longrightarrow> x \<in> Vs \<M>"
+  "x \<in> Vs \<M> \<Longrightarrow> buddy x \<noteq> None"
+  "buddy x \<noteq> None \<Longrightarrow> x \<in> Vs \<M>"
 proof(goal_cases)
   case 1
   then show ?case  
@@ -765,44 +629,44 @@ definition "invar_basic state=
     aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state)))"
 
 lemma invar_basicE:
-"invar_basic state \<Longrightarrow>
-(\<lbrakk>forest_invar \<M> (forest state);
-  ben_invar (best_even_neighbour state);
-  heap_invar (heap state);
-  missed_invar (missed state);\<F> state \<subseteq> G;
-  dom (ben_lookup (best_even_neighbour state)) \<subseteq> Vs G;
-  dom (missed_lookup (missed state)) \<subseteq> Vs G;
-  fst ` heap_abstract (heap state) \<subseteq> Vs G;
-  aevens state \<subseteq> L; aodds state \<subseteq> R;
-  {l | l r. ben_lookup (best_even_neighbour state) r = Some l} \<subseteq> aevens state;
-  aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state))\<rbrakk> 
- \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "invar_basic state \<Longrightarrow>
+  (\<lbrakk>forest_invar \<M> (forest state);
+    ben_invar (best_even_neighbour state);
+    heap_invar (heap state);
+    missed_invar (missed state);\<F> state \<subseteq> G;
+    dom (ben_lookup (best_even_neighbour state)) \<subseteq> Vs G;
+    dom (missed_lookup (missed state)) \<subseteq> Vs G;
+    fst ` heap_abstract (heap state) \<subseteq> Vs G;
+    aevens state \<subseteq> L; aodds state \<subseteq> R;
+    {l | l r. ben_lookup (best_even_neighbour state) r = Some l} \<subseteq> aevens state;
+    aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state))\<rbrakk> \<Longrightarrow> P)
+   \<Longrightarrow> P"
 and invar_basicI:
-"\<lbrakk>forest_invar \<M> (forest state);
-  ben_invar (best_even_neighbour state);
-  heap_invar (heap state);
-  missed_invar (missed state);\<F> state \<subseteq> G;
-  dom (ben_lookup (best_even_neighbour state)) \<subseteq> Vs G;
-  dom (missed_lookup (missed state)) \<subseteq> Vs G;
-  fst ` heap_abstract (heap state) \<subseteq> Vs G;
-  aevens state \<subseteq> L; aodds state \<subseteq> R;
-  {l | l r. ben_lookup (best_even_neighbour state) r = Some l} \<subseteq> aevens state;
-  aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state))\<rbrakk> 
- \<Longrightarrow> invar_basic state"
+  "\<lbrakk>forest_invar \<M> (forest state);
+    ben_invar (best_even_neighbour state);
+    heap_invar (heap state);
+    missed_invar (missed state);\<F> state \<subseteq> G;
+    dom (ben_lookup (best_even_neighbour state)) \<subseteq> Vs G;
+    dom (missed_lookup (missed state)) \<subseteq> Vs G;
+    fst ` heap_abstract (heap state) \<subseteq> Vs G;
+    aevens state \<subseteq> L; aodds state \<subseteq> R;
+    {l | l r. ben_lookup (best_even_neighbour state) r = Some l} \<subseteq> aevens state;
+    aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state))\<rbrakk> 
+   \<Longrightarrow> invar_basic state"
 and invar_basicD:
-"invar_basic state \<Longrightarrow> forest_invar \<M> (forest state)"
-"invar_basic state \<Longrightarrow> ben_invar (best_even_neighbour state)"
-"invar_basic state \<Longrightarrow> heap_invar (heap state)"
-"invar_basic state \<Longrightarrow> missed_invar (missed state)"
-"invar_basic state \<Longrightarrow> \<F> state \<subseteq> G"
-"invar_basic state \<Longrightarrow> dom (ben_lookup (best_even_neighbour state)) \<subseteq> Vs G"
-"invar_basic state \<Longrightarrow> dom (missed_lookup (missed state)) \<subseteq> Vs G"
-"invar_basic state \<Longrightarrow> fst ` heap_abstract (heap state) \<subseteq> Vs G"
-"invar_basic state \<Longrightarrow> aevens state \<subseteq> L"
-"invar_basic state \<Longrightarrow> aodds state \<subseteq> R"
-"invar_basic state \<Longrightarrow> {l | l r. ben_lookup (best_even_neighbour state) r = Some l} \<subseteq> aevens state"
-"invar_basic state \<Longrightarrow> aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state))"
+  "invar_basic state \<Longrightarrow> forest_invar \<M> (forest state)"
+  "invar_basic state \<Longrightarrow> ben_invar (best_even_neighbour state)"
+  "invar_basic state \<Longrightarrow> heap_invar (heap state)"
+  "invar_basic state \<Longrightarrow> missed_invar (missed state)"
+  "invar_basic state \<Longrightarrow> \<F> state \<subseteq> G"
+  "invar_basic state \<Longrightarrow> dom (ben_lookup (best_even_neighbour state)) \<subseteq> Vs G"
+  "invar_basic state \<Longrightarrow> dom (missed_lookup (missed state)) \<subseteq> Vs G"
+  "invar_basic state \<Longrightarrow> fst ` heap_abstract (heap state) \<subseteq> Vs G"
+  "invar_basic state \<Longrightarrow> aevens state \<subseteq> L"
+  "invar_basic state \<Longrightarrow> aodds state \<subseteq> R"
+  "invar_basic state \<Longrightarrow> 
+    {l | l r. ben_lookup (best_even_neighbour state) r = Some l} \<subseteq> aevens state"
+  "invar_basic state \<Longrightarrow> aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state))"
   by(auto simp add: invar_basic_def)
 
 definition "invar_feasible_potential state =
@@ -810,32 +674,29 @@ definition "invar_feasible_potential state =
                edge_costs u v \<ge> \<pi>\<^sup>* state u + \<pi>\<^sup>* state v)"
 
 lemma invar_feasible_potentialE:
-"invar_feasible_potential state \<Longrightarrow>
-((\<And> u v. {u, v} \<in> G \<Longrightarrow>
-               edge_costs u v \<ge> \<pi>\<^sup>* state u + \<pi>\<^sup>* state v) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "\<lbrakk>invar_feasible_potential state; 
+    (\<And> u v. {u, v} \<in> G \<Longrightarrow> edge_costs u v \<ge> \<pi>\<^sup>* state u + \<pi>\<^sup>* state v) \<Longrightarrow> P\<rbrakk>
+    \<Longrightarrow> P"
 and invar_feasible_potentialI:
-"(\<And> u v. {u, v} \<in> G \<Longrightarrow>
-               edge_costs u v \<ge> \<pi>\<^sup>* state u + \<pi>\<^sup>* state v) 
-\<Longrightarrow> invar_feasible_potential state"
+  "(\<And> u v. {u, v} \<in> G \<Longrightarrow> edge_costs u v \<ge> \<pi>\<^sup>* state u + \<pi>\<^sup>* state v) 
+    \<Longrightarrow> invar_feasible_potential state"
 and invar_feasible_potentialD:
-"\<lbrakk>invar_feasible_potential state;  {u, v} \<in> G\<rbrakk>
-   \<Longrightarrow> edge_costs u v \<ge> \<pi>\<^sup>* state u + \<pi>\<^sup>* state v"
+  "\<lbrakk>invar_feasible_potential state;  {u, v} \<in> G\<rbrakk>
+    \<Longrightarrow> edge_costs u v \<ge> \<pi>\<^sup>* state u + \<pi>\<^sup>* state v"
   by (auto simp add: invar_feasible_potential_def)
 
 definition "invar_forest_tight state = 
             (\<forall> u v.  {u, v} \<in> \<F> state \<longrightarrow> edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v)"
 
 lemma invar_forest_tightE:
-"invar_forest_tight state \<Longrightarrow>
- ((\<And> u v. {u, v} \<in> \<F> state \<Longrightarrow>edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "invar_forest_tight state \<Longrightarrow>
+   ((\<And> u v. {u, v} \<in> \<F> state \<Longrightarrow>edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v) \<Longrightarrow> P)
+   \<Longrightarrow> P"
 and invar_forest_tightI:
-"(\<And> u v. {u, v} \<in> \<F> state \<Longrightarrow> edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v)
- \<Longrightarrow> invar_forest_tight state"
+  "(\<And> u v. {u, v} \<in> \<F> state \<Longrightarrow> edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v)
+   \<Longrightarrow> invar_forest_tight state"
 and invar_forest_tightD:
-"\<lbrakk>invar_forest_tight state; {u, v} \<in> \<F> state\<rbrakk> 
-  \<Longrightarrow> edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v"
+  "\<lbrakk>invar_forest_tight state; {u, v} \<in> \<F> state\<rbrakk> \<Longrightarrow> edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v"
   by(auto simp add: invar_forest_tight_def)
 
 definition "invar_matching_tight state = 
@@ -843,17 +704,14 @@ definition "invar_matching_tight state =
                edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v)"
 
 lemma invar_matching_tightE:
-"invar_matching_tight state \<Longrightarrow>
-((\<And> u v. {u, v} \<in> \<M> \<Longrightarrow>
-               edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "invar_matching_tight state \<Longrightarrow>
+  ((\<And> u v. {u, v} \<in> \<M> \<Longrightarrow> edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v) \<Longrightarrow> P)
+  \<Longrightarrow> P"
 and invar_matching_tightI:
-"(\<And> u v. {u, v} \<in> \<M> \<Longrightarrow>
-               edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v)
- \<Longrightarrow> invar_matching_tight state"
+  "(\<And> u v. {u, v} \<in> \<M> \<Longrightarrow> edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v)
+   \<Longrightarrow> invar_matching_tight state"
 and invar_matching_tightD:
-"\<lbrakk>invar_matching_tight state; {u, v} \<in> \<M>\<rbrakk> \<Longrightarrow>
-               edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v"
+  "\<lbrakk>invar_matching_tight state; {u, v} \<in> \<M>\<rbrakk> \<Longrightarrow> edge_costs u v = \<pi>\<^sup>* state u + \<pi>\<^sup>* state v"
   by(auto simp add: invar_matching_tight_def)
 
 definition "invar_best_even_neighbour_heap state =
@@ -863,25 +721,25 @@ definition "invar_best_even_neighbour_heap state =
                        ben_lookup (best_even_neighbour state) r = Some l)})"
 
 lemma invar_best_even_neighbour_heapE:
-"invar_best_even_neighbour_heap state \<Longrightarrow>
-(heap_abstract (heap state) = 
-   {(r, k) | r k. r \<in> Vs G - aevens state - aodds state \<and>
-                  (\<exists> l. k = w\<^sub>\<pi> l r + missed_at state l \<and>
-                       ben_lookup (best_even_neighbour state) r = Some l)}
- \<Longrightarrow> P)
-\<Longrightarrow>P"
+  "invar_best_even_neighbour_heap state \<Longrightarrow>
+  (heap_abstract (heap state) = 
+     {(r, k) | r k. r \<in> Vs G - aevens state - aodds state \<and>
+                    (\<exists> l. k = w\<^sub>\<pi> l r + missed_at state l \<and>
+                         ben_lookup (best_even_neighbour state) r = Some l)}
+    \<Longrightarrow> P)
+   \<Longrightarrow>P"
 and invar_best_even_neighbour_heapI:
-"heap_abstract (heap state) = 
-   {(r, k) | r k. r \<in> Vs G - aevens state - aodds state \<and>
-                 (\<exists> l. k = w\<^sub>\<pi> l r + missed_at state l \<and>
-                       ben_lookup (best_even_neighbour state) r = Some l)}
- \<Longrightarrow> invar_best_even_neighbour_heap state"
+  "heap_abstract (heap state) = 
+     {(r, k) | r k. r \<in> Vs G - aevens state - aodds state \<and>
+                   (\<exists> l. k = w\<^sub>\<pi> l r + missed_at state l \<and>
+                         ben_lookup (best_even_neighbour state) r = Some l)}
+   \<Longrightarrow> invar_best_even_neighbour_heap state"
 and invar_best_even_neighbour_heapD:
-"invar_best_even_neighbour_heap state \<Longrightarrow>
-heap_abstract (heap state) = 
-   {(r, k) | r k. r \<in> Vs G - aevens state - aodds state \<and>
-                  (\<exists> l. k = w\<^sub>\<pi> l r + missed_at state l \<and>
-                       ben_lookup (best_even_neighbour state) r = Some l)}"
+  "invar_best_even_neighbour_heap state \<Longrightarrow>
+   heap_abstract (heap state) = 
+     {(r, k) | r k. r \<in> Vs G - aevens state - aodds state \<and>
+                    (\<exists> l. k = w\<^sub>\<pi> l r + missed_at state l \<and>
+                         ben_lookup (best_even_neighbour state) r = Some l)}"
   by(auto simp add: invar_best_even_neighbour_heap_def)
 
 definition "invar_best_even_neighbour_map state = 
@@ -895,42 +753,32 @@ definition "invar_best_even_neighbour_map state =
                    Min {w\<^sub>\<pi> l r + missed_at state l | l. l \<in> aevens state \<and> {l, r} \<in> G})))"
 
 lemma invar_best_even_neighbour_mapE:
-"invar_best_even_neighbour_map state \<Longrightarrow>
-(\<lbrakk>(\<And> r. \<lbrakk> r \<in> Vs G; r \<notin>  aevens state; r \<notin> aodds state;
-         \<nexists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
+  "invar_best_even_neighbour_map state \<Longrightarrow>
+  (\<lbrakk>(\<And> r. \<lbrakk> r \<in> Vs G; r \<notin>  aevens state; r \<notin> aodds state; \<nexists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
       \<Longrightarrow> ben_lookup (best_even_neighbour state) r = None);
-  (\<And> r. \<lbrakk> r \<in> Vs G; r \<notin>  aevens state; r \<notin> aodds state;
-         \<exists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
-      \<Longrightarrow> (\<exists> l. ben_lookup (best_even_neighbour state) r = Some l \<and>
-                            {r, l} \<in> G  \<and>  l \<in> aevens state \<and>
-                            w\<^sub>\<pi> l r + missed_at state l = 
-                            Min {w\<^sub>\<pi> l r + missed_at state l | l. 
-                                   l \<in> aevens state \<and> {l, r} \<in> G}))\<rbrakk>
-  \<Longrightarrow> P)
-\<Longrightarrow> P"
+  (\<And> r. \<lbrakk> r \<in> Vs G; r \<notin>  aevens state; r \<notin> aodds state; \<exists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
+      \<Longrightarrow> (\<exists> l. ben_lookup (best_even_neighbour state) r = Some l \<and> {r, l} \<in> G  \<and> l \<in> aevens state 
+                \<and> w\<^sub>\<pi> l r + missed_at state l = 
+                  Min {w\<^sub>\<pi> l r + missed_at state l | l. l \<in> aevens state \<and> {l, r} \<in> G}))\<rbrakk>
+    \<Longrightarrow> P)
+   \<Longrightarrow> P"
 and invar_best_even_neighbour_mapI:
-"\<lbrakk>(\<And> r. \<lbrakk> r \<in> Vs G; r \<notin>  aevens state; r \<notin> aodds state;
-         \<nexists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
-      \<Longrightarrow> ben_lookup (best_even_neighbour state) r = None);
-  (\<And> r. \<lbrakk> r \<in> Vs G; r \<notin>  aevens state; r \<notin> aodds state;
-         \<exists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
-      \<Longrightarrow> (\<exists> l. ben_lookup (best_even_neighbour state) r = Some l \<and>
-                            {r, l} \<in> G  \<and>  l \<in> aevens state \<and>
-                            w\<^sub>\<pi> l r + missed_at state l = 
-                            Min {w\<^sub>\<pi> l r + missed_at state l | l. 
-                                   l \<in> aevens state \<and> {l, r} \<in> G}))\<rbrakk>
+  "\<lbrakk>(\<And> r. \<lbrakk> r \<in> Vs G; r \<notin>  aevens state; r \<notin> aodds state; \<nexists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
+       \<Longrightarrow> ben_lookup (best_even_neighbour state) r = None);
+   (\<And> r. \<lbrakk> r \<in> Vs G; r \<notin>  aevens state; r \<notin> aodds state; \<exists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
+       \<Longrightarrow> (\<exists> l. ben_lookup (best_even_neighbour state) r = Some l \<and> {r, l} \<in> G  \<and> l \<in> aevens state
+               \<and> w\<^sub>\<pi> l r + missed_at state l = 
+                 Min {w\<^sub>\<pi> l r + missed_at state l | l. l \<in> aevens state \<and> {l, r} \<in> G}))\<rbrakk>
   \<Longrightarrow> invar_best_even_neighbour_map state"
 and invar_best_even_neighbour_mapD:
-"\<lbrakk>invar_best_even_neighbour_map state ; r \<in> Vs G; 
-  r \<notin>  aevens state; r \<notin> aodds state; \<nexists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
-      \<Longrightarrow> ben_lookup (best_even_neighbour state) r = None"
-"\<lbrakk>invar_best_even_neighbour_map state; r \<in> Vs G; 
-  r \<notin>  aevens state; r \<notin> aodds state;\<exists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
-      \<Longrightarrow> (\<exists> l. ben_lookup (best_even_neighbour state) r = Some l \<and>
-                            {r, l} \<in> G  \<and>  l \<in> aevens state \<and>
-                            w\<^sub>\<pi> l r + missed_at state l = 
-                            Min {w\<^sub>\<pi> l r + missed_at state l | l. 
-                                   l \<in> aevens state \<and> {l, r} \<in> G})"
+  "\<lbrakk>invar_best_even_neighbour_map state ; r \<in> Vs G; 
+    r \<notin>  aevens state; r \<notin> aodds state; \<nexists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
+    \<Longrightarrow> ben_lookup (best_even_neighbour state) r = None"
+  "\<lbrakk>invar_best_even_neighbour_map state; r \<in> Vs G; 
+    r \<notin>  aevens state; r \<notin> aodds state;\<exists> l. l \<in> aevens state \<and> {l, r} \<in> G \<rbrakk> 
+    \<Longrightarrow> (\<exists> l. ben_lookup (best_even_neighbour state) r = Some l \<and> {r, l} \<in> G  \<and>  l \<in> aevens state \<and>
+              w\<^sub>\<pi> l r + missed_at state l = 
+              Min {w\<^sub>\<pi> l r + missed_at state l | l. l \<in> aevens state \<and> {l, r} \<in> G})"
   by(auto simp add: invar_best_even_neighbour_map_def)
 
 definition "invar_out_of_heap state =
@@ -940,17 +788,14 @@ definition "invar_out_of_heap state =
                \<ge> w\<^sub>\<pi> l r + missed_at state l))"
 
 lemma invar_out_of_heapD:
-"\<lbrakk>invar_out_of_heap state;
- ben_lookup (best_even_neighbour state) r = Some l;
-  \<nexists> k. (r, k) \<in> heap_abstract (heap state);
-   kr \<in> heap_abstract (heap state)\<rbrakk> \<Longrightarrow>
-   snd kr  \<ge> w\<^sub>\<pi> l r + missed_at state l"
+  "\<lbrakk>invar_out_of_heap state; ben_lookup (best_even_neighbour state) r = Some l;
+    \<nexists> k. (r, k) \<in> heap_abstract (heap state); kr \<in> heap_abstract (heap state)\<rbrakk> 
+   \<Longrightarrow> snd kr  \<ge> w\<^sub>\<pi> l r + missed_at state l"
 and invar_out_of_heapI:
-"(\<And> r l kr. \<lbrakk>ben_lookup (best_even_neighbour state) r = Some l;
-  \<nexists> k. (r, k) \<in> heap_abstract (heap state);
-   kr \<in> heap_abstract (heap state)\<rbrakk> \<Longrightarrow>
-   snd kr  \<ge> w\<^sub>\<pi> l r + missed_at state l)
-\<Longrightarrow> invar_out_of_heap state"
+  "(\<And> r l kr. \<lbrakk>ben_lookup (best_even_neighbour state) r = Some l; 
+               \<nexists> k. (r, k) \<in> heap_abstract (heap state); kr \<in> heap_abstract (heap state)\<rbrakk> 
+           \<Longrightarrow>  snd kr  \<ge> w\<^sub>\<pi> l r + missed_at state l)
+   \<Longrightarrow> invar_out_of_heap state"
   by(auto simp add: invar_out_of_heap_def)
 
 subsection \<open>Manipulation of Heap and Best Even Neighbours\<close>
@@ -1003,7 +848,8 @@ proof-
          then (ben_upd r l ben, heap_decrease_key queue r (w\<^sub>\<pi> l r + off l))
          else (ben, queue))"
   obtain rnlist where rnlist:"set rnlist = vset_to_set (right_neighbs l)" "distinct rnlist"
-                      "vset_iterate_ben f (ben, queue) (right_neighbs l) = foldl f (ben, queue) rnlist"
+                      "vset_iterate_ben f (ben, queue) (right_neighbs l) =
+                        foldl f (ben, queue) rnlist"
     using vset_iterations(1)[OF G(4), OF assms(3), of f] by force
   define rs where "rs = rev rnlist"
   have rs_props: "distinct rs" "set rs = vset_to_set (right_neighbs l)"
@@ -1339,8 +1185,8 @@ proof-
             if "r1 \<in> vset_to_set (right_neighbs l)"
                "ben_lookup (fst result) r1 = Some y"
                "(if w\<^sub>\<pi> l r1 + off l < w\<^sub>\<pi> y r1 + off y then Some l
-               else ben_lookup (fst result) r1) = Some l'1" 
-                "r1 \<notin> fst ` heap_abstract (snd result)" for y
+                 else ben_lookup (fst result) r1) = Some l'1" 
+               "r1 \<notin> fst ` heap_abstract (snd result)" for y
              apply(cases "w\<^sub>\<pi> l r1 + off l < w\<^sub>\<pi> y r1 + off y")
              using G(5)[OF l_in_L] IH_applied(4)[of r1 y l] that
                   w\<^sub>\<pi>_non_neg[of l r1] 
@@ -1352,14 +1198,14 @@ proof-
              using single_update(6) that by blast
           from False have "ben_lookup (fst result) r1 = Some l'1" 
             using 1 unfolding single_update(5)
-            apply(cases "r1 \<notin> vset_to_set (right_neighbs l)")
-            apply(all \<open>cases \<open>ben_lookup (fst result) r1 = None\<close>\<close>)
-            by(auto simp add: single_update(6) intro: helper1 helper2)
+            by(cases "r1 \<notin> vset_to_set (right_neighbs l)",
+               all \<open>cases \<open>ben_lookup (fst result) r1 = None\<close>\<close>)
+              (auto simp add: single_update(6) intro: helper1 helper2)
           moreover have "(\<nexists>k. (r1, k) \<in> heap_abstract (snd result))"
            using 1 unfolding single_update(5)
-            apply(cases "r1 \<notin> vset_to_set (right_neighbs l)")
-            apply(all \<open>cases \<open>ben_lookup (fst result) r1 = None\<close>\<close>)
-            by(auto simp add: single_update(6) rev_image_eqI)
+           by(cases "r1 \<notin> vset_to_set (right_neighbs l)",
+              all \<open>cases \<open>ben_lookup (fst result) r1 = None\<close>\<close>)
+             (auto simp add: single_update(6) rev_image_eqI)
           ultimately show ?thesis 
             using IH_applied(4)[of r1 l'1 l1] by simp
         qed
@@ -1381,7 +1227,8 @@ proof-
           hence old_conn_min: "conn_min r =  conn_min_before r"
             by(auto intro: arg_cong[of _ _ Min] 
                  simp add: Cons.prems(7) conn_min_before_def )
-          obtain l where l: "( (l \<in> set ls \<and> r \<in> vset_to_set (right_neighbs l)) \<or> Some l = ben_lookup ben r)"
+          obtain l where l: 
+           "((l \<in> set ls \<and> r \<in> vset_to_set (right_neighbs l)) \<or> Some l = ben_lookup ben r)"
            "w\<^sub>\<pi> l r + off l = conn_min_before r \<and> ben_lookup (fst result) r = Some l"
             using 1 one IH_applied(6) by auto
           show ?case
@@ -1403,25 +1250,30 @@ proof-
               using "1" by presburger 
             show ?case
               unfolding Cons.prems(7)  if_P[OF 1] if_not_P[OF init_None]
-              apply(rule exI[of _ l] )
-              apply(rule forw_subst[of _ "{w\<^sub>\<pi> l r + off l}"])
-              using  r_not_previously two
-              by auto
+            proof(rule exI[of _ l], rule forw_subst[of _ "{w\<^sub>\<pi> l r + off l}"], goal_cases)
+            qed (insert r_not_previously two, auto)
           next
             case (2 ll)
+            note Two = this
             have "\<exists>l. ((l \<in> set ls \<and> r \<in> vset_to_set (right_neighbs l)) \<or> Some l = ben_lookup ben r) \<and>
               w\<^sub>\<pi> l r + off l = conn_min_before r \<and> ben_lookup (fst result) r = Some l"
-              apply(cases "r \<in> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> set ls}")
-              subgoal
+            proof(cases "r \<in> \<Union> {vset_to_set (right_neighbs l)| l. l \<in> set ls}", goal_cases)
+              case 1
+              thus ?case
                 using IH_applied(6) by auto
-              subgoal
-                apply(rule exI[of _ ll])
+            next
+              case 2
+              show ?case
+              proof(rule exI[of _ ll], goal_cases)
+                case 1
+                show ?case
                 unfolding conn_min_before_def
-              apply(rule forw_subst[of _ "{w\<^sub>\<pi> ll r + off ll}"])
-              using  two IH_applied(5) 2
-              by(auto intro!:  exI[of _ "the (ben_lookup ben r)"])
-            done
-          hence ll_props: "((ll \<in> set ls \<and> r \<in> vset_to_set (right_neighbs ll)) \<or> Some ll = ben_lookup ben r)"
+              proof(rule forw_subst[of _ "{w\<^sub>\<pi> ll r + off ll}"], goal_cases)
+              qed (insert two IH_applied(5) 2 Two, auto intro!:  exI[of _ "the (ben_lookup ben r)"])
+            qed
+          qed
+          hence ll_props: 
+              "((ll \<in> set ls \<and> r \<in> vset_to_set (right_neighbs ll)) \<or> Some ll = ben_lookup ben r)"
               "w\<^sub>\<pi> ll r + off ll = conn_min_before r" 
               "ben_lookup (fst result) r = Some ll"
             using 2 by auto
@@ -2863,7 +2715,7 @@ proof-
     by (auto intro: walk_between_nonempty_pathD(3))
   have edges_of_p_are:"edges_of_path p = {r, l}#edges_of_path (get_path F l)"
     using get_path_split_off_first  hd_get_path p_def 
-    by (metis edges_of_path.simps(3))
+    by(cases "get_path F l") simp+
   show "\<forall>e\<in>set (edges_of_path (the (augpath state'))).
        \<exists>u v. e = {u, v} \<and> \<w> u v = \<pi>\<^sup>* state' u + \<pi>\<^sup>* state' v "
   proof(rule, goal_cases)
@@ -3493,7 +3345,7 @@ proof-
     using result_props(6)  invar_basicD(10,9) potential_in_G
     by (auto simp add: new_potential_props from_assms(3))
 qed
-(*TODO say dual unbounded*)
+
 lemmas search_path_correct = 
  Lefts_Matched_all_lefts_matched
  Dual_Unbounded_dual_unbounded

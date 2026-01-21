@@ -1,480 +1,8 @@
 theory Alternating_Forest_Executable
-  imports RANKING.More_Graph 
-    "HOL-Data_Structures.Map_Specs"  "HOL-Data_Structures.Set_Specs"
+  imports RANKING.More_Graph Graph_Algorithms_Dev.Parent_Map
     Alternating_Forest_Spec
 begin
-
-(*TODO MOVE*)
-(*theory about follow on parent map taken from blossom and restructured,
-TODO: unify and put in a third place, also useful for Bellman-Ford*)
-
-lemma path_concat_2:
-  assumes "path G p" "path G q" "p \<noteq> []" "q \<noteq> []" "last p = hd q"
-  shows "path G (butlast p @ q)" 
-  apply(rule forw_subst[of "butlast p @ q" "p @ tl q"])
-   apply(cases p, all \<open> cases q\<close>)
-  using assms path_concat 
-  by force+
-
-lemma walk_transitive_3:
-  "\<lbrakk>walk_betw G v q w; walk_betw G u p v\<rbrakk> \<Longrightarrow> walk_betw G u (butlast p @ q) w"
-  by(auto simp add: walk_betw_def intro!: path_concat_2[of G p q], (cases p)?)+
-
-definition parent_spec::"('a \<Rightarrow> 'a option) \<Rightarrow> bool" where
-  "parent_spec parent = wf {(x, y) |x y. (Some x = parent y)}"
-
-locale parent_spec = 
-  fixes parent::"'a \<Rightarrow> 'a option" and
-    parent_rel::"'a \<Rightarrow> 'a \<Rightarrow> bool"
-begin
-
-function (domintros) follow where
-  "follow v = (case (parent v) of Some v' \<Rightarrow> v # (follow v') | _  \<Rightarrow> [v])"
-  by pat_completeness auto
-
-partial_function (tailrec) follow_impl_loop  where
-  "follow_impl_loop v acc =  
-  (case (parent v) of Some v' \<Rightarrow> (follow_impl_loop v' (v#acc)) 
-     | _  \<Rightarrow> v#acc)"
-
-lemma follow_dom_impl_same_loop:
-  assumes "follow_dom v"
-  shows   "follow_impl_loop v acc = rev (rev acc @ follow v)"
-  apply(induction arbitrary: acc rule: follow.pinduct[OF assms(1)])
-  apply(subst follow_impl_loop.simps)
-  by(auto simp add: follow.psimps split: option.split)
-
-definition "follow_impl v = rev (follow_impl_loop v Nil)"
-
-lemma follow_dom_impl_same: "follow_dom v \<Longrightarrow> follow_impl v = follow v"
-  by(auto simp add: follow_impl_def follow_dom_impl_same_loop)
-
-lemmas [code] = follow_impl_def follow_impl_loop.simps
-
-lemma assumes "parent v = None"
-  shows "follow_dom v"
-  apply(rule follow.domintros)
-  using assms
-  by auto
-
-lemma assumes "parent v' = Some v" "follow_dom v"
-  shows "Wellfounded.accp follow_rel v'"
-  apply(rule follow.domintros)
-  using assms
-  by auto
-
-lemma wfP_follow_rel:
-  assumes "wfP follow_rel"
-  shows "follow_dom v"
-  using accp_wfpD[OF assms]
-  by blast
-
-lemma wf_follow_rel:
-  assumes "wf {(x,y) | x y. follow_rel x y}"
-  shows "follow_dom v"
-  using wfP_follow_rel assms
-  unfolding wfp_def
-  by force
-
-end
-
-global_interpretation parent_spec_i: parent_spec parent parent_rel for parent parent_rel
-  defines follow_impl = parent_spec_i.follow_impl
-    and follow_impl_loop = parent_spec_i.follow_impl_loop
-    and follow = parent_spec_i.follow
-  done
-
-value "follow_impl (\<lambda> (x::nat). if x = 3 then Some 2 
-else if x = 2 then Some 1 else if x = 1 then Some 0 else None)
-3"
-
-
-locale parent = 
-  parent_spec+
-  assumes parent_rel:
-    "parent_spec parent"
-begin
-
-lemma parent_eq_follow_rel: "follow_rel = (\<lambda>v' v. Some v' = parent v)"
-  unfolding parent_rel follow_rel.simps
-  apply simp
-  apply(rule HOL.ext)+
-  by auto
-
-lemma wf_found_rel:
-  "wf {(x,y) | x y. follow_rel x y}"
-  unfolding parent_eq_follow_rel
-  using parent_rel[unfolded parent_spec_def]
-  by simp
-
-lemma follow_dom:
-  "follow_dom v"
-  using wf_found_rel wf_follow_rel
-  by force
-
-lemma follow_impl_is_follow:
-  "follow_impl = follow"
-  by(auto simp add: follow_dom_impl_same parent.follow_dom parent_axioms)
-
-lemma follow_cons:
-  "follow u = v # p \<Longrightarrow> v = u"
-  by (auto simp: follow.psimps[OF follow_dom] split: option.splits)
-
-lemma follow_cons_2:
-  "follow v = v # v' # p \<Longrightarrow> follow v' = v' # p"
-  "follow v = v # v' # p \<Longrightarrow> parent v = Some v'"
-  by(cases "parent v"; simp add: follow.psimps[OF follow_dom]; clarsimp split: option.splits)+
-
-lemma follow_append:
-  "follow v = p @ u # p' \<Longrightarrow> follow u = u # p'"
-proof(induction "follow v" arbitrary: v p)
-  case nil1: Nil
-  then show ?case 
-    by auto
-next
-  case cons1: (Cons v' follow_v')
-  then have "v' = v"
-    using follow_cons
-    by metis
-  show ?case
-  proof (cases follow_v')
-    case nil2: Nil
-    then have "v = u" "p = []"
-      using cons1 \<open>v' = v\<close>
-      by (simp add: Cons_eq_append_conv)+
-    then show ?thesis
-      using cons1
-      by auto
-  next
-    case cons2: (Cons v'' follow_v'')
-    then show ?thesis
-      using cons1
-      by (metis \<open>v' = v\<close> append_eq_Cons_conv follow_cons_2 list.sel(1))
-  qed
-qed
-
-lemma from_tree:
-  assumes "follow v1 = p1 @ u # p1'" "follow v2 = p2 @ u # p2'"
-  shows "p1' = p2'"
-  using follow_append follow_append
-    assms parent_axioms
-  by fastforce
-
-lemma follow_psimps:
-  "follow v = (case parent v of None \<Rightarrow> [v] | Some v' \<Rightarrow> v # follow v')"
-  using follow.psimps[OF follow_dom] .
-
-lemma follow_hd: "hd (follow  v) = v"
-  by(auto simp add:  follow_psimps split: option.split)
-
-lemma follow_nempty: "follow v \<noteq> []"
-  apply(subst follow.psimps[OF follow_dom])
-  by(auto simp add: option.case_eq_if split: if_splits)
-
-lemma follow_None:
-  "follow v = [v'] \<Longrightarrow> parent v = None"
-  apply(subst (asm) follow.psimps[OF follow_dom])
-  by(auto simp add: follow_nempty option.case_eq_if split: if_splits)
-
-
-lemma nin_ancestors: "\<forall>v2\<in>set (follow v1). parent v2 \<noteq> Some v3 \<Longrightarrow> v3 \<noteq> v1 \<Longrightarrow>  v3 \<notin> set (follow v1)"
-proof(induction rule: follow.pinduct[OF follow_dom[of v1]])
-  case (1 v)
-  then show ?case
-  proof (cases "parent v")
-    case None
-    then show ?thesis
-      using 1
-      by (simp add: follow_psimps)
-  next
-    case (Some a)
-    then show ?thesis
-      using 1
-      using follow_psimps by auto
-  qed
-qed
-
-lemma follow_walk_betw:
-  "walk_betw {{x, y}| x y. follow_rel x y} v (follow v) (last (follow v)) \<or> 
-   follow v = [v]"
-proof(induction rule: follow.pinduct[OF follow_dom])
-  case (1 v)
-  show ?case 
-  proof(cases "parent v")
-    case None
-    then show ?thesis 
-      by (simp add: follow_psimps)
-  next
-    case (Some u)
-    have one_step: "walk_betw { {x, y} | x y. (follow_rel x y)} v [v, u] u"
-      using Some
-      by(fastforce intro!: edges_are_walks simp add: parent_eq_follow_rel)
-    show ?thesis 
-      using 1(2)[OF Some]
-      by(auto simp add: follow_psimps[of v, simplified Some, simplified]
-          intro: walk_transitive_3[OF _ one_step, simplified] one_step)
-  qed
-qed
-  (*
-lemma follow_valk_bet:
-  "vwalk_bet {(y, x)| x y. follow_rel x y} v (follow v) (last (follow v)) \<or> 
-   follow v = [v]"
-proof(induction rule: follow.pinduct[OF follow_dom])
-  case (1 v)
-  show ?case 
-  proof(cases "parent v")
-    case None
-    then show ?thesis 
-      by (simp add: follow_psimps)
-  next
-    case (Some u)
-    have one_step: "vwalk_bet { (y, x) | x y. (follow_rel x y)} v [v, u] u"
-      using Some
-      by(force intro!: edges_are_vwalk_bet simp add: parent_eq_follow_rel)
-    show ?thesis 
-      using 1(2)[OF Some] hd_of_vwalk_bet one_step
-      by(force simp add: follow_psimps[of v, simplified Some, simplified])
-  qed
-qed
-*)
-lemma follow_R_one_star:
-  assumes "follow v = p1@[x]@p2"
-  shows "(v, x) \<in> {(x, y) | x y. (follow_rel y x)}\<^sup>*"
-  using assms
-proof(induction arbitrary:  x p1 p2 rule: follow.pinduct[OF follow_dom])
-  case (1 v x p1 p2)
-  show ?case 
-  proof(cases p1)
-    case Nil
-    hence "v = x"
-      using "1.prems" follow_cons by auto
-    then show ?thesis by simp
-  next
-    case (Cons a list)
-    show ?thesis
-    proof(cases "parent v")
-      case None
-      then show ?thesis 
-        using 1(3)
-        by(auto simp add: follow_psimps[of v] append_eq_Cons_conv Cons_eq_append_conv)
-    next
-      case (Some u)
-      have "(u, x) \<in> {(x, y) | x y. (follow_rel y x)}\<^sup>*"
-        using Some Cons 1(3)
-        by(force intro!:  1(2)[of u list x p2]  simp add: follow_psimps[of v])
-      moreover have "(v, u) \<in> {(x, y) | x y. (follow_rel y x)}\<^sup>*" 
-        using Some by(auto simp add: parent_eq_follow_rel)
-      ultimately show ?thesis by auto
-    qed
-  qed
-qed
-
-lemma follow_R_two_plus:
-  assumes "follow v = p1@[x]@p2@[y]@p3"
-  shows "(x, y) \<in> {(x, y) | x y. (follow_rel y x)}\<^sup>+"
-  using assms
-proof(induction arbitrary:  x p1 p2 p2 y rule: follow.pinduct[OF follow_dom])
-  case (1 v)
-  show ?case 
-  proof(cases "parent v")
-    case None
-    then show ?thesis 
-      using 1(3)
-      by (simp add: follow_psimps)
-  next
-    case (Some u)
-    show ?thesis
-    proof(cases p1)
-      case Nil
-      hence "v = x"
-        using "1.prems" follow_cons by auto
-      moreover hence "(u, y) \<in> {(x, y) | x y. (follow_rel y x)}\<^sup>*"
-        using 1(3) Some Nil 
-        by(force intro!:  follow_R_one_star[of u "p2" y p3] simp add:  follow_psimps[of x])
-      moreover have "(v, u)\<in> {(x, y) | x y. (follow_rel y x)}\<^sup>+" 
-        by (simp add: Some parent_eq_follow_rel trancl.r_into_trancl)
-      ultimately show ?thesis by simp
-    next
-      case (Cons a list)
-      show ?thesis 
-        using Cons 1(3) Some
-        by(force intro!: 1(2)[OF Some, of list x p2 y] simp add:  follow_psimps[of v])
-    qed
-  qed
-qed
-
-lemma follow_distinct:
-  "distinct (follow v)"
-proof(rule ccontr, goal_cases)
-  case 1
-  then obtain p1 x p2 p3 where split: "follow v = p1@[x]@p2@[x]@p3"
-    using not_distinct_decomp by blast
-  hence "follow x = [x]@p2@[x]@p3" 
-    by (simp add: follow_append)
-  moreover have "follow x = [x]@p3"
-    by (metis append.assoc append_Cons calculation follow_append)
-  ultimately show False 
-    by simp
-qed
-
-end
-
-lemma follow_cong:
-  assumes "parent par" "parent_spec.follow_dom par v"
-  shows "(\<forall>v'\<in>set(parent_spec.follow par v). par v' = par' v') 
-\<Longrightarrow> parent par' \<Longrightarrow> parent_spec.follow par v = parent_spec.follow par' v"
-  using assms(2)
-proof(induction rule: parent_spec.follow.pinduct[OF assms(2)])
-  case (1 v)
-  then show ?case
-  proof(cases "par v")
-    case None
-    then show ?thesis
-      apply( simp add: parent.follow_psimps[OF 1(4)])
-      by (metis (mono_tags, lifting) "1.hyps" "1.prems"(1) assms(1) list.set_intros(1) option.case_eq_if 
-          parent_spec.follow.psimps)
-  next
-    case (Some a)
-    have "\<forall>v\<in>set (parent_spec.follow par a). par v = par' v"
-      by (simp add: "1.prems"(1) "1.prems"(3) Some assms(1) parent_spec.follow.psimps)
-    moreover have "parent_spec.follow_dom par a"
-      by (simp add: assms(1) parent.follow_dom)
-    ultimately have "parent_spec.follow par a = parent_spec.follow par' a" 
-      using 1
-      using Some by blast
-    moreover have "par' v = Some a"
-      using "1.hyps" "1.prems"(1) Some assms(1) parent_spec.follow.psimps by fastforce
-    ultimately show ?thesis
-      using 1(4) Some
-      by(auto simp add: parent.follow_psimps[OF assms(1)] parent.follow_psimps[OF 1(4)] )
-  qed
-qed
-
-lemma v2_nin_ancestors:
-  assumes
-    "parent par" and
-    "\<forall>v''. par v'' \<noteq> Some v2" "v2 \<noteq> v"
-  shows "\<forall>v'\<in>set(parent_spec.follow par v). v' \<noteq> v2"
-  using assms
-proof(induction v rule: parent_spec.follow.pinduct[OF parent.follow_dom[OF assms(1)]])
-  case (1 v)
-  show ?case
-  proof(cases "par v")
-    case None
-    then show ?thesis
-      using 1(5)
-      by(simp add: parent.follow_psimps[OF 1(3)])
-  next
-    case (Some a)
-    have "\<forall>v\<in>set (parent_spec.follow par a). v \<noteq> v2"
-      using "1.IH" Some assms(1) assms(2) by blast
-    then show ?thesis
-      using "1.hyps" "1.prems"(3) Some assms(1) parent_spec.follow.psimps by fastforce
-  qed    
-qed
-
-lemma ancestors_unaffected_1:
-  assumes
-    "parent par" and
-    "\<forall>v'\<in>set(parent_spec.follow par v). v' \<noteq> v2" and
-    f': "f' = (f(v2 \<mapsto> v1))"
-  shows "\<forall>v'\<in>set(parent_spec.follow par v). f v' = f' v'"
-  using assms
-proof(induction v rule: parent_spec.follow.pinduct[OF  parent.follow_dom[OF assms(1)]])
-  case (1 v)
-  show ?case
-  proof(cases "par v")
-    case None
-    then show ?thesis
-      using 1
-      by( simp add: parent.follow_psimps[OF 1(3)])
-  next
-    case (Some a)
-    then have "\<forall>v\<in>set (parent_spec.follow par a). f v = f' v"
-      apply(intro 1)
-      using 1(4)
-      by (simp add: f' parent.follow_psimps[OF 1(3)])+
-    then show ?thesis
-      by (simp add: "1.prems"(2) "1.prems"(3))
-  qed
-qed
-
-lemma no_children_not_in_follow:
-  assumes
-    "parent par" and
-    "\<forall>v''. par v'' \<noteq> Some v2" "v2 \<noteq> v" and
-    par': "par' = (par(v2 \<mapsto> v1))"
-  shows "\<forall>v'\<in>set(parent_spec.follow par v). par v' = par' v'"
-  using assms
-proof(induction  rule: parent_spec.follow.pinduct[OF parent.follow_dom[OF assms(1)]])
-  case (1 v)
-  show ?case
-  proof(cases "par v")
-    case None
-    then show ?thesis
-      using 1
-      by( simp add: parent.follow_psimps[OF 1(3)])
-  next
-    case (Some a)
-    have "\<forall>v\<in>set (parent_spec.follow par a). par v = par' v"
-      using "1.IH" Some assms(1) assms(2) par' by blast
-    then show ?thesis
-      using "1.hyps" "1.prems"(3) Some assms(1) par' parent_spec.follow.psimps by fastforce
-  qed    
-qed
-
-lemma wf_par':
-  assumes wf: "parent_spec par" and
-    par': "par' = par(v2 := Some v1, v3 := Some v2)" and
-    neq: "v1 \<noteq> v2" "v2 \<noteq> v3" "v1 \<noteq> v3" and
-    no_ances: "\<forall>v. par v \<noteq> Some v2" "\<forall>v. par v \<noteq> Some v3" and
-    no_par: "par v2 = None" "par v3 = None"
-  shows "parent_spec par'" (is ?g1) "parent_spec (par(v2 := Some v1))" (is ?g2)
-proof-
-  have "(v2, v1) \<notin> {(x,y) | x y. (Some x = par y)}\<^sup>*"
-    using neq(1) no_ances(1)
-    apply clarsimp
-    by (metis (mono_tags, lifting) converse_rtranclE mem_Collect_eq old.prod.case)
-  then have wf_v2_v1: "wf (insert (v1, v2) {(x,y) | x y. (Some x = par y)})"
-    using wf[unfolded parent_spec_def] by blast
-  moreover have "{(x, y) |x y. Some x = (par(v2 \<mapsto> v1)) y} = (insert (v1, v2) {(x, y) |x y. Some x = par y})"
-    using neq(1) no_par
-    by auto
-  ultimately show ?g2
-    unfolding parent_spec_def
-    by simp
-
-  have "(v3, v2) \<notin> {(x,y) | x y. (Some x = par y)}\<^sup>*"
-    using neq(2) no_ances(2)
-    apply clarsimp
-    by (metis (mono_tags, lifting) converse_rtranclE mem_Collect_eq old.prod.case)
-  moreover have "(v3, v2) \<notin>  {(x, y). (x, v1) \<in> {(x,y) | x y. (Some x = par y)}\<^sup>* \<and> (v2, y) \<in> {(x,y) | x y. (Some x = par y)}\<^sup>*}"
-    using neq(3) no_ances(2)
-    apply clarsimp
-    by (metis (mono_tags, lifting) converse_rtranclE mem_Collect_eq old.prod.case)
-  ultimately have "(v3, v2) \<notin> (insert (v1, v2) {(x,y) | x y. (Some x = par y)})\<^sup>*"
-    unfolding rtrancl_insert
-    by simp
-  then have "wf (insert (v2, v3) (insert (v1, v2) {(x,y) | x y. (Some x = par y)}))"
-    apply(subst wf_insert)
-    using wf_v2_v1
-    by simp
-  moreover have "{(x,y) | x y. (Some x = par' y)} = insert (v2, v3) (insert (v1, v2) {(x,y) | x y. (Some x = par y)})"
-    using neq(1,2) no_par
-    by(auto simp add: par')
-  ultimately show ?g1
-    unfolding parent_spec_def
-    by simp
-qed
-
-lemma parent_specD:
-  "parent_spec parent \<Longrightarrow> wf {(x, y) |x y. (Some x = parent y)}"
-  and parent_specE:
-  "parent_spec parent \<Longrightarrow> (wf {(x, y) |x y. (Some x = parent y)} \<Longrightarrow> P) \<Longrightarrow> P"
-  and parent_specI:
-  "wf {(x, y) |x y. (Some x = parent y)} \<Longrightarrow> parent_spec parent" for parent
-  by(auto simp add: parent_spec_def)
-
+hide_const verts
 section \<open>Executable Alternating Forest\<close>
 
 subsection \<open>Implementation in Locale\<close>
@@ -490,8 +18,7 @@ and  parent_delete parent_lookup parent_invar
 and origin_empty and origin_upd::"'v\<Rightarrow>'v\<Rightarrow>'origin\<Rightarrow>'origin" 
 and origin_delete origin_lookup origin_invar
 and vset_empty and vset_insert::"'v \<Rightarrow> 'vset \<Rightarrow> 'vset"
-and  vset_delete vset_isin vset_to_set vset_invar
- +
+and  vset_delete vset_isin vset_to_set vset_invar +
 fixes  vset_iterate::"('origin \<Rightarrow> 'v \<Rightarrow> 'origin)
              \<Rightarrow> 'origin \<Rightarrow> 'vset \<Rightarrow> 'origin"
 begin
@@ -530,12 +57,12 @@ locale forest_manipulation =
 begin
 
 lemmas vset =
-vset.invar_empty
-vset.set_empty
-vset.invar_insert
-vset.set_insert
-vset.set_isin
-vseta
+ vset.invar_empty
+ vset.set_empty
+ vset.invar_insert
+ vset.set_insert
+ vset.set_isin
+ vseta
 
 lemmas parent =
  parent_map.invar_empty
@@ -640,17 +167,15 @@ definition "invar_matching_both_or_none \<M> F =
 
 lemma invar_matching_both_or_noneE:
   "invar_matching_both_or_none \<M> F \<Longrightarrow>
-((\<And> u v. {u, v} \<in> \<M> \<Longrightarrow>
+  ((\<And> u v. {u, v} \<in> \<M> \<Longrightarrow>
               {u, v} \<in> abstract_forest F \<or>
+              {u, v} \<inter> (Vs (abstract_forest F) \<union> vset_to_set (roots F)) = {}) \<Longrightarrow> P)
+  \<Longrightarrow> P"
+and invar_matching_both_or_noneI:
+  "(\<And> u v. {u, v} \<in> \<M> \<Longrightarrow> {u, v} \<in> abstract_forest F \<or>
             {u, v} \<inter> (Vs (abstract_forest F) \<union> vset_to_set (roots F)) = {})
- \<Longrightarrow> P)
-\<Longrightarrow> P"
-  and invar_matching_both_or_noneI:
-  "(\<And> u v. {u, v} \<in> \<M> \<Longrightarrow>
-              {u, v} \<in> abstract_forest F \<or>
-            {u, v} \<inter> (Vs (abstract_forest F) \<union> vset_to_set (roots F)) = {})
- \<Longrightarrow> invar_matching_both_or_none \<M> F"
-  and invar_matching_both_or_noneD:
+   \<Longrightarrow> invar_matching_both_or_none \<M> F"
+and invar_matching_both_or_noneD:
   "\<lbrakk>invar_matching_both_or_none \<M> F ;  {u, v} \<in> \<M>\<rbrakk>
   \<Longrightarrow> {u, v} \<in> abstract_forest F \<or>
       {u, v} \<inter> (Vs (abstract_forest F) \<union> vset_to_set (roots F)) = {}"
@@ -662,9 +187,8 @@ definition "invar_forest_even_and_odd F =
 
 lemma invar_forest_even_and_oddE:
   "invar_forest_even_and_odd F \<Longrightarrow>
- ((\<And> u v. {u, v} \<in> abstract_forest  F \<Longrightarrow>
-            (u \<in> vset_to_set (evens F)) = (v \<in> vset_to_set (odds F))) 
- \<Longrightarrow> P)
+  ((\<And> u v. {u, v} \<in> abstract_forest  F \<Longrightarrow>
+            (u \<in> vset_to_set (evens F)) = (v \<in> vset_to_set (odds F))) \<Longrightarrow> P)
  \<Longrightarrow> P"
   and invar_forest_even_and_oddI:
   "(\<And> u v. {u, v} \<in> abstract_forest  F \<Longrightarrow>
@@ -678,13 +202,10 @@ lemma invar_forest_even_and_oddE:
 definition "invar_parent_wf F = parent_spec (parent_lookup (parents F))"
 
 lemma invar_parent_wfE:
-  "invar_parent_wf F \<Longrightarrow>
-(parent_spec (parent_lookup (parents F)) \<Longrightarrow> P) 
-\<Longrightarrow> P"
-  and 
-  invar_parent_wfI:
+  "\<lbrakk>invar_parent_wf F; parent_spec (parent_lookup (parents F)) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+and invar_parent_wfI:
   "parent_spec (parent_lookup (parents F)) \<Longrightarrow> invar_parent_wf F"
-  and invar_parent_wfD:
+and invar_parent_wfD:
   "invar_parent_wf F \<Longrightarrow> parent_spec (parent_lookup (parents F))"
   by(auto simp add: invar_parent_wf_def)
 
@@ -694,15 +215,16 @@ definition "invar_even_to_parent_matching \<M> F =
 
 lemma invar_even_to_parent_matchingE:
   "invar_even_to_parent_matching \<M> F \<Longrightarrow>
-((\<And> u v . \<lbrakk>u \<in> vset_to_set (evens F); parent_lookup (parents F) u = Some v \<rbrakk> \<Longrightarrow> {u, v} \<in> \<M>)
-  \<Longrightarrow> P)
- \<Longrightarrow> P"
-  and invar_even_to_parent_matchingI:
+  ((\<And> u v . \<lbrakk>u \<in> vset_to_set (evens F); parent_lookup (parents F) u = Some v \<rbrakk> \<Longrightarrow> {u, v} \<in> \<M>)
+    \<Longrightarrow> P)
+  \<Longrightarrow> P"
+and invar_even_to_parent_matchingI:
   "(\<And> u v . \<lbrakk>u \<in> vset_to_set (evens F); parent_lookup (parents F) u = Some v \<rbrakk> \<Longrightarrow> {u, v} \<in> \<M>)
-  \<Longrightarrow> invar_even_to_parent_matching \<M> F"
-  and invar_even_to_parent_matchingD:
-  "\<lbrakk>invar_even_to_parent_matching \<M> F; u \<in> vset_to_set (evens F); parent_lookup (parents F) u = Some v \<rbrakk>
- \<Longrightarrow> {u, v} \<in> \<M>"
+   \<Longrightarrow> invar_even_to_parent_matching \<M> F"
+and invar_even_to_parent_matchingD:
+  "\<lbrakk>invar_even_to_parent_matching \<M> F; u \<in> vset_to_set (evens F); 
+    parent_lookup (parents F) u = Some v \<rbrakk>
+   \<Longrightarrow> {u, v} \<in> \<M>"
   by(auto simp add: invar_even_to_parent_matching_def)
 
 definition "invar_odd_to_parent_non_matching \<M> F =
@@ -711,15 +233,15 @@ definition "invar_odd_to_parent_non_matching \<M> F =
 
 lemma invar_odd_to_parent_non_matchingE:
   "invar_odd_to_parent_non_matching \<M> F \<Longrightarrow>
-((\<And> u . u \<in> vset_to_set (odds F) \<Longrightarrow> \<exists> v. parent_lookup (parents F) u = Some v \<and> {u, v} \<notin> \<M>)
-  \<Longrightarrow> P)
- \<Longrightarrow> P"
-  and invar_odd_to_parent_non_matchingI:
+  ((\<And> u . u \<in> vset_to_set (odds F) \<Longrightarrow> \<exists> v. parent_lookup (parents F) u = Some v \<and> {u, v} \<notin> \<M>)
+     \<Longrightarrow> P)
+   \<Longrightarrow> P"
+and invar_odd_to_parent_non_matchingI:
   "(\<And> u . u \<in> vset_to_set (odds F) \<Longrightarrow> \<exists> v. parent_lookup (parents F) u = Some v \<and> {u, v}  \<notin> \<M>)
-  \<Longrightarrow> invar_odd_to_parent_non_matching \<M> F"
-  and invar_odd_to_parent_non_matchingD:
+   \<Longrightarrow> invar_odd_to_parent_non_matching \<M> F"
+and invar_odd_to_parent_non_matchingD:
   "\<lbrakk>invar_odd_to_parent_non_matching \<M> F; u \<in> vset_to_set (odds F); parent_lookup (parents F) u = Some v \<rbrakk>
- \<Longrightarrow> {u, v}  \<notin> \<M>"
+  \<Longrightarrow> {u, v}  \<notin> \<M>"
   by(auto simp add: invar_odd_to_parent_non_matching_def)
 
 definition "invar_roots F = 
@@ -731,34 +253,34 @@ definition "invar_roots F =
 
 lemma invar_rootsE:
   "invar_roots F \<Longrightarrow> 
-  ( \<lbrakk>\<And> r. r \<in> vset_to_set (roots F) \<Longrightarrow> origin_lookup (origins F) r = Some r;
+  (\<lbrakk>\<And> r. r \<in> vset_to_set (roots F) \<Longrightarrow> origin_lookup (origins F) r = Some r;
     \<And> v. v \<in> verts F \<Longrightarrow> origin_lookup (origins F) v = Some (last (follow (parent_lookup (parents F)) v));
     \<And> v u. \<lbrakk>v \<in> verts F; u \<in> set (follow (parent_lookup (parents F)) v)\<rbrakk> \<Longrightarrow>
            origin_lookup (origins F) v = origin_lookup (origins F) u;
     \<And> v. v \<in>  verts F \<Longrightarrow> set (edges_of_path (follow (parent_lookup (parents F)) v)) \<subseteq> abstract_forest F\<rbrakk>
-   \<Longrightarrow> P)
- \<Longrightarrow> P"
-  and invar_rootsI:
+      \<Longrightarrow> P)
+   \<Longrightarrow> P"
+and invar_rootsI:
   " \<lbrakk>\<And> r. r \<in> vset_to_set (roots F) \<Longrightarrow> origin_lookup (origins F) r = Some r;
-    \<And> v. v \<in> verts F \<Longrightarrow> origin_lookup (origins F) v = Some (last (follow (parent_lookup (parents F)) v));
-    \<And> v u. \<lbrakk>v \<in> verts F; u \<in> set (follow (parent_lookup (parents F)) v)\<rbrakk> \<Longrightarrow>
+     \<And> v. v \<in> verts F \<Longrightarrow> origin_lookup (origins F) v = Some (last (follow (parent_lookup (parents F)) v));
+     \<And> v u. \<lbrakk>v \<in> verts F; u \<in> set (follow (parent_lookup (parents F)) v)\<rbrakk> \<Longrightarrow>
            origin_lookup (origins F) v = origin_lookup (origins F) u;
     \<And> v. v \<in> verts F \<Longrightarrow> set (edges_of_path (follow (parent_lookup (parents F)) v)) \<subseteq> abstract_forest F\<rbrakk>
    \<Longrightarrow> invar_roots F"
   and invar_rootsD:
   "\<lbrakk>invar_roots F ; r \<in> vset_to_set (roots F)\<rbrakk> \<Longrightarrow> origin_lookup (origins F) r = Some r"
   "\<lbrakk>invar_roots F; v \<in> verts F\<rbrakk>
-  \<Longrightarrow> origin_lookup (origins F) v = Some (last (follow (parent_lookup (parents F)) v))"
+   \<Longrightarrow> origin_lookup (origins F) v = Some (last (follow (parent_lookup (parents F)) v))"
   "\<lbrakk>invar_roots F; v \<in> verts F; u \<in> set (follow (parent_lookup (parents F)) v)\<rbrakk>
    \<Longrightarrow>origin_lookup (origins F) v = origin_lookup (origins F) u"
   "\<lbrakk>invar_roots F; v \<in> verts F\<rbrakk> 
-  \<Longrightarrow> set (edges_of_path (follow (parent_lookup (parents F)) v)) \<subseteq> abstract_forest F"
+   \<Longrightarrow> set (edges_of_path (follow (parent_lookup (parents F)) v)) \<subseteq> abstract_forest F"
   by(auto simp add: invar_roots_def)
 
 lemma follow_dom_invar_parent_wf:
   assumes "invar_parent_wf F"
-  shows "parent (parent_lookup (parents F))"
-    "parent_spec_i.follow_dom (parent_lookup (parents F)) v"
+  shows "parent (parent_lookup (parents F))" 
+        "parent_spec_i.follow_dom (parent_lookup (parents F)) v"
 proof-
   show ths1: "parent (parent_lookup (parents F))"
     by (simp add: assms invar_parent_wfD parent.intro)
@@ -770,8 +292,7 @@ proof-
 qed
 
 lemma path_follow_verts_in_verts_F:
-  assumes "invar_basic M F" "invar_roots F" 
-    "invar_parent_wf F" "v \<in> verts F"
+  assumes "invar_basic M F" "invar_roots F" "invar_parent_wf F" "v \<in> verts F"
   shows "set (follow (parent_lookup (parents F)) v) \<subseteq> verts F" 
 proof-
   obtain xs where xs: "follow (parent_lookup (parents F)) v = v#xs"
@@ -808,15 +329,15 @@ definition "forest_invar \<M> F =
 
 lemma forest_invarE:
   "forest_invar \<M> F \<Longrightarrow>
-(\<lbrakk>invar_basic \<M> F; invar_matching_both_or_none \<M> F; invar_forest_even_and_odd F;
-  invar_parent_wf F; invar_even_to_parent_matching \<M> F; invar_roots F;
-  invar_odd_to_parent_non_matching \<M> F\<rbrakk> \<Longrightarrow> P)
- \<Longrightarrow> P"
-  and forest_invarI:
+  (\<lbrakk>invar_basic \<M> F; invar_matching_both_or_none \<M> F; invar_forest_even_and_odd F;
+    invar_parent_wf F; invar_even_to_parent_matching \<M> F; invar_roots F;
+    invar_odd_to_parent_non_matching \<M> F\<rbrakk> \<Longrightarrow> P)
+   \<Longrightarrow> P"
+and forest_invarI:
   "\<lbrakk>invar_basic \<M> F; invar_matching_both_or_none \<M> F; invar_forest_even_and_odd F;
-  invar_parent_wf F; invar_even_to_parent_matching \<M> F; invar_roots F;
-  invar_odd_to_parent_non_matching \<M> F\<rbrakk> \<Longrightarrow> forest_invar \<M> F"
-  and forest_invarD:
+    invar_parent_wf F; invar_even_to_parent_matching \<M> F; invar_roots F;
+    invar_odd_to_parent_non_matching \<M> F\<rbrakk> \<Longrightarrow> forest_invar \<M> F"
+and forest_invarD:
   "forest_invar \<M> F \<Longrightarrow> invar_basic \<M> F"
   "forest_invar \<M> F \<Longrightarrow> invar_matching_both_or_none \<M> F"
   "forest_invar \<M> F \<Longrightarrow> invar_forest_even_and_odd F"
@@ -833,19 +354,20 @@ definition "forest_extension_precond F M x y z =
 
 lemma forest_extension_precondE:
   "forest_extension_precond F M x y z \<Longrightarrow>
-(\<lbrakk>forest_invar M F; x \<in> vset_to_set (evens F); 
+  (\<lbrakk>forest_invar M F; x \<in> vset_to_set (evens F); 
    {y, z} \<inter> (vset_to_set (evens F) \<union> vset_to_set (odds F)) = {};
    {x, y} \<notin> M; {y, z} \<in> M; matching M; x \<noteq> y; y \<noteq> z; x \<noteq> z\<rbrakk> \<Longrightarrow> P)
-\<Longrightarrow> P"
+   \<Longrightarrow> P"
   and forest_extension_precondI:
   "\<lbrakk>forest_invar M F; x \<in> vset_to_set (evens F); 
    {y, z} \<inter> (vset_to_set (evens F) \<union> vset_to_set (odds F)) = {};
-   {x, y} \<notin> M; {y, z} \<in> M; matching M; x \<noteq> y; y \<noteq> z; x \<noteq> z\<rbrakk> \<Longrightarrow> 
-forest_extension_precond F M x y z"
+   {x, y} \<notin> M; {y, z} \<in> M; matching M; x \<noteq> y; y \<noteq> z; x \<noteq> z\<rbrakk> 
+   \<Longrightarrow> forest_extension_precond F M x y z"
   and forest_extension_precondD:
   "forest_extension_precond F M x y z \<Longrightarrow> forest_invar M F"
   "forest_extension_precond F M x y z \<Longrightarrow>  x \<in> vset_to_set (evens F)"
-  "forest_extension_precond F M x y z \<Longrightarrow> {y, z} \<inter> (vset_to_set (evens F) \<union> vset_to_set (odds F)) = {}"
+  "forest_extension_precond F M x y z 
+   \<Longrightarrow> {y, z} \<inter> (vset_to_set (evens F) \<union> vset_to_set (odds F)) = {}"
   "forest_extension_precond F M x y z \<Longrightarrow>{x, y} \<notin> M"
   "forest_extension_precond F M x y z \<Longrightarrow>{y, z} \<in> M"
   "forest_extension_precond F M x y z \<Longrightarrow> matching M"
@@ -1332,8 +854,7 @@ qed
 subsection \<open>Properties of the Result\<close>
 
 lemma follow_alternating_paths_induction:
-  assumes "forest_invar \<M> F" "p = follow (parent_lookup (parents F)) v"
-    "length p = l"
+  assumes "forest_invar \<M> F" "p = follow (parent_lookup (parents F)) v" "length p = l"
   shows "v \<in> vset_to_set (evens F) \<Longrightarrow> rev_alt_path \<M> p"
     "v \<in> vset_to_set (odds F) \<Longrightarrow> alt_path \<M> p"
     "v \<in> vset_to_set (evens F) \<Longrightarrow> alt_list (\<lambda> x. x \<in> vset_to_set (evens F))
@@ -1458,11 +979,11 @@ lemma simple_invariant_consequences:
 
 lemma complex_invariant_consequences:
   assumes "forest_invar M F"
-  shows "{u, v} \<in> M \<Longrightarrow>
-       {u, v} \<in> abstract_forest  F \<or>
-       {u, v} \<inter> (Vs (abstract_forest  F) \<union> vset_to_set (roots F)) = {}"
-    "{u, v} \<in> abstract_forest F 
-      \<Longrightarrow> (u \<in> vset_to_set (evens F)) = (v \<in> vset_to_set (odds F))"
+  shows "{u, v} \<in> M 
+         \<Longrightarrow> {u, v} \<in> abstract_forest  F \<or>
+             {u, v} \<inter> (Vs (abstract_forest  F) \<union> vset_to_set (roots F)) = {}"
+        "{u, v} \<in> abstract_forest F 
+         \<Longrightarrow> (u \<in> vset_to_set (evens F)) = (v \<in> vset_to_set (odds F))"
   using  forest_invarD[OF assms] 
     invar_matching_both_or_noneD[of M F u v] invar_forest_even_and_oddD
   by auto
@@ -1477,8 +998,8 @@ lemma empty_forest_correctess:
   "evens (empty_forest R) = R"
   "odds (empty_forest R) = vset_empty"
   "abstract_forest (empty_forest R) = {}"
-  "\<lbrakk>matching M ; vset_invar R; vset_to_set R \<inter> Vs M = {};
- finite (vset_to_set R) ; vset_to_set R \<noteq> {}\<rbrakk>
+  "\<lbrakk>matching M ; vset_invar R; vset_to_set R \<inter> Vs M = {}; 
+    finite (vset_to_set R) ; vset_to_set R \<noteq> {}\<rbrakk>
    \<Longrightarrow> forest_invar M (empty_forest R)"
 proof(goal_cases)
   case 1
@@ -1558,13 +1079,9 @@ next
 qed
 
 lemma get_path_correct:
-  assumes"forest_invar M F" "v \<in> vset_to_set (evens F)"
-    "p = get_path  F v"
-  shows "rev_alt_path M p"
-    "odd (length p)"
-    "last p \<in> vset_to_set (roots F)" 
-    "walk_betw (abstract_forest  F) v p (last p) \<or> p = [v]"
-    "distinct p"
+  assumes"forest_invar M F" "v \<in> vset_to_set (evens F)" "p = get_path  F v"
+  shows "rev_alt_path M p" "odd (length p)" "last p \<in> vset_to_set (roots F)" 
+        "walk_betw (abstract_forest  F) v p (last p) \<or> p = [v]" "distinct p"
 proof-
   interpret parents_here: parent "parent_lookup (parents F)"
     using assms(1) follow_dom_invar_parent_wf(1) forest_invarD(4) by auto
@@ -1600,23 +1117,20 @@ qed
 
 end
                               
-
 context
   forest_manipulation
 begin
 
 interpretation  satisfied_simple:
-  alternating_forest_spec evens odds local.get_path local.abstract_forest forest_invar roots vset_invar
-  vset_to_set
-  apply(intro alternating_forest_spec.intro 
-      simple_invariant_consequences)
+  alternating_forest_spec evens odds local.get_path local.abstract_forest forest_invar roots 
+                          vset_invar vset_to_set
   using complex_invariant_consequences(1,2) 
-  by(auto intro: simp add: get_path_correct(1,2,3,4,5))
+  by(intro alternating_forest_spec.intro simple_invariant_consequences)
+    (auto simp add: get_path_correct(1,2,3,4,5))
 
 lemma satisfied_simple_extension_precond_same:
-  "satisfied_simple.forest_extension_precond F M x y z
-  = forest_extension_precond F M x y z"
-  by(auto simp add:  forest_extension_precond_def satisfied_simple.forest_extension_precond_def)
+  "satisfied_simple.forest_extension_precond F M x y z = forest_extension_precond F M x y z"
+  by(auto simp add: forest_extension_precond_def satisfied_simple.forest_extension_precond_def)
 
 interpretation satisfied: alternating_forest_ordinary_extension_spec
   vset_invar vset_to_set 
@@ -1624,15 +1138,14 @@ interpretation satisfied: alternating_forest_ordinary_extension_spec
   "abstract_forest" forest_invar  roots vset_empty
   "extend_forest_even_unclassified"
   "empty_forest"
-  apply(intro alternating_forest_ordinary_extension_spec.intro
+  by(intro alternating_forest_ordinary_extension_spec.intro
       satisfied_simple.alternating_forest_spec_axioms
       alternating_forest_ordinary_extension_spec_axioms.intro)
-  by (simp_all add: satisfied_simple_extension_precond_same extension_main_preservation 
+    (simp_all add: satisfied_simple_extension_precond_same extension_main_preservation 
       extension_abstract_is extension_evens extension_odds extension_roots 
       empty_forest_correctess)
 
 lemmas satisified = satisfied.alternating_forest_ordinary_extension_spec_axioms
 
 end
-
 end

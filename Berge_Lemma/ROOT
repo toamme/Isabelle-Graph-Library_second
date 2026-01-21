@@ -6,8 +6,11 @@ session "Berge_Lemma" = "Undirected_Set_Graphs" +
   (*directories*)
 
   theories
-    "Berge"
-    "Alternating_Lists"
+    Alternating_Lists
+    Matching
+    Bipartite_Alternating_Lists
+    Berge
+    
 
   document_files
     "root.tex"

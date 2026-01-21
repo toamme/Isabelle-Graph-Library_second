@@ -53,8 +53,6 @@ lemma card'_finite_nat[iff]: "(card' A = numeral m) \<longleftrightarrow> (finit
 lemma card'_finite_enat[iff]: "(card' A = enat m) \<longleftrightarrow> (finite A \<and> card A = m)"
   unfolding card'_def by simp
 
-(*TODO: FIX METIS*)
-
 lemma card'_1_singletonE:
   assumes "card' A = 1"
   obtains x where "A = {x}"
@@ -68,6 +66,106 @@ lemma card'_insert[simp]: "card' (insert a A) = (if a \<in> A then id else eSuc)
 
 lemma card'_empty_2[simp]: "card' {} = enat 0"
   by (simp add: card'_def)
+
+lemma exists_conj_elim_2_1: "\<lbrakk>\<And>x. \<lbrakk>P x; Q x\<rbrakk> \<Longrightarrow> V x; \<lbrakk>\<And>x. P x \<and> Q x \<Longrightarrow> V x\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_3_1: "\<lbrakk>\<And>x. \<lbrakk>P x; Q x; V x\<rbrakk> \<Longrightarrow> W x; \<lbrakk>\<And>x. P x \<and> Q x \<and> V x \<Longrightarrow> W x\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_4_1: "\<lbrakk>\<And>x. \<lbrakk>P x; Q x; V x; W x\<rbrakk> \<Longrightarrow> X x; \<lbrakk>\<And>x. P x \<and> Q x \<and> V x \<and> W x \<Longrightarrow> X x\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_2_2: "\<lbrakk>\<And>x y. \<lbrakk>P x y; Q x y\<rbrakk> \<Longrightarrow> V x y; \<lbrakk>\<And>x y. P x y \<and> Q x y \<Longrightarrow> V x y\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_3_2: "\<lbrakk>\<And>x y. \<lbrakk>P x y; Q x y; V x y\<rbrakk> \<Longrightarrow> W x y; \<lbrakk>\<And>x y. P x y \<and> Q x y \<and> V x y \<Longrightarrow> W x y\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_4_2: "\<lbrakk>\<And>x y. \<lbrakk>P x y; Q x y; V x y; W x y\<rbrakk> \<Longrightarrow> X x y; \<lbrakk>\<And>x y. P x y \<and> Q x y \<and> V x y \<and> W x y \<Longrightarrow> X x y\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_2_3: "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z\<rbrakk> \<Longrightarrow> V x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<Longrightarrow> V x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_3_3: "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z; V x y z\<rbrakk> \<Longrightarrow> W x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<and> V x y z \<Longrightarrow> W x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_4_3: "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z; V x y z; W x y z\<rbrakk> \<Longrightarrow> X x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<and> V x y z \<and> W x y z \<Longrightarrow> X x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_5_3: "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z; V x y z; W x y z; X x y z\<rbrakk> \<Longrightarrow> Y x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<and> V x y z \<and> W x y z \<and> X x y z \<Longrightarrow> Y x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_5_3': "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z; V x y z; W x y z; X x y z\<rbrakk> \<Longrightarrow> Y x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<and> V x y z \<and> W x y z \<and> X x y z \<Longrightarrow> Y x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+lemma exists_conj_elim_6_3: "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z; V x y z; W x y z; X x y z; Y x y z\<rbrakk> \<Longrightarrow> Z x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<and> V x y z \<and> W x y z \<and> X x y z \<and> Y x y z \<Longrightarrow> Z x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
+  by auto
+
+method instsantiate_obtains =
+  (match conclusion in "P" for P
+     \<Rightarrow> \<open>(match premises in ass[thin]: "\<And>x. _ x \<Longrightarrow> P" \<Rightarrow> \<open>rule ass\<close>) |
+         (match premises in ass[thin]: "\<And>x y. _ x y \<Longrightarrow> P" \<Rightarrow> \<open>rule ass\<close>)\<close>)
+
+lemmas exists_conj_elims = exists_conj_elim_2_1 exists_conj_elim_3_1 exists_conj_elim_4_1
+                           exists_conj_elim_2_2 exists_conj_elim_3_2 exists_conj_elim_4_2
+
+lemma sum_inner_function_to_image:
+  "inj_on g X \<Longrightarrow> sum (\<lambda> x. f (g x)) X = sum f (g ` X)"
+  by (simp add: sum.reindex_cong)
+
+lemma distinct_singleton_set: "distinct xs \<Longrightarrow> set xs = {x} \<longleftrightarrow> xs = [x]"
+  by (induction xs arbitrary:) (fastforce simp add: neq_Nil_conv intro: ccontr[where P = "_ = []"])+
+
+lemma empty_iff_card_0: "finite s \<Longrightarrow> s = {} \<longleftrightarrow> card s = 0"
+  by auto
+
+lemma in_singleton: "\<lbrakk>s = {x}; y \<in> s\<rbrakk> \<Longrightarrow> x = y"
+  by auto
+
+lemma reverse_pigeonhole:
+  "\<lbrakk>finite X; (f ` X) \<subseteq> Y; card X < card Y\<rbrakk> \<Longrightarrow> \<exists>y \<in> Y. \<forall>x \<in> X. y \<noteq> f x"
+  by (metis imageI less_le_not_le subset_eq surj_card_le)
+
+definition "pair_list_distinct xs = 
+(distinct xs \<and> (\<forall> x \<in> set xs. prod.swap x \<notin> set xs \<or> fst x = snd x))"
+
+lemma pair_list_distinctI:
+  "\<lbrakk>distinct xs; \<And> x. x \<in> set xs \<Longrightarrow>  prod.swap x \<notin> set xs \<or> fst x = snd x\<rbrakk>
+    \<Longrightarrow> pair_list_distinct xs"
+and pair_list_extended_distinctE:
+  "pair_list_distinct xs \<Longrightarrow>
+  (\<lbrakk>distinct xs; \<And> x. x \<in> set xs \<Longrightarrow>  prod.swap x \<notin> set xs \<or> fst x = snd x\<rbrakk> \<Longrightarrow> P)
+    \<Longrightarrow> P"
+  by(auto simp add: pair_list_distinct_def)
+
+lemma pair_list_distinct_front[simp]: 
+ "pair_list_distinct (x#xs) = (x \<notin> set xs \<and>  prod.swap x \<notin> set xs \<and> pair_list_distinct xs)"
+  by(cases x)(auto simp add: pair_list_distinct_def)
+
+lemma finite_union_singleton: 
+  "finite A \<Longrightarrow> finite ({a}\<union>A)"
+  by simp
+
+lemma set_of_f_up_to_n_image:"{f i |i. i < n} = f ` {0..<n::nat}" 
+  by auto
+
+lemma inj_image_rev_mono:"\<lbrakk>inj f; f `A \<subseteq> f `B\<rbrakk> \<Longrightarrow> A \<subseteq> B"
+  by (auto simp add: in_mono inj_image_subset_iff)
+
+lemma not_in_imageE:
+  "\<lbrakk>y \<notin> f ` X; (\<And> x. x \<in> X \<Longrightarrow> y = f x \<Longrightarrow> False) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  and not_in_imageD:
+  "\<lbrakk>y \<notin> f ` X;  x \<in> X; y = f x\<rbrakk> \<Longrightarrow> False"
+  by blast+
+
+lemma same_sum_card_prod:
+  "\<lbrakk>\<And> x. x \<in> X \<Longrightarrow> f x = (c::real); finite X \<rbrakk> \<Longrightarrow> sum f X = real (card X) * c"
+  by simp
+
+lemma int_minus_leq:"a \<le> b \<Longrightarrow> int b - int a = int ( b- a)"
+  by auto
 
 section\<open>Undirected Graphs\<close>
 
@@ -155,11 +253,30 @@ lemma less_edges_less_degree:
   by (intro subset_edges_less_degree)
      (simp add: subset_edges_less_degree)
 
+lemma degree_insert_leq: "degree G e \<le> degree (insert e' G) e"
+  by (simp add: subset_edges_less_degree subset_insertI)
+
 definition "neighbourhood G v = {u. {u,v} \<in> G}"
 
 lemma in_neighD[dest]: "v \<in> neighbourhood G u \<Longrightarrow> {u, v} \<in> G"
 "v \<in> neighbourhood G u \<Longrightarrow> {v, u} \<in> G"
   by (auto simp: neighbourhood_def insert_commute)
+
+definition "Neighbourhood G V = {v | v u. {u, v} \<in> G \<and> u \<in> V \<and> v \<notin> V}"
+
+lemma not_in_NeighbourhoodE: 
+ "v \<notin> Neighbourhood G V \<Longrightarrow>
+ ((\<And> u. \<lbrakk>{u, v} \<in> G; u \<in> V; v \<notin> V\<rbrakk> \<Longrightarrow> False) \<Longrightarrow> P)
+  \<Longrightarrow> P"
+  by(auto simp add: Neighbourhood_def)
+
+lemma self_not_in_Neighbourhood:
+  "x \<in> V \<Longrightarrow> x \<notin> Neighbourhood G V"
+  by(auto simp add: Neighbourhood_def)
+
+lemma Neighbourhood_neighbourhood_union_inter:
+  "Neighbourhood G V = \<Union> (neighbourhood G ` V) - V"
+  by(auto simp add: Neighbourhood_def neighbourhood_def  insert_commute)
 
 locale graph_defs =
   fixes G :: "'a set set"
@@ -187,6 +304,20 @@ lemma dblton_graph_finite_Vs:
 lemma dblton_graph_subset[intro]:
   "\<lbrakk>dblton_graph G1; G2 \<subseteq> G1\<rbrakk> \<Longrightarrow> dblton_graph G2"
   by (auto elim!: dblton_graphE intro!: dblton_graphI) 
+
+lemma doublton_inj:
+  "\<lbrakk>inj_on f (Vs E); dblton_graph E\<rbrakk> \<Longrightarrow> dblton_graph ((image f) ` E)"
+proof(rule dblton_graphI, goal_cases)
+  case (1 e)
+  then obtain e' where e': "e' \<in> E" "e = f ` e'" by blast
+  moreover then obtain u v where "e' = {u, v}" "u \<noteq> v"
+    using 1(2) by auto
+  moreover hence "f u \<noteq> f v"
+    using e'(1) 
+    by(subst inj_on_eq_iff[OF 1(1)])(auto intro: edges_are_Vs)
+  ultimately show ?case 
+    by auto
+qed
 
 abbreviation "graph_invar G \<equiv> dblton_graph G \<and> finite (Vs G)"
 
@@ -254,6 +385,200 @@ lemma graph_abs_mono: "graph_abs G \<Longrightarrow> F \<subseteq> G \<Longright
 lemma graph_invar_insert[simp]: "u \<noteq> v \<Longrightarrow> graph_invar G \<Longrightarrow> graph_invar (insert {u,v} G)"
   unfolding graph_abs_def
   by (fastforce simp: Vs_def  intro!: dblton_graphI)
+
+type_synonym 'a graph = "'a set set"
+
+lemma edge_commute: "{u,v} \<in> G \<Longrightarrow> {v,u} \<in> G"
+  by (simp add: insert_commute)
+
+lemma vs_empty[simp]: "Vs {} = {}"
+  by (simp add: Vs_def)
+
+lemma vs_insert: "Vs (insert e E) = e \<union> Vs E"
+  unfolding Vs_def by simp
+
+lemma vs_union: "Vs (A \<union> B) = Vs A \<union> Vs B"
+  unfolding Vs_def by simp
+
+lemma vs_compr: "Vs {{u, v} |v. v \<in> ns} = (if ns = {} then {} else {u} \<union> ns)"
+  unfolding Vs_def by auto
+
+lemma graph_abs_empty[simp]: "graph_invar {}"
+  by (simp add: dblton_graph_def)
+
+lemma dblton_graph_union: "dblton_graph G \<Longrightarrow> dblton_graph H \<Longrightarrow> dblton_graph (G \<union> H)"
+  by (auto simp: graph_abs_def Vs_def dblton_graph_def)
+
+lemma graph_invar_union: "graph_abs G \<Longrightarrow> graph_abs H \<Longrightarrow> graph_abs (G \<union> H)"
+  by (auto simp: graph_abs_def Vs_def dblton_graph_union)
+
+lemma graph_invar_compr: "u \<notin> ns \<Longrightarrow> finite ns \<Longrightarrow> graph_invar {{u, v} |v. v \<in> ns}"
+  by (auto simp: Vs_def dblton_graph_def)
+
+lemma graph_invar_subgraph: "graph_invar G \<Longrightarrow> G' \<subseteq> G \<Longrightarrow> graph_invar G'"
+  using graph_invar_subset.
+
+lemma graph_invar_edgeD: "graph_invar G \<Longrightarrow> {u,v} \<in> G \<Longrightarrow> u \<noteq> v"
+  by auto
+
+lemma graph_invar_no_edge_no_vertex:
+  "graph_invar G \<Longrightarrow> \<forall>v. {u,v} \<notin> G \<Longrightarrow> u \<notin> Vs G"
+  unfolding graph_abs_def Vs_def
+  by (auto simp: insert_commute)
+
+lemma graph_invar_vertex_edgeE:
+  assumes "graph_invar G"
+  assumes "u \<in> Vs G"
+  obtains v where "{u,v} \<in> G"
+  using assms
+  by (meson graph_invar_no_edge_no_vertex)
+
+lemma graph_invar_vertex_edgeE':
+  assumes "graph_invar G"
+  assumes "v \<in> Vs G"
+  obtains u where "{u,v} \<in> G"
+  using assms 
+  apply (auto elim!: graph_invar_vertex_edgeE dest!: edge_commute)
+  by (meson edge_commute graph_invar_vertex_edgeE)
+
+lemma card_of_non_empty_graph_geq_2:
+  assumes "graph_invar G"  "G \<noteq> {}"
+    shows "card (Vs G) \<ge> 2"
+proof-
+  obtain e where e_in_G:"e \<in> G"
+    using assms(2) by auto
+  then obtain u v where "e = {u, v}" "u \<noteq> v"
+    using assms(1) by blast
+  hence "card e = 2" by simp
+  moreover have "card (Vs G) \<ge> card e"
+    using e_in_G assms(1)
+    by(auto intro!: card_mono)
+  ultimately show ?thesis 
+    by simp
+qed
+
+lemma vs_neq_graphs_neq:
+  "\<lbrakk>x \<in> Vs G; x \<notin> Vs H\<rbrakk> \<Longrightarrow> G \<noteq> H"
+  by blast
+
+lemma subgraph_vs_subset_eq:
+  assumes "M \<subseteq> G"
+  assumes "Vs G \<subseteq> Vs M"
+  shows "Vs G = Vs M"
+  using assms
+  unfolding Vs_def
+  by auto
+
+lemma graph_abs_no_empty:
+  "graph_abs M \<Longrightarrow> {} \<notin> M"
+  "\<lbrakk>graph_abs M; {} \<in> M\<rbrakk> \<Longrightarrow> False"
+  by(auto simp add: graph_abs_def)
+
+lemma card_Vs_diff: 
+  "\<lbrakk>G \<subseteq> G'; finite (Vs G)\<rbrakk> \<Longrightarrow> card (Vs G' - Vs G) = card (Vs G') - card (Vs G)"
+  by(auto intro!: card_Diff_subset[OF _ Vs_subset])
+
+subsubsection \<open>Removing Vertices from Graphs\<close>
+text \<open>
+  As mentioned above we can reduce the analysis of the competitive ratio to inputs where a perfect
+  matching exists. In order to reason about all inputs, we need to remove vertices from the graph
+  which are not in a maximum matching.
+\<close>
+definition remove_vertices_graph :: "'a graph \<Rightarrow> 'a set \<Rightarrow> 'a graph" (infixl "\<setminus>" 60) where
+  "G \<setminus> X = {e \<in> G. e \<inter> X = {}}"
+
+lemma remove_vertices_empty[simp]:
+  "G \<setminus> {} = G"
+  unfolding remove_vertices_graph_def by simp
+
+lemma remove_vertices_not_vs:
+  "v \<in> X \<Longrightarrow> v \<notin> Vs (G \<setminus> X)"
+  unfolding Vs_def remove_vertices_graph_def by blast
+
+lemma remove_vertices_not_vs':
+  "v \<in> X \<Longrightarrow> v \<in> Vs (G \<setminus> X) \<Longrightarrow> False"
+  using remove_vertices_not_vs by force
+
+lemma remove_vertices_subgraph:
+  "G \<setminus> X \<subseteq> G"
+  unfolding remove_vertices_graph_def
+  by simp
+
+lemma remove_vertices_subgraph':
+  "e \<in> G \<setminus> X \<Longrightarrow> e \<in> G"
+  using remove_vertices_subgraph 
+  by fast
+
+lemma remove_vertices_subgraph_Vs:
+  "v \<in> Vs (G \<setminus> X) \<Longrightarrow> v \<in> Vs G" 
+  using Vs_subset[OF remove_vertices_subgraph]
+  by fast
+
+lemma in_remove_verticesI:
+  "e \<in> G \<Longrightarrow> e \<inter> X = {} \<Longrightarrow> e \<in> G \<setminus> X"
+  unfolding remove_vertices_graph_def
+  by blast
+
+lemma in_remove_vertices_subsetI:
+  "X' \<subseteq> X \<Longrightarrow> e \<in> G \<setminus> X' \<Longrightarrow> e \<inter> X - X' = {} \<Longrightarrow> e \<in> G \<setminus> X"
+  unfolding remove_vertices_graph_def
+  by blast
+
+lemma in_remove_vertices_vsI:
+  "e \<in> G \<Longrightarrow> e \<inter> X = {} \<Longrightarrow> u \<in> e \<Longrightarrow> u \<in> Vs (G \<setminus> X)"
+  by (auto dest: in_remove_verticesI)
+
+lemma remove_vertices_only_vs:
+  "G \<setminus> X = G \<setminus> (X \<inter> Vs G)"
+  unfolding remove_vertices_graph_def Vs_def
+  by blast
+
+lemma remove_vertices_mono:
+  "G' \<subseteq> G \<Longrightarrow> e \<in> G' \<setminus> X \<Longrightarrow> e \<in> G \<setminus> X"
+  unfolding remove_vertices_graph_def by blast
+
+lemma remove_vertices_inv_mono:
+  "X \<subseteq> X' \<Longrightarrow> e \<in> G \<setminus> X' \<Longrightarrow> e \<in> G \<setminus> X"
+  unfolding remove_vertices_graph_def by blast
+
+lemma remove_vertices_inv_mono':
+  "X \<subseteq> X' \<Longrightarrow> G \<setminus> X' \<subseteq> G \<setminus> X"
+  by (auto dest: remove_vertices_inv_mono)
+
+lemma remove_vertices_graph_disjoint: "X \<inter> Vs G = {} \<Longrightarrow> G \<setminus> X = G"
+  unfolding Vs_def remove_vertices_graph_def by blast
+
+lemma remove_vertex_not_in_graph: "x \<notin> Vs G \<Longrightarrow> G \<setminus> {x} = G"
+  by (auto intro!: remove_vertices_graph_disjoint)
+
+lemma remove_vertex_psubset: "x \<in> Vs G \<Longrightarrow> x \<in> X \<Longrightarrow> G \<setminus> X \<subset> G"
+  by (auto intro: remove_vertices_subgraph' dest: remove_vertices_not_vs vs_neq_graphs_neq)
+
+lemma remove_vertex_card_less: "finite G \<Longrightarrow> x \<in> Vs G \<Longrightarrow> x \<in> X \<Longrightarrow> card (G \<setminus> X) < card G"
+  by (auto intro: psubset_card_mono intro!: remove_vertex_psubset)
+
+lemma dblton_graph_remove_vertices:
+  "dblton_graph G \<Longrightarrow> dblton_graph (G \<setminus> X)"
+  by (simp add: dblton_graph_def graph_invar_subgraph remove_vertices_graph_def)
+
+lemma graph_invar_remove_vertices:
+  "graph_invar G \<Longrightarrow> graph_invar (G \<setminus> X)"
+  by (simp add: dblton_graph_def graph_invar_subgraph remove_vertices_graph_def)
+
+lemma finite_remove_vertices:
+  "finite G \<Longrightarrow> finite (G \<setminus> X)"
+  by (auto intro: finite_subset[OF remove_vertices_subgraph])
+
+lemma remove_remove_union: "G \<setminus> X \<setminus> Y = G \<setminus> X \<union> Y"
+  unfolding remove_vertices_graph_def by blast
+
+lemma remove_vertices_in_diff: "{u,v} \<in> G \<setminus> X \<Longrightarrow> {u,v} \<notin> G \<setminus> X' \<Longrightarrow> u \<in> X' - X \<or> v \<in> X' - X"
+  unfolding remove_vertices_graph_def
+  by simp
+
+lemma subgraph_remove_some_ex:
+  "\<exists>x. x \<in> Vs G \<and> x \<notin> Vs M \<Longrightarrow> M \<subseteq> G \<Longrightarrow> M \<subseteq> G \<setminus> {SOME x. x \<in> Vs G \<and> x \<notin> Vs M}"
+    by (auto intro: in_remove_verticesI dest!: someI_ex)
 
 subsection\<open>Paths, connected components, and symmetric differences\<close>
 
@@ -506,7 +831,22 @@ lemma induct_list0123[consumes 0, case_names nil list1 list2 list3]:
   "\<lbrakk>P []; \<And>x. P [x]; \<And>x y. P [x, y]; 
     \<And>x y z zs. \<lbrakk> P zs; P (z # zs); P (y # z # zs) \<rbrakk> \<Longrightarrow> P (x # y # z # zs)\<rbrakk>
     \<Longrightarrow> P xs"
-by induction_schema (pat_completeness, lexicographic_order)
+  by induction_schema (pat_completeness, lexicographic_order)
+
+lemma element_of_list_cases:
+  assumes "u \<in> set p"
+      "p = [u] \<Longrightarrow> P"
+      "\<And> p'. p = u#p' \<Longrightarrow> P"
+      "\<And> p'. p = p'@[u] \<Longrightarrow> P"
+      "\<And> a b p1 p2. p = p1@[a,u,b]@p2 \<Longrightarrow> P"
+ shows P
+proof-
+  obtain p1 p2 where "p = p1@[u]@p2" 
+    by (metis append_Cons append_Nil assms(1) in_set_conv_decomp_first)
+  thus P
+    by(cases p1 rule: rev_cases, all \<open>cases p2\<close>)
+      (auto intro: assms(2-))
+qed
 
 lemma tl_path_is_path: "path G p \<Longrightarrow> path G (tl p)"
   by (induction p rule: path.induct) (simp_all)
@@ -514,6 +854,14 @@ lemma tl_path_is_path: "path G p \<Longrightarrow> path G (tl p)"
 lemma path_concat:
   "\<lbrakk>path G p; path G q; q \<noteq> []; p \<noteq> [] \<Longrightarrow> last p = hd q\<rbrakk> \<Longrightarrow> path G (p @ tl q)"
   by (induction rule: path.induct) (simp_all add: tl_path_is_path)
+
+lemma path_concat_2:
+  assumes "path G p" "path G q" "p \<noteq> []" "q \<noteq> []" "last p = hd q"
+  shows "path G (butlast p @ q)" 
+  apply(rule forw_subst[of "butlast p @ q" "p @ tl q"])
+  apply(cases p, all \<open> cases q\<close>)
+  using assms path_concat 
+  by force+
 
 lemma path_append:
   "\<lbrakk>path G p1; path G p2; \<lbrakk>p1 \<noteq> []; p2 \<noteq> []\<rbrakk> \<Longrightarrow> {last p1, hd p2} \<in> G\<rbrakk> \<Longrightarrow> path G (p1 @ p2)"
@@ -580,6 +928,18 @@ qed simp_all
 lemma edges_of_path_Vs: "Vs (set (edges_of_path p)) \<subseteq> set p"
   by (auto elim: vs_member_elim intro: v_in_edge_in_path_gen)
 
+lemma graph_abs_edges_of_distinct_path:
+  "distinct p \<Longrightarrow> graph_invar (set (edges_of_path p))"
+  by (induction p rule: edges_of_path.induct) auto
+  
+lemma path_Cons_hd:
+  "path G vs \<Longrightarrow> hd vs = v \<Longrightarrow> {u,v} \<in> G \<Longrightarrow> path G (u#vs)"
+  by (cases vs) auto
+
+lemma distinct_no_self_loop_in_edges_of_path:
+"distinct p \<Longrightarrow> \<nexists> x. {x} \<in> set (edges_of_path p)"
+  by(induction p rule: edges_of_path.induct) auto
+
 subsection \<open>Walks, and Connected Components\<close>
 
 definition "walk_betw G u p v = (p \<noteq> [] \<and> path G p \<and> hd p = u \<and> last p = v)"
@@ -612,6 +972,9 @@ lemma walk_reflexive_cong:
   "\<lbrakk>w \<in> Vs E;  a = w;  b = w\<rbrakk> \<Longrightarrow>  walk_betw E a [w] b"
   using walk_reflexive by simp
 
+lemma walk_reflexive_cong2: "\<lbrakk>u \<in> Vs G; u = u'; u' = u''\<rbrakk> \<Longrightarrow> walk_betw G u [u'] u''"
+  using walk_reflexive by simp
+
 lemma walk_symmetric:
   "walk_betw G u p v \<Longrightarrow> walk_betw G v (rev p) u"
   by (auto simp add: hd_rev last_rev walk_betw_def intro: rev_path_is_path)
@@ -623,6 +986,10 @@ lemma walk_transitive:
 lemma walk_transitive_2:
   "\<lbrakk>walk_betw G v q w; walk_betw G u p v\<rbrakk> \<Longrightarrow> walk_betw G u (p @ tl q) w"
   by (auto simp add: walk_betw_def intro: path_concat elim: path.cases)
+
+lemma walk_transitive_3:
+  "\<lbrakk>walk_betw G v q w; walk_betw G u p v\<rbrakk> \<Longrightarrow> walk_betw G u (butlast p @ q) w"
+  by(auto simp add: walk_betw_def intro!: path_concat_2[of G p q], (cases p)?)+
 
 lemma walk_in_Vs:
   "walk_betw G a p b \<Longrightarrow> set p \<subseteq> Vs G"
@@ -1106,6 +1473,16 @@ proof(intro equals0I, goal_cases)
   thus False using 1 unfolding component_edges_def by blast
 qed
 
+lemma component_edges_subset:
+  shows "component_edges G C \<subseteq> G"
+  by (auto simp: component_edges_def)
+
+lemma edges_path_subset_edges:
+  assumes "path G p" "set p \<subseteq> C"
+  shows "set (edges_of_path p) \<subseteq> component_edges G C"
+  using assms
+  by (induction) (auto simp add: component_edges_def)
+
 lemma reachable_in_Vs:
   assumes "reachable G u v"
   shows "u \<in> Vs G" "v \<in> Vs G"
@@ -1324,6 +1701,55 @@ next
     }
     ultimately show ?thesis using Cons.prems(2-4) by auto
   qed
+qed
+
+lemma degree_edges_of_path_ge_2_all:
+  assumes "distinct p" "length p \<ge> 3" "v\<in>set p"
+  shows "degree (set (edges_of_path (last p # p))) v \<ge> 2"
+proof(cases "v = hd p \<or> v = last p")
+  case True
+  moreover obtain a a' a'' p' where p: "p = a # a' # a'' # p'"
+    using assms(2)
+    by(auto simp add: Suc_le_length_iff eval_nat_numeral)
+  ultimately have "v = a \<or> v = last (a'' # p')"
+    by auto
+  moreover have "2 \<le> degree (set (edges_of_path (last p # p))) a"
+  proof-
+    have "last p \<noteq> a'" using assms(1) p by auto
+    hence "{last p, a} \<noteq> {a, a'}" by (auto simp: doubleton_eq_iff)
+    hence "2 \<le> degree {{last p, a}, {a, a'}} a"
+      by (simp add: degree_insert eval_enat_numeral one_eSuc)
+    moreover have "{{last p, a}, {a, a'}} \<subseteq> set (edges_of_path (last p # p))"
+      by (simp add: p)
+    ultimately show ?thesis
+      using order.trans 
+      by (force dest!: subset_edges_less_degree[where v = a])
+  qed
+  moreover have "2 \<le> degree (set (edges_of_path (last p # p))) (last (a'' # p'))"
+  proof-
+    obtain u where u: "{u, last (a'' # p')} \<in> set (edges_of_path (a' # a'' # p'))" "u \<in> set (a' # a'' # p')"
+      by (elim exists_conj_elims, rule exE[OF last_in_edge]) force
+    hence "{u, last (a'' # p')} \<noteq> {a, last (a'' # p')}"
+      using assms(1) u
+      by (auto simp add: p doubleton_eq_iff)
+    hence "2 \<le> degree {{u, last (a'' # p')}, {a, last (a'' # p')}} (last (a'' # p'))"
+      by (simp add: degree_insert eval_enat_numeral one_eSuc)
+    moreover have "{{u, last (a'' # p')}, {a, last (a'' # p')}} \<subseteq> set (edges_of_path (last p # p))"
+      using p u(1) by fastforce
+    ultimately show ?thesis
+      using order.trans
+      by (fastforce dest!: subset_edges_less_degree[where v = "(last (a'' # p'))"])
+  qed
+  ultimately show ?thesis
+    by fastforce
+next
+  case False
+  hence "2 = degree (set (edges_of_path p)) v"
+    by (simp add: assms(1) assms(3) degree_edges_of_path_ge_2)
+  moreover have "set (edges_of_path p) \<subseteq> set (edges_of_path (last p # p))"
+    by (cases p) fastforce+
+  then show ?thesis
+    by (simp add: \<open>2 = degree (set (edges_of_path p)) v\<close> subset_edges_less_degree)
 qed
 
 lemma in_Vs_insertE:
@@ -2225,50 +2651,6 @@ lemma gr_zeroI: "(x::enat) \<noteq> 0 \<Longrightarrow> 0 < x"
 lemma degree_neq_zeroI: "\<lbrakk>e \<in> G; v \<in> e\<rbrakk> \<Longrightarrow> degree G v \<noteq> 0"
   by (auto simp add: degree_def)
 
-lemma exists_conj_elim_2_1: "\<lbrakk>\<And>x. \<lbrakk>P x; Q x\<rbrakk> \<Longrightarrow> V x; \<lbrakk>\<And>x. P x \<and> Q x \<Longrightarrow> V x\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_3_1: "\<lbrakk>\<And>x. \<lbrakk>P x; Q x; V x\<rbrakk> \<Longrightarrow> W x; \<lbrakk>\<And>x. P x \<and> Q x \<and> V x \<Longrightarrow> W x\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_4_1: "\<lbrakk>\<And>x. \<lbrakk>P x; Q x; V x; W x\<rbrakk> \<Longrightarrow> X x; \<lbrakk>\<And>x. P x \<and> Q x \<and> V x \<and> W x \<Longrightarrow> X x\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_2_2: "\<lbrakk>\<And>x y. \<lbrakk>P x y; Q x y\<rbrakk> \<Longrightarrow> V x y; \<lbrakk>\<And>x y. P x y \<and> Q x y \<Longrightarrow> V x y\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_3_2: "\<lbrakk>\<And>x y. \<lbrakk>P x y; Q x y; V x y\<rbrakk> \<Longrightarrow> W x y; \<lbrakk>\<And>x y. P x y \<and> Q x y \<and> V x y \<Longrightarrow> W x y\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_4_2: "\<lbrakk>\<And>x y. \<lbrakk>P x y; Q x y; V x y; W x y\<rbrakk> \<Longrightarrow> X x y; \<lbrakk>\<And>x y. P x y \<and> Q x y \<and> V x y \<and> W x y \<Longrightarrow> X x y\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_2_3: "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z\<rbrakk> \<Longrightarrow> V x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<Longrightarrow> V x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_3_3: "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z; V x y z\<rbrakk> \<Longrightarrow> W x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<and> V x y z \<Longrightarrow> W x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_4_3: "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z; V x y z; W x y z\<rbrakk> \<Longrightarrow> X x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<and> V x y z \<and> W x y z \<Longrightarrow> X x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_5_3: "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z; V x y z; W x y z; X x y z\<rbrakk> \<Longrightarrow> Y x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<and> V x y z \<and> W x y z \<and> X x y z \<Longrightarrow> Y x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_5_3': "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z; V x y z; W x y z; X x y z\<rbrakk> \<Longrightarrow> Y x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<and> V x y z \<and> W x y z \<and> X x y z \<Longrightarrow> Y x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-lemma exists_conj_elim_6_3: "\<lbrakk>\<And>x y z. \<lbrakk>P x y z; Q x y z; V x y z; W x y z; X x y z; Y x y z\<rbrakk> \<Longrightarrow> Z x y z; \<lbrakk>\<And>x y z. P x y z \<and> Q x y z \<and> V x y z \<and> W x y z \<and> X x y z \<and> Y x y z \<Longrightarrow> Z x y z\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
-  by auto
-
-method instsantiate_obtains =
-  (match conclusion in "P" for P
-     \<Rightarrow> \<open>(match premises in ass[thin]: "\<And>x. _ x \<Longrightarrow> P" \<Rightarrow> \<open>rule ass\<close>) |
-         (match premises in ass[thin]: "\<And>x y. _ x y \<Longrightarrow> P" \<Rightarrow> \<open>rule ass\<close>)\<close>)
-
-lemmas exists_conj_elims = exists_conj_elim_2_1 exists_conj_elim_3_1 exists_conj_elim_4_1
-                           exists_conj_elim_2_2 exists_conj_elim_3_2 exists_conj_elim_4_2
-
 lemma edge_mid_path:
   "path G (p1 @ [v1,v2] @ p2) \<Longrightarrow> {v1,v2} \<in> G"
   using path_suff
@@ -2925,16 +3307,6 @@ lemma component_path_works:
   unfolding component_path_def
   apply(rule someI_ex)
   using component_has_path_no_cycle[OF assms] .
-
-lemma component_edges_subset:
-  shows "component_edges G C \<subseteq> G"
-  unfolding component_edges_def
-  by auto
-
-lemma edges_path_subset_edges:
-  "\<lbrakk>path G p; set p \<subseteq> C\<rbrakk> \<Longrightarrow>
-    set (edges_of_path p) \<subseteq> component_edges G C"
-  by (induction rule: path.induct) (auto simp add:  component_edges_def)
 
 lemma Vs_component_edges:
   "dblton_graph G \<Longrightarrow> C \<in> connected_components G \<Longrightarrow> Vs (component_edges G C) = C"
@@ -3633,6 +4005,24 @@ proof(goal_cases)
       \<open>card ((\<lambda>v. {v}) ` (V - (Vs X))) = card (V - Vs X)\<close> by simp
 qed
 
+lemma con_comp_card_2:
+  assumes con_comp: "C \<in> connected_components G"
+  assumes finite_comp: "finite C"
+  assumes doubleton_edges: "\<And>e. e\<in>G \<Longrightarrow> \<exists>u v. e = {u, v} \<and> u \<noteq> v"
+  shows "card C \<ge> 2"
+proof-
+  obtain X where "X \<in> C" "X \<in> Vs G"
+    using con_comp connected_comp_nempty connected_component_subs_Vs by blast
+  then obtain F where "F \<in> G" "X \<in> F" unfolding Vs_def by blast
+  then obtain Y where "X \<noteq> Y" "F = {X, Y}" using doubleton_edges by force
+  hence "Y \<in> C"
+    using \<open>F \<in> G\<close> \<open>X \<in> C\<close> con_comp 
+    by (fastforce intro: in_connected_componentI4 dest: edges_are_walks)
+  show "card C \<ge> 2"
+    using finite_comp \<open>X \<in> C\<close> \<open>X \<noteq> Y\<close> \<open>Y \<in> C\<close>
+    by(auto simp: eval_nat_numeral not_less_eq_eq[symmetric] dest: card_le_Suc0_iff_eq)
+qed
+
 subsection \<open>Acyclic Graphs\<close>
 
 context graph_abs
@@ -4023,10 +4413,6 @@ proof(goal_cases)
   show "card (Vs X) = card X + card (connected_components X)" by auto
 qed
 
-lemma reverse_pigeonhole:
-  "finite X \<Longrightarrow> (f ` X) \<subseteq> Y \<Longrightarrow> card X < card Y \<Longrightarrow> \<exists>y \<in> Y. \<forall>x \<in> X. y \<noteq> f x"
-  by (metis imageI less_le_not_le subset_eq surj_card_le)
-
 lemma decycle_edge_path: 
   "\<lbrakk>(insert {v, w} Y) \<subseteq> G; decycle (insert {v, w} Y) u p; {v, w} \<in> set p\<rbrakk>
     \<Longrightarrow> \<exists>q. walk_betw Y w q v"
@@ -4222,25 +4608,291 @@ next
   qed
 qed
 
-text \<open>Ordered pair to undirected edge\<close>
+subsubsection \<open>Bipartite Graphs\<close>
+text \<open>
+  We are considering the online \<^emph>\<open>bipartite\<close> matching problem, hence, a definition of
+  bipartiteness.
+\<close>
+definition bipartite :: "'a graph \<Rightarrow> 'a set \<Rightarrow> 'a set \<Rightarrow> bool" where
+  "bipartite G X Y  = ( X \<inter> Y = {} \<and> (\<forall>e \<in> G. \<exists>u v. e = {u,v} \<and> u \<in> X \<and> v \<in> Y))"
 
-definition "set_of_pair = ( \<lambda>(u,v). {u,v})"
+lemma bipartiteI:
+  assumes "X \<inter> Y = {}"
+  assumes "\<And>e. e \<in> G \<Longrightarrow> \<exists>u v. e = {u,v} \<and> u \<in> X \<and> v \<in> Y"
+  shows "bipartite G X Y"
+  using assms
+  unfolding bipartite_def
+  by auto
 
-lemma get_urlist_to_dbltn: 
-  "set X \<subseteq> set_of_pair ` Y \<Longrightarrow> \<exists> urX. map set_of_pair urX = X \<and> set urX \<subseteq> Y" 
-proof(induction X)
-  case Nil
-  then show ?case by auto
-next
-  case (Cons a X)
-  then obtain ura where "ura \<in> Y" "set_of_pair ura = a" by auto
-  moreover obtain urX where "map set_of_pair urX = X" "set urX \<subseteq> Y"
-    using Cons by auto
-  ultimately show ?case
-    by(auto intro!: exI[of _ "ura#urX"])
+lemma bipartite_disjointD:
+  assumes "bipartite G X Y"
+  shows "X \<inter> Y = {}"
+  using assms
+  unfolding bipartite_def
+  by blast
+
+lemma bipartite_edgeE:
+  assumes "e \<in> G"
+  assumes "bipartite G X Y"
+  obtains x y where "x \<in> X" "y \<in> Y" "e = {x,y}" "x \<noteq> y"
+  using assms
+  unfolding bipartite_def
+  by fast
+
+lemma bipartite_vertex:
+  assumes "x \<in> Vs G"
+  assumes "bipartite G U V"
+  shows "x \<in> U \<Longrightarrow> x \<notin> V"
+    and "x \<in> V \<Longrightarrow> x \<notin> U"
+    and "x \<notin> U \<Longrightarrow> x \<in> V"
+    and "x \<notin> V \<Longrightarrow> x \<in> U"
+  using assms
+  unfolding bipartite_def Vs_def
+  by auto
+
+lemma bipartite_edgeD:
+  assumes "{u,v} \<in> G"
+  assumes "bipartite G X Y"
+  shows
+    "u \<in> X \<Longrightarrow> v \<in> Y - X"
+    "u \<in> Y \<Longrightarrow> v \<in> X - Y"
+    "v \<in> X \<Longrightarrow> u \<in> Y - X"
+    "v \<in> Y \<Longrightarrow> u \<in> X - Y"
+  using assms
+  unfolding bipartite_def
+  by fast+
+
+lemma bipartite_empty[simp]: "X \<inter> Y = {} \<Longrightarrow> bipartite {} X Y"
+  unfolding bipartite_def by blast
+
+lemma bipartite_empty_part_iff_empty: "bipartite G {} Y \<longleftrightarrow> G = {}"
+  unfolding bipartite_def by blast
+
+lemma bipartite_commute:
+  "bipartite G X Y \<Longrightarrow> bipartite G Y X"
+  unfolding bipartite_def
+  by fast
+
+lemma bipartite_subgraph:
+  "bipartite G X Y \<Longrightarrow> G' \<subseteq> G \<Longrightarrow> bipartite G' X Y"
+  unfolding bipartite_def
+  by blast
+
+lemma bipartite_vs_subset: "bipartite G X Y \<Longrightarrow> Vs G \<subseteq> X \<union> Y"
+  unfolding bipartite_def Vs_def
+  by auto
+
+lemma finite_parts_bipartite_graph_invar:
+  "\<lbrakk>finite X; finite Y; bipartite G X Y\<rbrakk> \<Longrightarrow> graph_invar G"
+  by (auto simp: dblton_graph_def dest: bipartite_vs_subset intro: finite_subset elim!: bipartite_edgeE)
+
+lemma bipartite_to_graph_abs:
+  "\<lbrakk>bipartite G L R; finite G\<rbrakk> \<Longrightarrow> graph_abs G"
+  by(fastforce simp add: bipartite_def graph_abs_def dblton_graph_def disjoint_iff
+      intro!: finite_dbl_finite_verts) 
+
+lemma finite_bipartite_graph_invar:
+  "\<lbrakk>finite G; bipartite G X Y\<rbrakk> \<Longrightarrow> graph_invar G"
+  by (auto simp: dblton_graph_def elim!: bipartite_edgeE simp: Vs_def)
+
+lemma bipartite_insertI:
+  assumes "bipartite G X Y"
+  assumes "u \<in> X" "v \<in> Y"
+  shows "bipartite (insert {u,v} G) X Y"
+  using assms
+  unfolding bipartite_def
+  by auto
+
+lemma bipartite_unionI:
+  assumes "bipartite G X Y"
+  assumes "bipartite H X Y"
+  shows "bipartite (G \<union> H) X Y"
+  using assms
+  unfolding bipartite_def
+  by auto
+
+lemma bipartite_reduced_to_vs:
+  "bipartite G X Y \<Longrightarrow> bipartite G (X \<inter> Vs G) (Y \<inter> Vs G)"
+  unfolding bipartite_def
+  by auto (metis edges_are_Vs insert_commute)
+
+lemma bipartite_In_singletons:
+  assumes "bipartite G U V"
+  assumes "X \<in> ((\<inter>) V) ` G"
+  shows "\<exists>x. X = {x}"
+  using assms
+  by (auto elim!: bipartite_edgeE dest: bipartite_disjointD)
+
+lemma bipartite_eqI:
+  assumes "bipartite M U V"
+  assumes "e \<in> M"
+  assumes "x \<in> e" "x \<in> V" "y \<in> e" "y \<in> V"
+  shows "x = y"
+  using assms
+proof -
+  from assms obtain u v where e: "e = {u,v}" "u \<in> U" "v \<in> V"
+    by (auto elim: bipartite_edgeE)
+
+  from assms have "U \<inter> V = {}"
+    by (auto dest: bipartite_disjointD)
+
+  with assms e show "x = y"
+    by blast
 qed
 
-lemma to_dbltn_sym: "{fst x, snd x} = set_of_pair x" 
-  by (auto simp add: set_of_pair_def)
+lemma bipartite_remove_vertices:
+  "bipartite G U V \<Longrightarrow> bipartite (G \<setminus> X) U V"
+  using remove_vertices_subgraph
+  by (auto intro: bipartite_subgraph)
+
+lemma Vs_of_edges_connecting_two_sets:
+  "\<lbrakk> X \<noteq> {}; Y \<noteq> {}\<rbrakk> \<Longrightarrow> Vs ({{u, v} | u v. u\<in> X \<and> v \<in> Y}) = X \<union> Y"
+  by(auto simp add: Vs_def)
+
+lemma Vs_of_edges_connecting_two_sets_subs:
+  "Vs ({{u, v} | u v. u\<in> X \<and> v \<in> Y}) \<subseteq> X \<union> Y"
+  by(auto simp add: Vs_def)
+
+definition is_bipartite where 
+  "is_bipartite E = (\<exists> X \<subseteq> Vs E. \<forall> e \<in> E. \<exists> u v. 
+                                   e = {u, v} \<and> (u \<in> X \<and> v \<in> Vs E - X))"
+
+lemma Neighbourhood_bipartite:
+  assumes"bipartite G X Y" "V \<subseteq> X \<or> V \<subseteq> Y"
+  shows  "Neighbourhood G V = \<Union> (neighbourhood G ` V)"
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 u)
+  then obtain v where uv:"{v, u} \<in> G" "v \<in> V"
+    by(auto simp add: Neighbourhood_def)
+  hence "u \<in> neighbourhood G v"
+    by(auto simp add: neighbourhood_def edge_commute) 
+  then show ?case 
+    using uv(2) by auto
+next
+  case (2 u)
+  then obtain v where v: "u \<in> neighbourhood G v" "v \<in> V" by auto
+  hence uv:"{u, v} \<in> G"
+    by(auto simp add: neighbourhood_def)
+  hence "u \<notin> V"
+    using v(2) assms by(fastforce simp add: bipartite_def)
+  then show ?case 
+    using edge_commute[OF uv] v(2)
+    by(auto simp add: Neighbourhood_def) 
+qed
+
+lemma Neighbourhood_bipartite_left:
+  assumes "bipartite G X Y" "V \<subseteq> X"
+  shows   "Neighbourhood G V \<subseteq> Y"
+  using assms
+  by(auto simp add: doubleton_eq_iff bipartite_def Neighbourhood_def 
+              dest: bipartite_edgeD(1))
+
+lemma Neighbourhood_bipartite_mono:
+  assumes "bipartite G X Y" "G' \<subseteq> G"
+  shows   "Neighbourhood G' X \<subseteq> Neighbourhood G X"
+  using assms
+  by (auto simp add: doubleton_eq_iff bipartite_def Neighbourhood_def)
+
+lemma Neighbourhood_bipartite_right:
+  assumes "bipartite G X Y" "V \<subseteq> Y"
+  shows   "Neighbourhood G V \<subseteq> X"
+  using assms
+  by (auto simp add: doubleton_eq_iff bipartite_def Neighbourhood_def 
+               dest: bipartite_edgeD(2))
+
+lemma bipartite_even_and_odd_walk:
+  assumes "bipartite G X Y" "x \<in> X"
+          "walk_betw G x p y"
+    shows "odd (length p) \<Longrightarrow> y \<in> X"
+          "even (length p) \<Longrightarrow> y \<in> Y"
+proof-
+  have "(odd (length p) \<longrightarrow> y \<in> X) \<and> (even (length p) \<longrightarrow> y \<in> Y)"
+    using assms(3)
+  proof(induction p arbitrary: y rule: rev_induct)
+    case Nil
+    then show ?case by(simp add: walk_betw_def)
+  next
+    case (snoc x' xs)
+    note IH = this
+    show ?case 
+    proof(cases "even (length (xs@[x]))")
+      case True
+      hence odd: "odd (length xs)" by simp
+      have "\<exists> y'. walk_betw G x xs y' \<and> {y', y} \<in> G"
+        using odd snoc(2) path_2[of G y] path_suff[of G _ "[_, y]"] snoc.prems[simplified walk_betw_def] 
+        by(cases xs rule: rev_cases)
+          (auto intro!: exI[of _ "last xs"] walk_reflexive_cong simp add: walk_pref)
+      then obtain y' where y':"walk_betw G x xs y'" "{y', y} \<in> G"
+        by auto
+      moreover hence "y' \<in> X" 
+        using snoc(1) odd by simp
+      ultimately have "y \<in> Y"
+        using assms(1) bipartite_edgeD(1) by fastforce
+      thus ?thesis
+        using True by fastforce
+    next
+      case False
+      show ?thesis
+      proof(cases xs rule: rev_cases)
+        case Nil
+        hence "y = x" 
+          using IH(2) snoc.prems[simplified walk_betw_def]  
+          by auto
+        then show ?thesis 
+          by (simp add: assms(2) local.Nil)
+      next
+        case (snoc list a)
+      hence even: "even (length xs)"using False  by simp
+      have "\<exists> y'. (walk_betw G x xs y' \<and> {y', y} \<in> G)"
+        using IH(2)  path_suff[of G _ "[_, y]"] 
+             snoc.prems[simplified walk_betw_def] 
+        by(auto intro!: exI[of _ a] simp add: snoc walk_pref)
+      then obtain y' where y':"walk_betw G x xs y'" "{y', y} \<in> G"
+        by auto
+      moreover hence "y' \<in> Y" 
+        using IH(1) even by simp
+      ultimately have "y \<in> X"
+        using assms(1) bipartite_edgeD(2) by fastforce
+      thus ?thesis
+        using False by fastforce
+    qed
+  qed
+qed
+  thus  "odd (length p) \<Longrightarrow> y \<in> X" "even (length p) \<Longrightarrow> y \<in> Y" 
+    by auto
+qed
+
+definition "complete_bipartite G L R = 
+   (bipartite G L R \<and> (\<forall> u \<in> L. \<forall> v \<in> R. {u, v} \<in> G))"
+
+lemma complete_bipartiteE:
+  "complete_bipartite G L R \<Longrightarrow>
+  (\<lbrakk>bipartite G L R; \<And> u v. \<lbrakk>u \<in> L; v \<in> R\<rbrakk> \<Longrightarrow> {u, v} \<in> G\<rbrakk> \<Longrightarrow> P)
+  \<Longrightarrow> P"
+  and complete_bipartiteI:
+  "\<lbrakk>bipartite G L R; \<And> u v. \<lbrakk>u \<in> L; v \<in> R\<rbrakk> \<Longrightarrow> {u, v} \<in> G\<rbrakk> \<Longrightarrow> complete_bipartite G L R"
+  and complete_bipartiteD:
+  "complete_bipartite G L R \<Longrightarrow> bipartite G L R"
+  "\<lbrakk>complete_bipartite G L R; u \<in> L; v \<in> R\<rbrakk> \<Longrightarrow> {u, v} \<in> G"
+  by(auto simp add: complete_bipartite_def)
+
+lemma complete_bipartite_Vs:
+  assumes "complete_bipartite G L R" "dblton_graph G" "L = {} \<longleftrightarrow> R = {}"
+  shows "Vs G = L \<union> R"
+  using assms
+  by(auto elim!: complete_bipartiteE bipartite_edgeE 
+      intro: bipartite_vertex(3) 
+      dest!: edges_are_Vs) blast
+
+definition "balanced_complete_bipartite G L R = (complete_bipartite G L R \<and> card L = card R)"
+
+lemma balanced_complete_bipartiteE:
+  "\<lbrakk>balanced_complete_bipartite G L R; \<lbrakk>complete_bipartite G L R; card L = card R\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  and balanced_complete_bipartiteI:
+  "\<lbrakk>complete_bipartite G L R; card L = card R\<rbrakk> \<Longrightarrow> balanced_complete_bipartite G L R"
+  and balanced_complete_bipartiteD:
+  "balanced_complete_bipartite G L R \<Longrightarrow> complete_bipartite G L R"
+  "balanced_complete_bipartite G L R \<Longrightarrow> card L = card R"
+  by(auto simp add: balanced_complete_bipartite_def)
 
 end

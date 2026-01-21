@@ -245,4 +245,102 @@ lemma if_PQ:"if P then False else if Q then False else True \<Longrightarrow> \<
 
 lemma if_PQ_E: "if P then False else if Q then False else True \<Longrightarrow> (\<not> P \<and> \<not> Q \<Longrightarrow> R) \<Longrightarrow> R"
   by metis
+
+lemma image_two_Collect:
+  "{f x y | x y. P x y} = (\<lambda> (x, y). f x y) ` { (x, y) | x y. P x y}"
+  by auto
+
+lemma finite_pairs_of_finite_set_set:
+  "finite G \<Longrightarrow> finite {(u, v). {u, v} \<in> G}"
+proof(induction G rule: finite_induct)
+  case (insert x F)
+  have "{a. case a of (u, v) \<Rightarrow> {u, v} \<in> {x} \<union> F}
+        = {a. case a of (u, v) \<Rightarrow> {u, v} \<in> F} \<union> {a. case a of (u, v) \<Rightarrow> {u, v}= x}"
+    by auto
+  moreover have "{(u, v). {u, v} = x} = {} \<or> (\<exists> a b. {(u, v). {u, v} = x} = {(a, b), (b, a)})"
+  proof(cases "\<exists>a b. {(u, v). {u, v} = x}= {(a, b), (b, a)}")
+    case True
+    then show ?thesis by auto
+  next
+    case False
+    note false = this
+    have x_not_weak_dbltn:"\<nexists> u v. {u, v} = x" 
+    proof(rule ccontr, goal_cases)
+      case 1
+      then obtain u v where "{u, v} = x" by auto
+      hence "{(u, v). {u, v} = x}= {(u, v), (v, u)}"
+        by fast
+      then show ?case 
+        using False by blast
+    qed
+    show ?thesis 
+    proof(cases "{(u, v). {u, v} = x} = {}")
+      case True
+      then show ?thesis by simp
+    next
+      case False
+      then obtain u v w where "u \<noteq> v" "v \<noteq> w" "u \<noteq> w" "{u, v, w} \<subseteq> x"
+        using x_not_weak_dbltn by simp
+      hence "{(u, v). {u, v} = x} = {}" by auto
+      then show ?thesis by simp
+    qed
+  qed
+  ultimately show ?case
+    by (auto simp add: insert(3))
+qed auto
+
+lemma finite_g_applied_double:
+  assumes "finite {f x y | x y. P x y}" 
+  shows   "finite {g (f x y) | x y. P x y}"
+proof-
+  have "{g (f x y) |x y. P x y} = g ` {f x y | x y. P x y}" by blast
+  thus ?thesis
+    using assms by auto
+qed
+
+lemma finite_g_applied_single:
+  assumes "finite {f x | x . P x}" 
+  shows   "finite {g (f x) | x. P x}"
+proof-
+  have "{g (f x) | x. P x} = g ` {f x | x . P x}" by auto
+  thus ?thesis 
+    using assms by auto
+qed
+
+lemma Collect_double_f_to_single: 
+  "{ g (f x y) | x y. P x y} = {g ff | ff. \<exists> x y. ff = f x y \<and> P x y}"
+  by auto
+
+lemma Collect_single_f_to_single: "{g (f x) | x. P x} = {g ff | ff. \<exists> x. ff = f x \<and> P x}"
+  by auto
+
+lemma pair_eq_fst_snd_eq:
+      "(a, b) = c \<Longrightarrow> a = fst c"
+      "(a, b) = c \<Longrightarrow> b = snd c"
+  by auto
+
+lemma in_image_with_fst_eq: "a \<in> fst ` A \<longleftrightarrow> (\<exists> b. (a, b) \<in> A)" 
+  by force
+
+lemma finite_double_image_of_pairs_in_set_of_sets:
+  "finite G \<Longrightarrow> finite {f x y | x y. {x, y} \<in> G}"
+proof(induction G rule: finite_induct)
+  case (insert e F)
+  show ?case 
+  proof(cases "\<exists> x y. e = {x, y}")
+    case True
+    then obtain x y where "e = {x, y}" by auto
+    hence "{f x y | x y. {x, y} \<in> insert e F} = 
+           {f x y | x y. {x, y} \<in> F} \<union> {f x y, f y x}" 
+      by (auto simp add: doubleton_eq_iff)
+    then show ?thesis 
+      using insert by simp
+  next
+    case False
+  hence "{f x y | x y. {x, y} \<in> insert e F} = 
+           {f x y | x y. {x, y} \<in> F}" by auto
+  then show ?thesis
+    using insert by simp
+  qed
+qed simp
 end

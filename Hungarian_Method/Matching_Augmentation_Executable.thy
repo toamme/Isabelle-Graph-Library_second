@@ -4,123 +4,13 @@ theory Matching_Augmentation_Executable
    Directed_Set_Graphs.Summary
    Undirected_Set_Graphs.Pair_Graph_Berge_Adaptor
    "HOL-Data_Structures.Map_Specs"
+   Undirected_Set_Graphs.Directed_Undirected
 begin
-
-(*TODO MOVE*)
-
-lemma distinct_no_self_loop_in_edges_of_path:
-"distinct p \<Longrightarrow> \<nexists> x. {x} \<in> set (edges_of_path p)"
-  by(induction p rule: edges_of_path.induct) auto
-
-lemma distinct_no_self_loop_in_edges_of_vwalk:
-"distinct p \<Longrightarrow> \<nexists> x. (x,x) \<in> set (edges_of_vwalk p)"
-  by(induction p rule: edges_of_vwalk.induct) auto
-
-lemma element_of_list_cases:
-  assumes "u \<in> set p"
-      "p = [u] \<Longrightarrow> P"
-      "\<And> p'. p = u#p' \<Longrightarrow> P"
-      "\<And> p'. p = p'@[u] \<Longrightarrow> P"
-      "\<And> a b p1 p2. p = p1@[a,u,b]@p2 \<Longrightarrow> P"
- shows P
-proof-
-  obtain p1 p2 where "p = p1@[u]@p2" 
-    by (metis append_Cons append_Nil assms(1) in_set_conv_decomp_first)
-  thus P
-    by(cases p1 rule: rev_cases, all \<open>cases p2\<close>)
-      (auto intro: assms(2-))
-qed
-
-lemma alt_list_adjacent:
-     "alt_list P Q (xs@[x,y]@ys) \<Longrightarrow> (P x \<and> Q y) \<or> (Q x \<and> P y)"
-  by (metis alt_list_append_1 alt_list_step)
-
-lemma alt_list_split_off_first_two:
-  "alt_list P Q (x#y#xs) \<Longrightarrow> alt_list P Q xs"
-  by (simp add: alt_list_step)
 
 no_translations
   "_Collect p P"      <= "{p. P}"
   "_Collect p P"      <= "{p|xs. P}"
   "_CollectIn p A P"  <= "{p : A. P}"
-(*from main branch, to be removed and integrated in
-unify this with Undirected from Pair_Graph_Berge_Adaptor
-try to remove D from locale there*)
-
-subsection \<open>Relationship between Symmetric Directed Graphs and Undirected Graphs\<close>
-
-text \<open>This should have gone to Undirected-Set-Graphs, but importing certain bits of directed graph
-           theory seems to make some force and fastforce calls loops in subsequent theories.\<close>
-
-definition "symmetric_digraph E = (\<forall> u v. (u, v) \<in> E \<longrightarrow> (v, u) \<in> E)"
-
-lemma symmetric_digraphI:
-"(\<And> u v. (u, v) \<in> E \<Longrightarrow> (v, u) \<in> E) \<Longrightarrow> symmetric_digraph E"
-and  symmetric_digraphE:
-"symmetric_digraph E \<Longrightarrow> ((\<And> u v. (u, v) \<in> E \<Longrightarrow> (v, u) \<in> E) \<Longrightarrow> P) \<Longrightarrow> P"
-and  symmetric_digraphD:
-"symmetric_digraph E \<Longrightarrow>  (u, v) \<in> E \<Longrightarrow> (v, u) \<in> E"
-  by(auto simp add: symmetric_digraph_def)
-
-definition "UD G = { {u, v} | u v. (u, v) \<in>  G}"
-
-lemma in_UDI: "(u, v) \<in> E \<Longrightarrow> {u, v} \<in> UD E"
-and in_UDE: "{u, v} \<in> UD E \<Longrightarrow> ((u, v) \<in> E \<Longrightarrow> P) \<Longrightarrow> ((v, u) \<in> E \<Longrightarrow> P) \<Longrightarrow> P"
-and in_UD_symE: "\<lbrakk>{u, v} \<in> UD E; symmetric_digraph E; ((u, v) \<in> E \<Longrightarrow> P)\<rbrakk> \<Longrightarrow> P"
-and in_UD_symD: "\<lbrakk>{u, v} \<in> UD E; symmetric_digraph E\<rbrakk> \<Longrightarrow> (u, v) \<in> E"
-  by(auto simp add: UD_def doubleton_eq_iff symmetric_digraph_def)
-
-lemma symmetric_digraph_walk_betw_vwalk_bet:
-  assumes "symmetric_digraph E" "walk_betw (UD E) u p v"
-  shows "vwalk_bet E u p v"
-  using assms (2,1)
-  apply(induction rule: induct_walk_betw)
-  apply (simp add: UD_def dVs_def vs_member vwalk_bet_reflexive )
-  by (simp add: in_UD_symD)
-
-lemma symmetric_digraph_vwalk_betw_walk_betw:
-  assumes "symmetric_digraph E" "vwalk_bet E u p v"
-  shows "walk_betw (UD E) u p v"
-  using assms (2,1)
-  apply(induction rule: induct_vwalk_bet)
-  apply (simp add: UD_def dVs_def vs_member walk_reflexive)
-  by (meson edges_are_walks in_UDI walk_betw_cons)
-
-lemma symmetric_digraph_vwalk_bet_vwalk_bet:
-  assumes "symmetric_digraph E" "vwalk_bet E u p v"
-  shows "vwalk_bet E v (rev p) u"
-  using assms (2,1)
-  apply(induction rule: induct_vwalk_bet)
-  apply (simp add: UD_def dVs_def vs_member vwalk_bet_reflexive)
-  using symmetric_digraphD vwalk_append_intermediate_edge by fastforce
-
-lemma undirected_edges_subset_directed_edges_subset:
-  "\<lbrakk>set (edges_of_path Q) \<subseteq> UD E; symmetric_digraph E\<rbrakk>
-     \<Longrightarrow> set (edges_of_vwalk Q) \<subseteq> E"
-  by(induction Q rule: edges_of_path.induct)
-    (auto simp add: doubleton_eq_iff UD_def elim: symmetric_digraphE)
-
-lemma directed_edges_subset_undirected_edges_subset:
-  "set (edges_of_vwalk Q) \<subseteq> E \<Longrightarrow> set (edges_of_path Q) \<subseteq> UD E"
-  by(induction Q rule: edges_of_path.induct)
-    (auto simp add: doubleton_eq_iff intro!: in_UDI)
-
-lemma path_edges_set_of_pair_of_vwalk_edges:
-   "edges_of_path p = map set_of_pair (edges_of_vwalk p)"
-  by(induction p rule: edges_of_vwalk.induct)
-    (auto simp add: set_of_pair_def)
-
-lemma UD_is_image_set_of_pair: "UD A = set_of_pair ` A"
-  by(auto simp add: UD_def set_of_pair_def)
-
-lemma "set (edges_of_path p) = UD (set (edges_of_vwalk p))"
-  by(auto simp add: path_edges_set_of_pair_of_vwalk_edges UD_is_image_set_of_pair)
-
-lemma UD_diff_hom: "symmetric_digraph B \<Longrightarrow> UD (A - B) = UD A - UD B"
-  by(fastforce simp add: UD_def doubleton_eq_iff elim!: symmetric_digraphE)
-
-lemma UD_union_hom: "UD (A \<union> B) = UD A \<union> UD B"
-  by(auto simp add: UD_def)
 
 lemma UD_symmetric_diff_hom:
   assumes "symmetric_digraph A" 
@@ -129,54 +19,9 @@ lemma UD_symmetric_diff_hom:
   using assms
   by(simp add: UD_diff_hom symmetric_diff_def UD_union_hom)
 
-lemma symmetric_union_pres:
-   "\<lbrakk>symmetric_digraph A; symmetric_digraph B\<rbrakk> \<Longrightarrow> symmetric_digraph (A \<union> B)"
-  by(auto simp add:  symmetric_digraph_def)
-
-lemma symmetric_diff_pres:
-   "\<lbrakk>symmetric_digraph A; symmetric_digraph B\<rbrakk> \<Longrightarrow> symmetric_digraph (A - B)"
-  by(auto simp add:  symmetric_digraph_def)
-
 lemma symmetric_sym_diff_pres:
    "\<lbrakk>symmetric_digraph A; symmetric_digraph B\<rbrakk> \<Longrightarrow> symmetric_digraph (A \<oplus> B)"
   by(auto simp add:  symmetric_digraph_def symmetric_diff_def)
-
-(*TODO change later to D,
-take D and as many lemmas as possible out of locale graph_abs*)
-lemma symmetric_digraph_by_def:
-  "symmetric_digraph {(u, v). {u, v} \<in> G}"
-  by (simp add: insert_commute symmetric_digraph_def)
-
-lemma UD_inverse_of_D: 
-  "dblton_graph G \<Longrightarrow> UD {(u, v). {u, v} \<in> G} = G"
-  unfolding UD_def dblton_graph_def 
-  by auto metis
-
-lemma distinc_p_dblton_edges:
-"distinct p \<Longrightarrow> dblton_graph (set (edges_of_path p))"
-  using graph_abs_edges_of_distinct_path by blast
-
-lemma D_of_edges_of_path:
-  "{(u, v) | u v.  {u, v} \<in>  (set (edges_of_path p))} = 
-    set (edges_of_vwalk p) \<union> prod.swap ` set (edges_of_vwalk p)"
-  by(induction p rule: edges_of_path.induct)
-    (auto split: prod.split simp add: doubleton_eq_iff)
-
-context graph_abs
-begin
-
-lemma "UD D = G"
-  apply(auto simp add: D_def UD_def)
-  by blast
-
-end
-(*TODO MOVE*)
-definition "dpairs_of_map m = {(x, y) | x y. m x = Some y}"
-definition "upairs_of_map m = {{x, y} | x y. m x = Some y}"
-
-lemma upairs_dpairs_of_map:
- "upairs_of_map m = UD (dpairs_of_map m)"
-  by(auto simp add: upairs_of_map_def dpairs_of_map_def UD_def)
 
 locale matching_augmentation_spec =
   buddy_map: Map buddy_empty buddy_upd buddy_delete buddy_lookup buddy_invar
@@ -197,33 +42,31 @@ lemmas [code] = augment_impl.simps
 definition "\<M> M = upairs_of_map (buddy_lookup M)"
 definition "\<M>_dir M = dpairs_of_map (buddy_lookup M)"
 
-
 lemmas \<M>_def' = \<M>_def[simplified upairs_of_map_def]
 lemmas \<M>_dir_def' = \<M>_dir_def[simplified dpairs_of_map_def]
 
 definition "symmetric_buddies M = (\<forall> u v. buddy_lookup M u = Some v \<longleftrightarrow> buddy_lookup M v = Some u)"
 
 lemma symmetric_buddiesI:
-"(\<And> u v. buddy_lookup M u = Some v \<Longrightarrow> buddy_lookup M v = Some u) 
-\<Longrightarrow> symmetric_buddies M"
+  "(\<And> u v. buddy_lookup M u = Some v \<Longrightarrow> buddy_lookup M v = Some u) \<Longrightarrow> symmetric_buddies M"
 and symmetric_buddiesE:
-"symmetric_buddies M \<Longrightarrow>
- ((\<And> u v. buddy_lookup M u = Some v \<longleftrightarrow> buddy_lookup M v = Some u) \<Longrightarrow>P)
- \<Longrightarrow>P"
+  "symmetric_buddies M \<Longrightarrow>
+   ((\<And> u v. buddy_lookup M u = Some v \<longleftrightarrow> buddy_lookup M v = Some u) \<Longrightarrow>P)
+   \<Longrightarrow>P"
 and symmetric_buddiesD:
-"symmetric_buddies M \<Longrightarrow> buddy_lookup M u = Some v \<longleftrightarrow> buddy_lookup M v = Some u"
-  subgoal
+  "symmetric_buddies M \<Longrightarrow> buddy_lookup M u = Some v \<longleftrightarrow> buddy_lookup M v = Some u"
+proof(goal_cases)
+  case 1
+  thus ?case
     unfolding symmetric_buddies_def by blast
-  by(auto simp add: symmetric_buddies_def)
+qed(auto simp add: symmetric_buddies_def)
 
 definition "no_self_loop_buddy M = (\<forall> u. buddy_lookup M u \<noteq> Some u)"
 
 lemma no_self_loop_buddyE:
-"no_self_loop_buddy M \<Longrightarrow>
- ( (\<And> u. buddy_lookup M u = Some u \<Longrightarrow> False) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "no_self_loop_buddy M \<Longrightarrow> ((\<And> u. buddy_lookup M u = Some u \<Longrightarrow> False) \<Longrightarrow> P) \<Longrightarrow> P"
 and no_self_loop_buddyI:
-"(\<And> u. buddy_lookup M u = Some u \<Longrightarrow> False) \<Longrightarrow> no_self_loop_buddy M "
+  "(\<And> u. buddy_lookup M u = Some u \<Longrightarrow> False) \<Longrightarrow> no_self_loop_buddy M "
   by(auto simp add: no_self_loop_buddy_def)
 
 lemma no_self_loop_buddy_dblton_graph:
@@ -239,27 +82,26 @@ definition "invar_matching G M =
    graph_matching G (\<M> M) \<and> finite (\<M> M))"
 
 lemma invar_matchingE:
-"invar_matching G M \<Longrightarrow> 
- (\<lbrakk>buddy_invar M; symmetric_buddies M; no_self_loop_buddy M;
-    graph_matching G (\<M> M); finite (\<M> M)\<rbrakk>
- \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "invar_matching G M \<Longrightarrow> 
+   (\<lbrakk>buddy_invar M; symmetric_buddies M; no_self_loop_buddy M; 
+     graph_matching G (\<M> M); finite (\<M> M)\<rbrakk>
+    \<Longrightarrow> P)
+   \<Longrightarrow> P"
 and invar_matchingI:
-"\<lbrakk>buddy_invar M; symmetric_buddies M; no_self_loop_buddy M;
-  graph_matching G (\<M> M); finite (\<M> M)\<rbrakk>
- \<Longrightarrow> invar_matching G M"
+  "\<lbrakk>buddy_invar M; symmetric_buddies M; no_self_loop_buddy M;
+    graph_matching G (\<M> M); finite (\<M> M)\<rbrakk>
+   \<Longrightarrow> invar_matching G M"
 and invar_matchingD:
-"invar_matching G M \<Longrightarrow> buddy_invar M"
-"invar_matching G M \<Longrightarrow> symmetric_buddies M"
-"invar_matching G M \<Longrightarrow> no_self_loop_buddy M"
-"invar_matching G M \<Longrightarrow> graph_matching G (\<M> M)"
-"invar_matching G M \<Longrightarrow> finite (\<M> M)"
+  "invar_matching G M \<Longrightarrow> buddy_invar M"
+  "invar_matching G M \<Longrightarrow> symmetric_buddies M"
+  "invar_matching G M \<Longrightarrow> no_self_loop_buddy M"
+  "invar_matching G M \<Longrightarrow> graph_matching G (\<M> M)"
+  "invar_matching G M \<Longrightarrow> finite (\<M> M)"
   by(auto simp add: invar_matching_def)
 
 end
 
-locale matching_augmentation =
-matching_augmentation_spec 
+locale matching_augmentation = matching_augmentation_spec 
 begin
 
 lemmas buddies = 
@@ -280,12 +122,10 @@ lemma \<M>_dir_one_upd_change:
                     if_split[of "\<lambda> x. x = Some _" "_ = _" "Some _"])
 
 lemma augment_impl_effect:
-  assumes"buddy_invar M"
-         "distinct P" 
-         "even (length P)"
+  assumes"buddy_invar M" "distinct P" "even (length P)"
   shows "buddy_invar (augment_impl M P)"
-        "\<M>_dir (augment_impl M P) = \<M>_dir M - {(u, v) | u v. u \<in> set P \<and> buddy_lookup M u = Some v} \<union>
-                                   \<Union> {{(u, v), (v, u)} | u v i. u = P!i \<and> v = P!(i+1) \<and> i+1 < length P \<and> even i}"
+  "\<M>_dir (augment_impl M P) = \<M>_dir M - {(u, v) | u v. u \<in> set P \<and> buddy_lookup M u = Some v} \<union>
+                  \<Union> {{(u, v), (v, u)} | u v i. u = P!i \<and> v = P!(i+1) \<and> i+1 < length P \<and> even i}"
 proof-
   have buddy_invar_it: "buddy_invar (augment_impl M P)" for P
     using assms(1)
@@ -293,8 +133,9 @@ proof-
     using buddies(2) by auto
   thus "buddy_invar (augment_impl M P)"
     by simp
-  show "\<M>_dir (augment_impl M P) = \<M>_dir M - {(u, v) | u v. u \<in> set P \<and> buddy_lookup M u = Some v} \<union>
-                                   \<Union> {{(u, v), (v, u)} | u v i. u = P!i \<and> v = P!(i+1) \<and> i+1 < length P \<and> even i}"
+  show "\<M>_dir (augment_impl M P) = 
+      \<M>_dir M - {(u, v) | u v. u \<in> set P \<and> buddy_lookup M u = Some v} \<union>
+               \<Union> {{(u, v), (v, u)} | u v i. u = P!i \<and> v = P!(i+1) \<and> i+1 < length P \<and> even i}"
     using assms
   proof(induction M P rule: augment_impl.induct)
     case (1 M)
@@ -316,9 +157,9 @@ proof-
           {(uu, vv), (vv, uu)} \<union> ?U"
     proof(rule, all \<open>rule\<close>, goal_cases)
       case (1 e)
-      then obtain u v i where uvi: "e = (u, v) \<or> e = (v, u)"
-                 "u = (uu # vv # vs)!i" "v = (uu # vv # vs)!(i+1)"
-                 "i+1 < length (uu # vv # vs)" "even i"
+      then obtain u v i where uvi: 
+        "e = (u, v) \<or> e = (v, u)" "u = (uu # vv # vs)!i" "v = (uu # vv # vs)!(i+1)"
+        "i+1 < length (uu # vv # vs)" "even i"
         by auto
       show ?case 
       proof(cases i)
@@ -327,8 +168,7 @@ proof-
           using uvi by fastforce
       next
         case (Suc ii)
-        hence "u = vs!(i-2) \<and> v = vs!((i-2) + 1)"
-                 "(i-2)+1 < length vs \<and> even (i-2)"
+        hence "u = vs!(i-2) \<and> v = vs!((i-2) + 1)" "(i-2)+1 < length vs \<and> even (i-2)"
           apply(cases ii)
           using uvi(2-) Suc
           by auto
@@ -345,9 +185,8 @@ proof-
                      intro: exI[of _ uu] exI[of _ vv])
       next
         case 2
-        then obtain u v i where uvi: "e = (u, v) \<or> e = (v, u)"
-                 "u = vs!i" "v = vs!(i+1)"
-                 "i+1 < length vs" "even i"
+        then obtain u v i where uvi: 
+          "e = (u, v) \<or> e = (v, u)"  "u = vs!i" "v = vs!(i+1)" "i+1 < length vs" "even i"
         by auto
       then show ?case 
         by (force intro!: exI[of _ "{(u, v), (v, u)}"] 
@@ -357,11 +196,17 @@ proof-
     have IH_precond: "distinct vs"  "even (length vs)"
       using IH(3,4) by auto
     show ?case
-      apply(subst augment_impl.simps Let_def)+
-      apply(subst IH(1)[OF refl \<M>_dir_one_upd_change(1)[OF IH(2) refl] IH_precond])
-      apply(subst \<M>_dir_one_upd_change[OF IH(2) refl] Big_extract_first U_def[symmetric])+
-      using IH(3) 
-      by (auto simp add: if_split[of "\<lambda> x. x = Some _" "_ = _" "Some _"])
+    proof((subst augment_impl.simps Let_def)+, goal_cases)
+      case 1
+      show ?case
+      proof(subst IH(1)[OF refl \<M>_dir_one_upd_change(1)[OF IH(2) refl] IH_precond], goal_cases)
+        case 1
+        show ?case
+          using IH(3) 
+          by ((subst \<M>_dir_one_upd_change[OF IH(2) refl] Big_extract_first U_def[symmetric])+)
+             (auto simp add: if_split[of "\<lambda> x. x = Some _" "_ = _" "Some _"])
+      qed
+    qed
   qed
 qed
 
@@ -393,18 +238,19 @@ lemma
   "length p \<ge> 2 \<Longrightarrow> hd p \<notin> Vs (\<M> M)"
   "length p \<ge> 2 \<Longrightarrow> last p \<notin> Vs (\<M> M)"
 shows augment_impl_correct_general: "\<M> (augment_impl M p) = \<M> M \<oplus> (set (edges_of_path p))"
-and  augment_impl_symmetry_general:"symmetric_buddies (augment_impl M p)"
-and augment_impl_dir_correct_general:
+  and augment_impl_symmetry_general:"symmetric_buddies (augment_impl M p)"
+  and augment_impl_dir_correct_general:
      "\<M>_dir (augment_impl M p) = \<M>_dir M \<oplus> {(u, v) | u v. {u, v} \<in> set (edges_of_path p)}"
-and augment_impl_no_self_loop_buddy_pres: 
-    "no_self_loop_buddy M \<Longrightarrow> no_self_loop_buddy (augment_impl M p)"
+  and augment_impl_no_self_loop_buddy_pres: 
+     "no_self_loop_buddy M \<Longrightarrow> no_self_loop_buddy (augment_impl M p)"
 proof-
   have substracted_are:
         "{(u, v) |u v. u \<in> set p \<and> buddy_lookup M u = Some v} = 
         {(u, v) | u v. {u, v} \<in> set (edges_of_path p)} \<inter> \<M>_dir M"
   proof(rule, all \<open>rule\<close>, goal_cases)
     case (1 e)
-    then obtain u v where uv: "e = (u, v)" "u \<in> set p" "buddy_lookup M u = Some v" by auto
+    then obtain u v where uv: "e = (u, v)" "u \<in> set p" "buddy_lookup M u = Some v" 
+      by auto
     hence uv_in_M: "{u, v} \<in> \<M> M"
       using \<M>_def' by blast
     have "{u, v} \<in> set (edges_of_path p)"
@@ -473,13 +319,11 @@ proof-
           "u = p ! i" "v = p ! (i + 1)" "i + 1 < length p" "even i"
       by blast
     have p_split: "p = take i p @(u# v# drop (i+2) p)"
-      apply(subst id_take_nth_drop[OF  uvi(4)])
-      by(auto simp add: uvi(2) take_Suc_conv_app_nth[OF add_lessD1, OF uvi(4)] uvi(3))
+      by(subst id_take_nth_drop[OF  uvi(4)])
+        (auto simp add: uvi(2) take_Suc_conv_app_nth[OF add_lessD1, OF uvi(4)] uvi(3))
     have uv_in_p:"{u, v} \<in> set (edges_of_path p)" 
-      apply(subst p_split)
-      apply(subst edges_of_path_append_2[of  "[_]@_" "_@[_]", simplified])
-      apply(subst edges_of_path_snoc_2)
-      by auto
+      by(subst p_split, subst edges_of_path_append_2[of  "[_]@_" "_@[_]", simplified])
+        (auto simp add: edges_of_path_snoc_2)
     have uv_index:"{u, v} = edges_of_path p ! i"
       using edges_of_path_index uvi(2,3,4) by auto
     have "{u, v} \<notin> \<M> M"
@@ -526,8 +370,7 @@ proof-
               intro!: symmetric_sym_diff_pres symmetric_digraph_by_def)
   show "no_self_loop_buddy M \<Longrightarrow> no_self_loop_buddy (augment_impl M p)"
     using assms(5)
-    by(unfold no_self_loop_buddy_and_\<M>_dir M_dir_new_is symmetric_diff_def
-              D_of_edges_of_path)
+    by(unfold no_self_loop_buddy_and_\<M>_dir M_dir_new_is symmetric_diff_def D_of_edges_of_path)
       (auto dest!: distinct_no_self_loop_in_edges_of_vwalk)
 qed
 
@@ -558,11 +401,10 @@ lemma augmentation_correct:
          simp add: augment_impl_correct)+ 
 
 lemma empty_matching_props:
-"invar_matching G buddy_empty"
-"\<M> buddy_empty = {}"
+  "invar_matching G buddy_empty"
+  "\<M> buddy_empty = {}"
    by(auto intro!: invar_matchingI symmetric_buddiesI no_self_loop_buddyI 
          simp add: buddies \<M>_def')
 
 end
-
 end

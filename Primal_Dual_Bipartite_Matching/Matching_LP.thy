@@ -44,21 +44,6 @@ and min_feasible_max_dualD:
 "min_feasible_max_dual V E w y \<Longrightarrow> feasible_max_dual V E w y' \<Longrightarrow> sum y V \<le> sum y' V"
   by(auto simp add: min_feasible_max_dual_def)
 
-definition "max_weight_matching E w M =
-  (graph_matching E M \<and> (\<forall> M'. graph_matching E M' \<longrightarrow> (sum w M'::real) \<le> sum w M))"
-
-lemma max_weight_matchingI:
-"graph_matching E M \<Longrightarrow> (\<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<le> sum w M)
-\<Longrightarrow> max_weight_matching E w M"
-and max_weight_matchingE:
-"max_weight_matching E w M \<Longrightarrow> 
-(graph_matching E M \<Longrightarrow> (\<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<le> sum w M) \<Longrightarrow> P)
-\<Longrightarrow> P"
-and max_weight_matchingD:
-"max_weight_matching E w M \<Longrightarrow> graph_matching E M"
-"max_weight_matching E w M \<Longrightarrow> graph_matching E M' \<Longrightarrow> sum w M' \<le> sum w M"
-  by(auto simp add: max_weight_matching_def)
-
 definition "tight_subgraph E w y = {{u, v} | u v. {u, v} \<in> E \<and> w {u, v} = y u + y v}"
 
 lemma in_tight_subgraphI:
@@ -111,21 +96,6 @@ and max_feasible_min_perfect_dualD:
 "max_feasible_min_perfect_dual E w y \<Longrightarrow> feasible_min_perfect_dual E w y'
  \<Longrightarrow> sum y (Vs E) \<ge> sum y' (Vs E)"
   by(auto simp add: max_feasible_min_perfect_dual_def)
-
-definition "min_weight_perfect_matching E w M =
-  (perfect_matching E M \<and> (\<forall> M'. perfect_matching E M' \<longrightarrow> (sum w M'::real) \<ge> sum w M))"
-
-lemma min_weight_perfect_matchingI:
-"perfect_matching E M \<Longrightarrow> (\<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M)
-\<Longrightarrow> min_weight_perfect_matching E w M"
-and min_weight_perfect_matchingE:
-"min_weight_perfect_matching E w M \<Longrightarrow> 
-(perfect_matching E M \<Longrightarrow> (\<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M) \<Longrightarrow> P)
-\<Longrightarrow> P"
-and min_weight_perfect_matchingD:
-"min_weight_perfect_matching E w M \<Longrightarrow> perfect_matching E M"
-"min_weight_perfect_matching E w M \<Longrightarrow> perfect_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M"
-  by(auto simp add: min_weight_perfect_matching_def)
 
 subsection \<open>Translations between matchings and LPs\<close>
 

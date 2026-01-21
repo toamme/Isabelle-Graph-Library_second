@@ -1040,8 +1040,9 @@ next
               have "{v, v'} \<in>  (component_edges (graph_diff G X) C)" 
                 using graph_diff_subset path2.hyps(1) by blast
               then have "{v, v'} \<in> (graph_diff G X)" 
-                using component_edges_subset 
-                using Berge.component_edges_subset insert_Diff insert_subset by blast
+                using component_edges_subset  Undirected_Set_Graphs.component_edges_subset 
+                      insert_Diff insert_subset
+                by blast
               then have "{v, v'} \<inter> X = {}"
                 unfolding graph_diff_def  
                 by fastforce
@@ -1659,7 +1660,7 @@ next
               have "{v, v'} \<in> (component_edges (graph_diff G X) C)" 
                 using graph_diff_subset path2.hyps(1) by blast
               then have "{v, v'} \<in> (graph_diff G X)" 
-                using Berge.component_edges_subset by blast
+                using Undirected_Set_Graphs.component_edges_subset by fastforce
               then have "{v, v'} \<inter> X = {}"
                 unfolding graph_diff_def by fastforce
               then have "{v, v'} \<in> (graph_diff G (X \<union> Y))" 
@@ -1731,7 +1732,8 @@ next
             by (smt (z3) Int_Un_distrib Int_Un_eq(4) Un_Int_assoc_eq Un_absorb Un_commute \<open>C' \<subseteq> C\<close>
                 \<open>c \<in> e \<and> e \<in> ?C \<and> e \<inter> Y = {}\<close> assms(3) odd_comps_in_diff_not_in_X subset_trans)
           have "e \<in> G" 
-            using `c \<in> e \<and> e \<in> ?C \<and> e \<inter> Y = {}` Berge.component_edges_subset graph_diff_member 
+            using `c \<in> e \<and> e \<in> ?C \<and> e \<inter> Y = {}` Undirected_Set_Graphs.component_edges_subset 
+                  graph_diff_member 
             by blast
           then have "e \<in> (graph_diff G (X \<union> Y))" 
             by (simp add: \<open>e \<inter> (X \<union> Y) = {}\<close> graph_diff_def)

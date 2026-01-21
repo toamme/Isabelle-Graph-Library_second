@@ -2,163 +2,6 @@ theory Hungarian_Method_Top_Loop
   imports Primal_Dual_Bipartite_Matching.Matching_LP
           Path_Search_Result Matching_Augmentation_Executable
 begin
-(*TODO MOVE*)
-lemma bipartite_same_matcheds_on_both_sides:
-  assumes "bipartite G L R" "graph_matching G M"
-  shows   "card (Vs M \<inter> L) = card (Vs M \<inter> R)"
-proof-
-  define f where "f = (\<lambda> l. SOME r. \<exists> e \<in> M. {l, r} = e)"
-  have "inj_on f (Vs M \<inter> L)"
-  proof(rule inj_onI, goal_cases)
-    case (1 l l')
-     have "{l, f l} \<in> M"
-      using 1(1) assms(1,2) 
-      by(auto simp add: Vs_def  insert_commute  f_def
-                   elim!: bipartite_edgeE[of _ G L R] 
-                   dest!: set_mp[of M G] dest: someI)
-    moreover have "{l', f l'} \<in> M"
-      using 1(2) assms(1,2) 
-      by(auto simp add: Vs_def  insert_commute  f_def
-                   elim!: bipartite_edgeE[of _ G L R] 
-                   dest!: set_mp[of M G] dest: someI)
-    ultimately show ?case
-      using 1(3)  assms(2) 
-      by(auto intro!: doubleton_in_matching(2))
-  qed
-  moreover have "f ` (Vs M \<inter> L) = Vs M \<inter> R"
-  proof(rule, all \<open>rule\<close>, goal_cases)
-    case (1 r)
-    then obtain l e where le: "l \<in> L" "l \<in> e" "e \<in> M" "r = f l"
-      by(auto simp add: Vs_def)
-    moreover hence lflM:"{l, f l} \<in> M"
-      using assms(1,2) 
-      by(auto simp add: insert_commute  f_def
-                   elim!: bipartite_edgeE[of _ G L R] 
-                   dest!: set_mp[of M G] dest: someI)
-    ultimately have "e = {l, f l}" "f l = r" "r \<in> R"
-      using assms(1,2) matching_unique_match[of M l e "{l, f l}"] 
-      by(auto  elim!: bipartite_edgeE[of _ G L R] dest!: set_mp[of M G] 
-            simp add: doubleton_eq_iff  bipartite_def disjoint_iff)
-    thus ?case 
-      using edges_are_Vs_2[OF lflM] 
-      by auto
-  next
-    case (2 r)
-    then obtain l where l: "{l ,r} \<in> M" 
-      using 2(1) assms(1,2) 
-      by(auto simp add: Vs_def  insert_commute 
-                   elim!: bipartite_edgeE[of _ G L R] 
-                   dest!: set_mp[of M G] )
-    have "f l = r" "l \<in> L"
-      using assms(1,2) l 2 someI[of "\<lambda> r. \<exists> e \<in> M. {l, r} = e", OF bexI, OF refl l]
-       by(auto  elim!: bipartite_edgeE[of _ G L R] dest!: set_mp[of M G]
-                intro: doubleton_in_matching(1)
-             simp add: f_def doubleton_eq_iff bipartite_def disjoint_iff)
-     thus ?case
-       using edges_are_Vs[of l "f l"] l  
-       by auto
-   qed
-  ultimately have "bij_betw f (Vs M \<inter> L) (Vs M \<inter> R)"
-    by(auto simp add: bij_betw_def)
-  thus ?thesis
-    by(rule bij_betw_same_card)
-qed
-
-lemma all_left_matched_perfect:
-  assumes "bipartite G L R"
-          "L \<subseteq> Vs M" "card L = card R"
-          "graph_matching G M" "finite R"
-    shows "perfect_matching G M"
-proof(rule perfect_matchingI, goal_cases)
-  case 1
-  then show ?case 
-    using assms(4) by simp 
-next
-  case 2
-  then show ?case 
-   using assms(4) by simp
-next
-  case 3
-  have "Vs M \<inter> L = L"
-    using assms(1,2,4)
-    by blast
-  hence "card L = card (Vs M \<inter> R)"
-    using bipartite_same_matcheds_on_both_sides[OF assms(1,4)] by simp
-  hence "card (Vs M \<inter> R) = card R"
-    using assms(3) by simp
-  hence "Vs M \<inter> R = R"
-    using assms(5) 
-    by(intro card_subset_eq) auto
-  hence "R \<subseteq> Vs M" 
-    by auto
-  hence "Vs G \<subseteq> Vs M"
-    using assms(2) bipartite_vs_subset[OF assms(1)] by auto
-  then show ?case 
-    by (simp add: assms(4) subgraph_vs_subset_eq)  
-qed
-
-lemma all_right_matched_perfect:
-  assumes "bipartite G L R"
-          "R \<subseteq> Vs M" "card L = card R"
-          "graph_matching G M" "finite L"
-    shows "perfect_matching G M"
-proof(rule perfect_matchingI, goal_cases)
-  case 1
-  then show ?case 
-    using assms(4) by simp 
-next
-  case 2
-  then show ?case 
-   using assms(4) by simp
-next
-  case 3
-  have "Vs M \<inter> R = R"
-    using assms(1,2,4)
-    by blast
-  hence "card R = card (Vs M \<inter> L)"
-    using bipartite_same_matcheds_on_both_sides[OF assms(1,4)] by simp
-  hence "card (Vs M \<inter> L) = card L"
-    using assms(3) by simp
-  hence "Vs M \<inter> L = L"
-    using assms(5) 
-    by(intro card_subset_eq) auto
-  hence "L \<subseteq> Vs M" 
-    by auto
-  hence "Vs G \<subseteq> Vs M"
-    using assms(2) bipartite_vs_subset[OF assms(1)] by auto
-  then show ?case 
-    by (simp add: assms(4) subgraph_vs_subset_eq)  
-qed
-
-lemma no_perfect_matching_one_side_bigger:
-  assumes "bipartite G L R" "L \<union> R \<subseteq> Vs G" 
-          "card L \<noteq> card R"
-    shows "\<nexists> M. perfect_matching G M"
-proof(rule ccontr, goal_cases)
-  case 1
-  then obtain M where M: "perfect_matching G M" by auto
-  hence "card (Vs M \<inter> L) = card (Vs M \<inter> R)" 
-    using assms(1) bipartite_same_matcheds_on_both_sides perfect_matchingD(1,2) by blast
-  moreover have "card (Vs M \<inter> L) = card L"  "card (Vs M \<inter> R) = card R"
-    using M assms(2) perfect_matchingD(3)
-    by(fastforce intro!: arg_cong[of _ _ card ])+
-  ultimately have "card L = card R" 
-    by simp
-  thus False
-    using assms(3) by simp
-qed
-
-lemma in_symmetric_diff_iff:
-   "x \<in> X \<oplus> Y \<longleftrightarrow> x \<in> X \<and> x \<notin> Y \<or> x \<in> Y \<and> x \<notin> X"
-  by(auto simp add: symmetric_diff_def)
-
-lemma Berge_2':         
-  assumes aug_path: "matching_augmenting_path M p" "M \<subseteq> G" "path G p" "distinct p" and
-    finite: "finite M" and
-    matchings: "graph_matching G M"
-  shows "graph_matching G (M \<oplus> set (edges_of_path p))" 
-  using assms
-  by (auto intro!: Berge_2[of _ _ G] dest: Berge_2(3))
 
 section \<open>Top Loop for Hungarian Method\<close>
 
@@ -258,12 +101,12 @@ definition  "hungarian_loop_fail_cond state =
        | Next_Iteration P \<pi>' \<Rightarrow> False)"
 
 lemma hungarian_loop_fail_condE:
-"hungarian_loop_fail_cond state \<Longrightarrow>
-(path_search (buddies state) (potential state) = Dual_Unbounded \<Longrightarrow> P)
- \<Longrightarrow> P"
+  "\<lbrakk>hungarian_loop_fail_cond state;
+    path_search (buddies state) (potential state) = Dual_Unbounded \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
 and hungarian_loop_fail_condI:
-"path_search (buddies state) (potential state) = Dual_Unbounded 
- \<Longrightarrow> hungarian_loop_fail_cond state"
+  "path_search (buddies state) (potential state) = Dual_Unbounded
+   \<Longrightarrow> hungarian_loop_fail_cond state"
   by(cases "path_search (buddies state) (potential state)")
     (auto simp add: hungarian_loop_fail_cond_def)
 
@@ -276,12 +119,12 @@ definition  "hungarian_loop_succ_cond state =
        | Next_Iteration P \<pi>' \<Rightarrow> False)"
 
 lemma hungarian_loop_succ_condE:
-"hungarian_loop_succ_cond state \<Longrightarrow>
-(path_search (buddies state) (potential state) = Lefts_Matched \<Longrightarrow> P)
- \<Longrightarrow> P"
+  "\<lbrakk>hungarian_loop_succ_cond state;
+    path_search (buddies state) (potential state) = Lefts_Matched \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
 and hungarian_loop_succ_condI:
-"path_search (buddies state) (potential state) = Lefts_Matched
- \<Longrightarrow> hungarian_loop_succ_cond state"
+  "path_search (buddies state) (potential state) = Lefts_Matched
+   \<Longrightarrow> hungarian_loop_succ_cond state"
   by(cases "path_search (buddies state) (potential state)")
     (auto simp add: hungarian_loop_succ_cond_def)
 
@@ -294,12 +137,12 @@ definition  "hungarian_loop_cont_cond state =
        | Next_Iteration P \<pi>' \<Rightarrow> True)"
 
 lemma hungarian_loop_cont_condE:
-"hungarian_loop_cont_cond state \<Longrightarrow>
-(\<And>p \<pi>'. path_search (buddies state) (potential state) = Next_Iteration p \<pi>' \<Longrightarrow> P)
- \<Longrightarrow> P"
+  "\<lbrakk>hungarian_loop_cont_cond state;
+   \<And> p \<pi>'. path_search (buddies state) (potential state) = Next_Iteration p \<pi>' \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
 and  hungarian_loop_cont_condI:
-" path_search (buddies state) (potential state) = Next_Iteration p \<pi>' \<Longrightarrow> 
-hungarian_loop_cont_cond state"
+   "path_search (buddies state) (potential state) = Next_Iteration p \<pi>' \<Longrightarrow> 
+    hungarian_loop_cont_cond state"
   by(cases "path_search (buddies state) (potential state)")
     (auto simp add: hungarian_loop_cont_cond_def)
 
@@ -351,16 +194,15 @@ lemma succ_cond_after_succ_upd:
        simp add: hungarian_loop_succ_def)
 
 lemma succ_and_fail_impossible:
- "\<lbrakk>hungarian_loop_succ_cond state; hungarian_loop_fail_cond state\<rbrakk>
- \<Longrightarrow> False"
+ "\<lbrakk>hungarian_loop_succ_cond state; hungarian_loop_fail_cond state\<rbrakk> \<Longrightarrow> False"
   by(auto elim!: hungarian_loop_succ_condE hungarian_loop_fail_condE)
 
 lemma hungarian_loop_induct:
   assumes "hungarian_loop_dom state"
-           "\<And> state. \<lbrakk>hungarian_loop_dom state;
+          "\<And> state. \<lbrakk>hungarian_loop_dom state;
                       hungarian_loop_cont_cond state \<Longrightarrow> P (hungarian_loop_upd state)\<rbrakk>
                      \<Longrightarrow> P state"
-     shows "P state"
+    shows "P state"
 proof(induction rule: hungarian_loop.pinduct[OF assms(1)])
   case (1 state)
   note IH = this
@@ -404,26 +246,26 @@ definition "path_search_precond M \<pi> =
   feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>))"
 
 lemma path_search_precondI:
-"\<lbrakk>matching_invar M; potential_invar \<pi>;
-  matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>);
-  graph_matching G (matching_abstract M);
-  feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>)\<rbrakk>
-\<Longrightarrow> path_search_precond M \<pi>"
+  "\<lbrakk>matching_invar M; potential_invar \<pi>;
+    matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>);
+    graph_matching G (matching_abstract M);
+    feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>)\<rbrakk>
+   \<Longrightarrow> path_search_precond M \<pi>"
 and path_search_precondE:
-"path_search_precond M \<pi> \<Longrightarrow>
- (\<lbrakk>matching_invar M; potential_invar \<pi>;
-  matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>);
-  graph_matching G (matching_abstract M);
-  feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>)\<rbrakk> \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "path_search_precond M \<pi> \<Longrightarrow>
+   (\<lbrakk>matching_invar M; potential_invar \<pi>;
+     matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>);
+     graph_matching G (matching_abstract M);
+     feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>)\<rbrakk> \<Longrightarrow> P)
+   \<Longrightarrow> P"
 and path_search_precondD:
-"path_search_precond M \<pi> \<Longrightarrow> matching_invar M"
-"path_search_precond M \<pi> \<Longrightarrow> potential_invar \<pi>"
-"path_search_precond M \<pi> \<Longrightarrow> graph_matching G (matching_abstract M)"
-"path_search_precond M \<pi> \<Longrightarrow> 
-   matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>)"
-"path_search_precond M \<pi> \<Longrightarrow> 
-   feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>)"
+  "path_search_precond M \<pi> \<Longrightarrow> matching_invar M"
+  "path_search_precond M \<pi> \<Longrightarrow> potential_invar \<pi>"
+  "path_search_precond M \<pi> \<Longrightarrow> graph_matching G (matching_abstract M)"
+  "path_search_precond M \<pi> \<Longrightarrow> 
+     matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>)"
+  "path_search_precond M \<pi> \<Longrightarrow> 
+     feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>)"
   by(auto simp add: path_search_precond_def)
 
 definition "good_search_result M \<pi>' p =
@@ -434,30 +276,30 @@ definition "good_search_result M \<pi>' p =
         graph_augmenting_path G (matching_abstract M) p)"
 
 lemma good_search_resultE:
-"good_search_result M \<pi>' p \<Longrightarrow>
- (\<lbrakk>potential_invar \<pi>'; 
-   matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>');
-   feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>'); 
-   set (edges_of_path p) \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>');
-   graph_augmenting_path G (matching_abstract M) p\<rbrakk> 
- \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "good_search_result M \<pi>' p \<Longrightarrow>
+   (\<lbrakk>potential_invar \<pi>'; 
+     matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>');
+     feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>'); 
+     set (edges_of_path p) \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>');
+     graph_augmenting_path G (matching_abstract M) p\<rbrakk> 
+    \<Longrightarrow> P)
+   \<Longrightarrow> P"
 and good_search_resultI:
-"\<lbrakk>potential_invar \<pi>'; 
-   matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>');
-   feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>'); 
-   set (edges_of_path p) \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>');
-   graph_augmenting_path G (matching_abstract M) p\<rbrakk> 
- \<Longrightarrow> good_search_result M \<pi>' p"
+  "\<lbrakk>potential_invar \<pi>'; 
+    matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>');
+    feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>'); 
+    set (edges_of_path p) \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>');
+    graph_augmenting_path G (matching_abstract M) p\<rbrakk> 
+   \<Longrightarrow> good_search_result M \<pi>' p"
 and good_search_resultD:
-"good_search_result M \<pi>' p \<Longrightarrow> potential_invar \<pi>'"
-"good_search_result M \<pi>' p \<Longrightarrow> 
-  matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>')"
-"good_search_result M \<pi>' p \<Longrightarrow> 
-   feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>')"
-"good_search_result M \<pi>' p \<Longrightarrow>
-   set (edges_of_path p) \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>')"
-"good_search_result M \<pi>' p \<Longrightarrow> graph_augmenting_path G (matching_abstract M) p"
+  "good_search_result M \<pi>' p \<Longrightarrow> potential_invar \<pi>'"
+  "good_search_result M \<pi>' p \<Longrightarrow> 
+     matching_abstract M \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>')"
+  "good_search_result M \<pi>' p \<Longrightarrow> 
+    feasible_min_perfect_dual G edge_costs (potential_abstract \<pi>')"
+  "good_search_result M \<pi>' p \<Longrightarrow>
+    set (edges_of_path p) \<subseteq> tight_subgraph G edge_costs (potential_abstract \<pi>')"
+  "good_search_result M \<pi>' p \<Longrightarrow> graph_augmenting_path G (matching_abstract M) p"
   by(auto simp add: good_search_result_def)
 
 end
@@ -474,8 +316,7 @@ assumes G:
    "card_R = card R"
    "finite L"
    "finite R"
-   "L \<union> R \<subseteq> Vs G"
-   
+   "L \<union> R \<subseteq> Vs G" 
 and potential:
  "potential_invar init_potential"
  "feasible_min_perfect_dual G edge_costs (potential_abstract init_potential)"
@@ -512,36 +353,36 @@ definition "state_invar state =
   feasible_min_perfect_dual G edge_costs (potential_abstract (potential state)))"
 
 lemma state_invarE:
-"state_invar state \<Longrightarrow> 
- (\<lbrakk>matching_invar (buddies state); potential_invar (potential state);
-   graph_matching G (matching_abstract (buddies state));
-  matching_abstract (buddies state) \<subseteq> 
-        tight_subgraph G edge_costs (potential_abstract (potential state));
-  feasible_min_perfect_dual G edge_costs (potential_abstract (potential state))\<rbrakk>
-  \<Longrightarrow> P)
- \<Longrightarrow> P"
+  "state_invar state \<Longrightarrow> 
+   (\<lbrakk>matching_invar (buddies state); potential_invar (potential state);
+     graph_matching G (matching_abstract (buddies state));
+     matching_abstract (buddies state) \<subseteq> 
+          tight_subgraph G edge_costs (potential_abstract (potential state));
+     feasible_min_perfect_dual G edge_costs (potential_abstract (potential state))\<rbrakk>
+     \<Longrightarrow> P)
+   \<Longrightarrow> P"
 and state_invarI:
-"\<lbrakk>matching_invar (buddies state); potential_invar (potential state);
-   graph_matching G (matching_abstract (buddies state));
-  matching_abstract (buddies state) \<subseteq> 
-        tight_subgraph G edge_costs (potential_abstract (potential state));
-  feasible_min_perfect_dual G edge_costs (potential_abstract (potential state))\<rbrakk>
-  \<Longrightarrow> state_invar state"
+  "\<lbrakk>matching_invar (buddies state); potential_invar (potential state);
+    graph_matching G (matching_abstract (buddies state));
+    matching_abstract (buddies state) \<subseteq> 
+          tight_subgraph G edge_costs (potential_abstract (potential state));
+    feasible_min_perfect_dual G edge_costs (potential_abstract (potential state))\<rbrakk>
+   \<Longrightarrow> state_invar state"
 and state_invarD:
-"state_invar state \<Longrightarrow> matching_invar (buddies state)"
-"state_invar state \<Longrightarrow> potential_invar (potential state)"
-"state_invar state \<Longrightarrow> graph_matching G (matching_abstract (buddies state))"
-"state_invar state \<Longrightarrow> 
-   matching_abstract (buddies state) \<subseteq> 
-        tight_subgraph G edge_costs (potential_abstract (potential state))"
-"state_invar state \<Longrightarrow> 
-  feasible_min_perfect_dual G edge_costs (potential_abstract (potential state))"
+  "state_invar state \<Longrightarrow> matching_invar (buddies state)"
+  "state_invar state \<Longrightarrow> potential_invar (potential state)"
+  "state_invar state \<Longrightarrow> graph_matching G (matching_abstract (buddies state))"
+  "state_invar state \<Longrightarrow> 
+    matching_abstract (buddies state) \<subseteq> 
+         tight_subgraph G edge_costs (potential_abstract (potential state))"
+  "state_invar state \<Longrightarrow> 
+    feasible_min_perfect_dual G edge_costs (potential_abstract (potential state))"
   by(auto simp add: state_invar_def)
 
 subsection \<open>Invariant Preservation\<close>
 
 lemma 
-  assumes "hungarian_loop_cont_cond state"  "state_invar state"
+ assumes "hungarian_loop_cont_cond state"  "state_invar state"
  shows state_invar_pres_one_step:
     "state_invar (hungarian_loop_upd state)"
  and card_increase: "card (matching_abstract (buddies (hungarian_loop_upd state)))
@@ -656,7 +497,7 @@ qed
 
 lemma if_fail_flag_then_fail:
   assumes "hungarian_loop_dom state" "result (hungarian_loop state) = failure"
-  shows "hungarian_loop_fail_cond (hungarian_loop state)"
+    shows "hungarian_loop_fail_cond (hungarian_loop state)"
   using assms(2)
 proof(induction rule: hungarian_loop_induct[OF assms(1)])
   case (1 state)
@@ -668,7 +509,7 @@ qed
 
 lemma if_succ_flag_then_succ:
   assumes "hungarian_loop_dom state" "result (hungarian_loop state) = success"
-  shows "hungarian_loop_succ_cond (hungarian_loop state)"
+    shows "hungarian_loop_succ_cond (hungarian_loop state)"
   using assms(2)
 proof(induction rule: hungarian_loop_induct[OF assms(1)])
   case (1 state)
@@ -681,7 +522,7 @@ qed
 lemma min_perfect_if_algo_says_so:
   assumes "hungarian_loop_succ_cond state"
           "state_invar state" "card_L = card_R"
-  shows   "min_weight_perfect_matching G edge_costs (matching_abstract (buddies state))"
+    shows "min_weight_perfect_matching G edge_costs (matching_abstract (buddies state))"
 proof-
   have "L \<subseteq> Vs (matching_abstract (buddies state))" 
     using assms(1,2)

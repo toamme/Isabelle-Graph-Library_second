@@ -1,7 +1,8 @@
 session "Blossom" = "Berge_Lemma" +
   options [document = pdf, document_output = "output"]
 
-  (*sessions*)
+  sessions
+    Graph_Algorithms_Dev
 
   (*directories*)
 

@@ -2,6 +2,7 @@ theory Naive_Primal_Dual
   imports  Flow_Theory.More_Arith "HOL-Data_Structures.Set_Specs"
     "HOL-Data_Structures.Map_Specs"  Flow_Theory.More_Logic
     Primal_Dual_Bipartite_Matching.Matching_LP
+    Undirected_Set_Graphs.Directed_Undirected
 begin
 
 section \<open>The Algorithm Resulting from Shrijver\<close>
@@ -12,141 +13,6 @@ no_translations
   "_Collect p P"      <= "{p. P}"
   "_Collect p P"      <= "{p|xs. P}"
   "_CollectIn p A P"  <= "{p : A. P}"
-
-(*TODO MOVE*)
-lemma matching_graph_mono: "\<lbrakk>graph_matching G M; G \<subseteq> G'\<rbrakk> \<Longrightarrow> graph_matching G' M"
-  by(auto simp add: matching_def)
-
-lemma perfect_matchingE:
-  "\<lbrakk>perfect_matching G M ; \<lbrakk>M \<subseteq> G; matching M; Vs G = Vs M\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  by(auto simp add: perfect_matching_def)
-    (*TODO MOVE*)
-definition "Neighbourhood G V = {v | v u. {u, v} \<in> G \<and> u \<in> V \<and> v \<notin> V}"
-
-lemma not_in_NeighbourhoodE: 
- "v \<notin> Neighbourhood G V \<Longrightarrow>
- ((\<And> u. \<lbrakk>{u, v} \<in> G; u \<in> V; v \<notin> V\<rbrakk> \<Longrightarrow> False) \<Longrightarrow> P)
-  \<Longrightarrow> P"
-  by(auto simp add: Neighbourhood_def)
-
-lemma self_not_in_Neighbourhood:
-  "x \<in> V \<Longrightarrow> x \<notin> Neighbourhood G V"
-  by(auto simp add: Neighbourhood_def)
-
-lemma Neighbourhood_neighbourhood_union_inter:
-  "Neighbourhood G V = \<Union> (neighbourhood G ` V) - V"
-  by(auto simp add: Neighbourhood_def neighbourhood_def  insert_commute)
-
-lemma Neighbourhood_bipartite:
-  assumes"bipartite G X Y" "V \<subseteq> X \<or> V \<subseteq> Y"
-  shows  "Neighbourhood G V = \<Union> (neighbourhood G ` V)"
-proof(rule, all \<open>rule\<close>, goal_cases)
-  case (1 u)
-  then obtain v where uv:"{v, u} \<in> G" "v \<in> V"
-    by(auto simp add: Neighbourhood_def)
-  hence "u \<in> neighbourhood G v"
-    by(auto simp add: neighbourhood_def edge_commute) 
-  then show ?case 
-    using uv(2) by auto
-next
-  case (2 u)
-  then obtain v where v: "u \<in> neighbourhood G v" "v \<in> V" by auto
-  hence uv:"{u, v} \<in> G"
-    by(auto simp add: neighbourhood_def)
-  hence "u \<notin> V"
-    using v(2) assms by(fastforce simp add: bipartite_def)
-  then show ?case 
-    using edge_commute[OF uv] v(2)
-    by(auto simp add: Neighbourhood_def) 
-qed
-
-lemma Neighbourhood_bipartite_left:
-  assumes "bipartite G X Y" "V \<subseteq> X"
-  shows   "Neighbourhood G V \<subseteq> Y"
-  using assms
-  by(auto simp add: doubleton_eq_iff bipartite_def Neighbourhood_def 
-              dest: bipartite_edgeD(1))
-
-lemma Neighbourhood_bipartite_mono:
-  assumes "bipartite G X Y" "G' \<subseteq> G"
-  shows   "Neighbourhood G' X \<subseteq> Neighbourhood G X"
-  using assms
-  by (auto simp add: doubleton_eq_iff bipartite_def Neighbourhood_def)
-
-lemma Neighbourhood_bipartite_right:
-  assumes "bipartite G X Y" "V \<subseteq> Y"
-  shows   "Neighbourhood G V \<subseteq> X"
-  using assms
-  by (auto simp add: doubleton_eq_iff bipartite_def Neighbourhood_def 
-               dest: bipartite_edgeD(2))
-
-lemma bipartite_alternation:
-  assumes "bipartite G X Y" "walk_betw G s p t"
-  shows   "s \<in> X \<Longrightarrow> alt_list (\<lambda> x. x \<in> X) (\<lambda> x. x \<in> Y) p"
-          "s \<in> Y \<Longrightarrow> alt_list (\<lambda> x. x \<in> Y) (\<lambda> x. x \<in> X) p"
-  using assms(2)
-proof(induction rule: induct_walk_betw , goal_cases)
-  case (1 s)
-  then show ?case 
-    by (simp add: alt_list.intros(1,2))
-next
-  case (2 s)
-  then show ?case
-    by (simp add: alt_list.intros(1,2))
-next
-  case (3 x y p t)
-  have XY: "x \<in> X" "y \<in> Y"
-    using  3(1,5) assms(1) bipartite_edgeD(1) by fastforce+
-  show ?case 
-    by(auto intro!: 3(4) intro: alt_list.intros(2) simp add: XY)
-next
-  case (4 x y p t)
-  have XY: "x \<in> Y" "y \<in> X"
-    using  4(1,5) assms(1) bipartite_edgeD(2) by fastforce+
-  show ?case 
-    by(auto intro!: 4(3) intro: alt_list.intros(2) simp add: XY)
-qed
-
-lemma bipartite_ends_and_lengths:
-  assumes "bipartite G X Y" "walk_betw G s p t"
-  shows   "\<lbrakk>s \<in> X; even (length p)\<rbrakk> \<Longrightarrow> t \<in> Y"
-    "\<lbrakk>s \<in> X; odd (length p)\<rbrakk> \<Longrightarrow> t \<in> X"
-    "\<lbrakk>s \<in> Y; even (length p)\<rbrakk> \<Longrightarrow> t \<in> X"
-    "\<lbrakk>s \<in> Y; odd (length p)\<rbrakk> \<Longrightarrow> t \<in> Y"
-    "\<lbrakk>s \<in> X; t \<in> Y\<rbrakk> \<Longrightarrow> even (length p)"
-    "\<lbrakk>s \<in> X; t \<in> X\<rbrakk> \<Longrightarrow> odd (length p)"
-    "\<lbrakk>s \<in> Y; t \<in> X\<rbrakk> \<Longrightarrow> even (length p)"
-    "\<lbrakk>s \<in> Y; t \<in> Y\<rbrakk> \<Longrightarrow> odd (length p)"
-  using bipartite_alternation[OF assms]
-    alternating_list_odd_last[of _ _ p]
-    alternating_list_even_last[of _ _ p] assms(2)
-    bipartite_vertex(1)[OF walk_endpoints(1) assms(1)] walk_symmetric[OF assms(2)] 
-  by (fastforce simp add: walk_between_nonempty_pathD(4)[OF assms(2)])+
-
-(*Do we have something like that already?*)
-definition "pick_one e = (SOME v. v \<in> e)"
-definition "pick_another e = (SOME v. v \<in> e \<and> v \<noteq> pick_one e)"
-
-lemma pick_one_of_singleton:
-  "e = {u} \<Longrightarrow> pick_one e = u"
-  by (simp add: pick_one_def)
-
-lemma pick_one_and_another_props:
-  assumes "\<exists> u v. e = {u, v} \<and> u \<noteq> v" 
-  shows   "pick_one e \<in> e" "pick_another e \<in> e"
-          "e = {pick_one e, pick_another e}"
-proof-
-  obtain u v where uv: "e = {u, v}" "u \<noteq> v" using assms by auto
-  have "pick_one e = u \<or> pick_one e = v"
-    using uv some_in_eq[of e]
-    by(simp add: pick_one_def)
-  moreover have "pick_one e = u \<Longrightarrow> pick_another e = v"
-                "pick_one e = v \<Longrightarrow> pick_another e = u"
-    using uv
-    by(auto simp add: pick_another_def)
-  ultimately show  "pick_one e \<in> e" "pick_another e \<in> e" "e = {pick_one e, pick_another e}"
-    using uv by auto
-qed
 
 (*TODO MOVE*)
 
@@ -392,22 +258,6 @@ next
 qed
 
 end
-  (*TODO move or replace if an appropriate def already exists*)
-definition "pair_list_distinct xs = 
-(distinct xs \<and> (\<forall> x \<in> set xs. prod.swap x \<notin> set xs \<or> fst x = snd x))"
-
-lemma pair_list_distinctI:
-  "\<lbrakk>distinct xs; \<And> x. x \<in> set xs \<Longrightarrow>  prod.swap x \<notin> set xs \<or> fst x = snd x\<rbrakk>
-    \<Longrightarrow> pair_list_distinct xs"
-and pair_list_extended_distinctE:
-  "pair_list_distinct xs \<Longrightarrow>
-  (\<lbrakk>distinct xs; \<And> x. x \<in> set xs \<Longrightarrow>  prod.swap x \<notin> set xs \<or> fst x = snd x\<rbrakk> \<Longrightarrow> P)
-    \<Longrightarrow> P"
-  by(auto simp add: pair_list_distinct_def)
-
-lemma pair_list_distinct_front[simp]: 
- "pair_list_distinct (x#xs) = (x \<notin> set xs \<and>  prod.swap x \<notin> set xs \<and> pair_list_distinct xs)"
-  by(cases x)(auto simp add: pair_list_distinct_def)
 
 subsection \<open>Locale for Proofs\<close>
 
@@ -495,20 +345,6 @@ lemma graph_invar_G: "graph_invar G"
 lemma in_G_sym_slack: 
   "{u, v} \<in> G \<Longrightarrow> edge_slack p u v = edge_slack p v u"
   by(auto simp add: edge_slack_def intro!:  sym_weights)
-
-(*TODO MOVE*)
-
-lemma finite_union_singleton: 
-  "finite A \<Longrightarrow> finite ({a}\<union>A)"
-  by simp
-
-lemma set_of_pair_applied_to_pair: "set_of_pair (u, v) = {u, v}"
-  by(auto simp add: set_of_pair_def)
-
-(*TODO MOVE*)
-lemma abstract_real_map_fun_upd:
-  "abstract_real_map (fun_upd f x (Some y)) = (\<lambda> z. if z = x then y else abstract_real_map f z)"
-  by(auto simp add: abstract_real_map_def)
 
 definition "pair_weight e =  weight (fst e) (snd e)"
 
@@ -682,7 +518,7 @@ proof-
       by fastforce force
     have finites: "finite {ereal (edge_slack pmap u v) |u v. vset_isin S u \<and>
       ({u, v} = set_of_pair e \<or> {u, v} \<in> set_of_pair ` set es) \<and>  edge_slack pmap u v \<noteq> 0}"   
-      using Cons(2)[of x y] helper1
+      using Cons(2)[of x y] helper1 (*takes some time*)
       by (intro finite_subset[of _ "(\<lambda> (u, v). ereal (edge_slack pmap u v)) ` set (e#es)", 
             OF _ finite_imageI],
           auto simp add: e_split set_of_pair_def doubleton_eq_iff case_prod_beta 
@@ -858,110 +694,6 @@ proof-
 qed
 
 abbreviation "potential pmap \<equiv> (abstract_real_map (p_lookup pmap))"
-  (*TODO MOVE*)
-definition "epsilon_multiples (\<epsilon>::real) f X = (\<forall> x \<in> X. \<exists> n::nat. f x = n * \<epsilon>)"
-
-lemma epsilon_multiplesI:
-  "(\<And> x. x \<in> X \<Longrightarrow> \<exists> n::nat. f x = n * (\<epsilon>::real)) \<Longrightarrow> epsilon_multiples \<epsilon> f X"
-  and epsilon_multiplesE:
-  "\<lbrakk>epsilon_multiples (\<epsilon>::real) f X; (\<And> x. x \<in> X \<Longrightarrow> \<exists> n::nat. f x = n * \<epsilon>) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  and epsilon_multiplesD:
-  "\<lbrakk>epsilon_multiples (\<epsilon>::real) f X; x \<in> X\<rbrakk> \<Longrightarrow> \<exists> n::nat. f x = n * \<epsilon>"
-  by(auto simp add: epsilon_multiples_def)
-
-lemma epsilon_multiples_sum: 
- "\<lbrakk>finite X; epsilon_multiples \<epsilon> f X\<rbrakk> \<Longrightarrow> epsilon_multiples \<epsilon> id {sum f X}"
-proof(induction X rule: finite_induct)
-  case empty
-  then show ?case 
-    by(auto simp add: epsilon_multiples_def)
-next
-  case (insert x X)
-  obtain n where "(n::nat)*\<epsilon> = sum f X"
-    using insert(3,4)
-    by(force simp add: epsilon_multiples_def)
-  moreover obtain n' where "(n'::nat) * \<epsilon> = f x"
-    using insert (4)
-    by(force simp add: epsilon_multiples_def)
-  ultimately have "(n+n') *\<epsilon> = sum f (insert x X)"
-    using insert(2,1)
-    by(auto simp add: comm_monoid_add_class.sum.insert[simplified] algebra_simps)
-  thus ?case 
-    by(auto simp add: epsilon_multiples_def intro!: exI[of _ "n + n'"])
-qed
-
-(*TODO MOVE*) 
-lemma image_two_Collect:
-  "{f x y | x y. P x y} = (\<lambda> (x, y). f x y) ` { (x, y) | x y. P x y}"
-  by auto
-
-lemma finite_pairs_of_finite_set_set:
-  "finite G \<Longrightarrow> finite {(u, v). {u, v} \<in> G}"
-proof(induction G rule: finite_induct)
-  case (insert x F)
-  have "{a. case a of (u, v) \<Rightarrow> {u, v} \<in> {x} \<union> F}
-        = {a. case a of (u, v) \<Rightarrow> {u, v} \<in> F} \<union> {a. case a of (u, v) \<Rightarrow> {u, v}= x}"
-    by auto
-  moreover have "{(u, v). {u, v} = x} = {} \<or> (\<exists> a b. {(u, v). {u, v} = x} = {(a, b), (b, a)})"
-  proof(cases "\<exists>a b. {(u, v). {u, v} = x}= {(a, b), (b, a)}")
-    case True
-    then show ?thesis by auto
-  next
-    case False
-    note false = this
-    have x_not_weak_dbltn:"\<nexists> u v. {u, v} = x" 
-    proof(rule ccontr, goal_cases)
-      case 1
-      then obtain u v where "{u, v} = x" by auto
-      hence "{(u, v). {u, v} = x}= {(u, v), (v, u)}"
-        by fast
-      then show ?case 
-        using False by blast
-    qed
-    show ?thesis 
-    proof(cases "{(u, v). {u, v} = x} = {}")
-      case True
-      then show ?thesis by simp
-    next
-      case False
-      then obtain u v w where "u \<noteq> v" "v \<noteq> w" "u \<noteq> w" "{u, v, w} \<subseteq> x"
-        using x_not_weak_dbltn by simp
-      hence "{(u, v). {u, v} = x} = {}" by auto
-      then show ?thesis by simp
-    qed
-  qed
-  ultimately show ?case
-    by (auto simp add: insert(3))
-qed auto
-
-lemma finite_g_applied_double:
-  assumes "finite {f x y | x y. P x y}" 
-  shows   "finite {g (f x y) | x y. P x y}"
-proof-
-  have "{g (f x y) |x y. P x y} = g ` {f x y | x y. P x y}" by blast
-  thus ?thesis
-    using assms by auto
-qed
-
-lemma finite_g_applied_single:
-  assumes "finite {f x | x . P x}" 
-  shows   "finite {g (f x) | x. P x}"
-proof-
-  have "{g (f x) | x. P x} = g ` {f x | x . P x}" by auto
-  thus ?thesis 
-    using assms by auto
-qed
-
-lemma real_of_ereal_of_Min_or_ereal:
-  "\<lbrakk>finite A; A \<noteq> {}\<rbrakk> \<Longrightarrow> real_of_ereal (Min (ereal ` A)) = Min A"
-  by(auto simp add: ereal_Min[symmetric])
-
-lemma Collect_double_f_to_single: 
-  "{ g (f x y) | x y. P x y} = {g ff | ff. \<exists> x y. ff = f x y \<and> P x y}"
-  by auto
-
-lemma Collect_single_f_to_single: "{g (f x) | x. P x} = {g ff | ff. \<exists> x. ff = f x \<and> P x}"
-  by auto
 
 lemma Collect_vset_set:
   "vset_invar S \<Longrightarrow> Collect (vset_isin S) = vset_set S"
@@ -975,11 +707,6 @@ lemma w_weight_cong: "{u, v} \<in> G \<Longrightarrow> w {u, v} = weight u v"
     basic_graph_props(9)[of u]
     pick_one_and_another_props(3)[of "{u, v}"] sym_weights[of u v]
   by(auto simp add: w_def) 
-
-(*TODO MOVE*)
-lemma real_of_plus_distrib: "real (a + b) = real a + real b"
-and real_of_minus_distrib: "a \<ge> b \<Longrightarrow> real (a - b) = real a - real b"
-  by auto
 
 subsection \<open>One Step and Invariants\<close>
 

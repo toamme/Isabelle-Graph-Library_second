@@ -405,4 +405,22 @@ next
     by (auto simp add: alt_list_step alt_list_empty)
 qed
 
+lemma alt_list_distinct:
+  assumes "alt_list P Q xs"
+  assumes "distinct [x <- xs. P x]"
+  assumes "distinct [x <- xs. Q x]"
+  assumes "\<forall>x. \<not>(P x \<and> Q x)"
+  shows "distinct xs"
+  using assms
+  by (induction xs rule: induct_alt_list012)
+     (auto split: if_splits)
+
+lemma alt_list_adjacent:
+     "alt_list P Q (xs@[x,y]@ys) \<Longrightarrow> (P x \<and> Q y) \<or> (Q x \<and> P y)"
+  by (metis alt_list_append_1 alt_list_step)
+
+lemma alt_list_split_off_first_two:
+  "alt_list P Q (x#y#xs) \<Longrightarrow> alt_list P Q xs"
+  by (simp add: alt_list_step)
+
 end
