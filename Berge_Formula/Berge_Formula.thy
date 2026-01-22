@@ -630,11 +630,14 @@ next
       by (meson perfect_matchingE perfect_matchingE)
     then have "card M' \<le> card M" 
       by (simp add: assms(5))
-    then have "card (Vs M') \<le> card (Vs M)" 
-      using M'
-      apply(simp add: perfect_matching_def) 
-      by (smt (verit) Vs_subset assms(2) card_mono graph_invar_subgraph matching_subgraph
-              matching_vertices_double_size obtain_subset_with_card_n)
+    moreover have "graph_invar M'"
+      using \<open>graph_matching G M'\<close> assms(1) graph_invar_subset by auto
+    moreover have "graph_invar M"
+      using assms(1,2) graph_invar_subset by auto
+    ultimately have "card (Vs M') \<le> card (Vs M)" 
+      using M' assms(1,2)
+      by(auto elim!: perfect_matchingE 
+           simp add: matching_vertices_double_size[symmetric]) 
     then have "card (Vs M) \<ge> card (Vs G)" 
       by (metis M' perfect_matchingE)
     have "Vs M \<subseteq> Vs G" 
@@ -703,7 +706,7 @@ next
       using assms(7) by presburger
     have "finite (Vs ?H)" using `Vs ?H = Vs G \<union> A` 
       by (simp add: assms(1) assms(6))
-    have "graph_invar ?H" 
+    have graph_invar_H:"graph_invar ?H" 
       using `finite (Vs ?H)` assms(1) assms(8)
       by (smt (verit) Un_iff dblton_graph_def disjoint_iff_not_equal mem_Collect_eq)
     obtain Mh where Mh:"perfect_matching ?H Mh" 
@@ -805,8 +808,8 @@ next
     then have "2* card M + ?k \<ge> 2*card Mh - card A" 
       by (metis assms(7))
     also have "2*card Mh - card A = card (Vs Mh) - card A" 
-      using Mh dblton_graph_subset matching_vertices_double_size
-      by (fastforce simp add: perfect_matching_def matching_vertices_double_size subset_eq)
+      using Mh dblton_graph_subset matching_vertices_double_size graph_invar_H
+      by(force elim!: perfect_matchingE simp add: matching_vertices_double_size[symmetric])
     also have "card (Vs Mh) - card A = card (Vs ?H) - card A" 
       using 6 by presburger
     also  have "card (Vs ?H) - card A = card(Vs G)" 

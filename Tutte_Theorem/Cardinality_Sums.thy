@@ -1,5 +1,5 @@
 theory Cardinality_Sums
-  imports Bipartite
+  imports Basic_Matching.Matching
 begin
 
 lemma matching_int_card_is_sum:

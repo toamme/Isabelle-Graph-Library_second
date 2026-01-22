@@ -368,6 +368,83 @@ lemma (in graph_abs) matching_card_vs':
   shows "card G = card (Vs G) / 2"
   using assms by(simp add: matching_card_vs[symmetric])
 
+lemma neighbours_of_Vs_in_matching_singl:
+  assumes "x \<in> Vs M"
+  assumes "matching M"
+  assumes" M \<subseteq> G"
+  assumes "graph_invar G"
+  shows "\<exists> v. (neighbours_of_Vs M {x}) = {v}"
+proof -
+  have "\<exists>!e. e \<in> M \<and> x \<in> e"  using matching_def2 assms(2) assms(1)  by metis
+  then obtain e where e: " e \<in> M \<and> x \<in> e" by auto
+  then have x_one_edge:"\<forall> e' \<in> M. e' \<noteq> e \<longrightarrow> x \<notin> e'" 
+    using \<open>\<exists>!e. e \<in> M \<and> x \<in> e\<close> by blast
+  have "\<exists>v. (\<exists> e\<in>M. x \<in> e \<and> v\<in>e \<and> x \<noteq> v)"
+    by (metis assms(3) assms(4) dblton_graphE dblton_graph_subset e insertCI)
+  then obtain v where "(\<exists> e\<in>M. x\<in> e \<and> v \<in> e \<and> x \<noteq> v)" by auto
+  have "\<forall>v'. (\<exists> e\<in>M. x\<in> e \<and> v'\<in>e \<and> x \<noteq> v') \<longrightarrow> v = v'"
+    by (metis \<open>\<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v\<close> assms(3) assms(4) dblton_graphE dblton_graph_subset
+              insertE singletonD x_one_edge) 
+  then have "\<exists>!v. \<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v" 
+    using \<open>\<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v\<close> by blast
+  then show ?thesis unfolding neighbours_of_Vs_def 
+    by auto
+qed
+
+lemma vertex_not_in_source_then_not_neighbours_of_Vs:
+  assumes "matching M"
+  assumes "{x, y} \<in> M"
+  assumes "x \<notin> X"
+  shows "y \<notin> neighbours_of_Vs M X"
+proof(rule ccontr)
+  assume "\<not> y \<notin> neighbours_of_Vs M X"
+  then show False 
+    unfolding neighbours_of_Vs_def 
+    by (smt (verit) assms insert_iff matching_unique_match mem_Collect_eq singleton_iff)
+qed
+
+lemma card_ther_vertex:
+  assumes "graph_invar G"
+  assumes "matching M"
+  assumes" M \<subseteq> G"
+  assumes "X \<subseteq> Vs M"
+  shows" card X = card (neighbours_of_Vs M X)" 
+proof -
+  have "finite X" using assms(1)
+    by (meson Vs_subset assms(3) assms(4) finite_subset)
+  show ?thesis
+    using \<open>finite X\<close> \<open>X \<subseteq> Vs M\<close>
+  proof (induct X)
+    case empty
+    then show ?case 
+      by (simp add: neighbours_of_Vs_def)
+  next
+    case (insert x F)  
+    then have "\<exists>v. neighbours_of_Vs M {x} = {v}"
+      using neighbours_of_Vs_in_matching_singl assms(1-3) by fastforce
+    then obtain v where v:"neighbours_of_Vs M {x} = {v}" by auto
+    then obtain e where e: "e \<in> M \<and> x \<in> e \<and> v \<in> e \<and> x \<noteq> v" 
+      unfolding neighbours_of_Vs_def by auto
+    then have "e = {x, v}" 
+      using assms(1) assms(3) by fastforce
+    then have "v \<notin> neighbours_of_Vs M F" 
+      by (metis assms(2) e insert.hyps(2) vertex_not_in_source_then_not_neighbours_of_Vs)
+    then have  "neighbours_of_Vs M {x} \<inter> neighbours_of_Vs M F = {}" 
+      by (simp add: v)
+    then have card_sum_u: "card (neighbours_of_Vs M {x}) + card( neighbours_of_Vs M F) = 
+                  card (neighbours_of_Vs M {x} \<union> neighbours_of_Vs M F)"
+      by (metis finite_neighbours_of_Vs assms(1) assms(3) card_Un_disjoint)
+    have " neighbours_of_Vs M (insert x F) = neighbours_of_Vs M F \<union> neighbours_of_Vs M {x}"
+      by (meson neighbours_of_Vs_insert)
+    then have 3: "card (neighbours_of_Vs M (insert x F)) = card (neighbours_of_Vs M F) + 1"
+      using v card_sum_u  by simp
+    have "card (insert x F) = card F + 1"
+      by (simp add: insert.hyps(1) insert.hyps(2)) 
+    then show  "card (insert x F) = card (neighbours_of_Vs M (insert x F))" using 3
+      by (metis insert.hyps(3) insert.prems insert_subset)
+  qed
+qed
+
 subsection \<open>Augmenting and Alternating Paths\<close>
 
 definition matching_augmenting_path where
@@ -840,6 +917,10 @@ lemma perfect_matching_edgeE:
   obtains e where "e \<in> M" "v \<in> e"
   using assms
   by (auto dest: perfect_matchingD elim!: vs_member_elim)
+
+lemma perfect_matching_member[iff?]: 
+  "perfect_matching G M \<longleftrightarrow> matching M \<and> M \<subseteq> G \<and> Vs M = Vs G"
+  unfolding perfect_matching_def by auto
 
 lemma (in graph_abs) perfect_matching_is_max_card_matching: 
   assumes perfect: "perfect_matching G M"
@@ -1375,6 +1456,19 @@ proof(rule ccontr, goal_cases)
     by(auto elim!: min_weight_matchingE)
 qed
 
+subsubsection \<open>Matching Specific Vertices\<close>
+
+definition cover_matching where
+  "cover_matching G M A = (matching M \<and> M \<subseteq> G \<and> A \<subseteq> Vs M)"
+
+lemma cover_matching_neighbours_of_Vs_card:
+  fixes G :: "'a set set"
+  assumes "cover_matching G M A" "graph_invar G"
+  shows "\<forall> X \<subseteq> A. card (neighbours_of_Vs M X) = card X"
+  using assms card_ther_vertex 
+  unfolding cover_matching_def 
+  by fastforce
+
 subsection \<open>Bipartite Matching\<close>
 
 lemma perfect_matching_bipartite_card_eq:
@@ -1728,5 +1822,32 @@ corollary perfect_matching_in_balanced_complete_bipartite:
   shows "\<exists> M. perfect_matching G M"
   using extend_to_perfect_matching_in_balanced_complete_bipartite[where M = empty] assms
   by auto
+
+lemma part_bipart_of_cover_matching:
+  fixes G :: "'a set set"
+  fixes M
+  assumes "partitioned_bipartite G A"
+  assumes "cover_matching G M A"
+  assumes "graph_invar G"
+  shows "partitioned_bipartite M A"
+proof -
+  have M_subs:"M \<subseteq> G" 
+    using assms(2) unfolding cover_matching_def by auto
+  have "graph_invar G"
+    using assms(1,3) partitioned_bipartite_def
+    by auto
+  then have "graph_invar M"
+    using M_subs graph_invar_subset
+    by auto
+  have "A \<subseteq> Vs M" 
+    using assms(2) unfolding cover_matching_def by auto
+  have "\<forall> e \<in> G. \<exists> u v. e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs G - A)"
+    using assms(1) unfolding partitioned_bipartite_def by auto
+  then have "\<forall>e \<in> M. \<exists> u v. e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs M - A)" 
+    by (metis M_subs Diff_iff edges_are_Vs insert_commute subsetD)
+  then show ?thesis 
+    unfolding partitioned_bipartite_def
+    using \<open>A \<subseteq> Vs M\<close> \<open>graph_invar M\<close>  by auto
+qed
 
 end

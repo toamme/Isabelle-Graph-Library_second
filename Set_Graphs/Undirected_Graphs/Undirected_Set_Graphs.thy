@@ -169,6 +169,8 @@ lemma int_minus_leq:"a \<le> b \<Longrightarrow> int b - int a = int ( b- a)"
 
 section\<open>Undirected Graphs\<close>
 
+subsection \<open>Vertices\<close>
+
 definition Vs where "Vs G = \<Union> G"
 
 lemma Vs_subset:
@@ -208,6 +210,27 @@ lemma finite_Vs_then_finite:
   shows "finite G"
   using assms
   by (metis Vs_def finite_UnionD)
+
+lemma edge_commute: "{u,v} \<in> G \<Longrightarrow> {v,u} \<in> G"
+  by (simp add: insert_commute)
+
+lemma vs_empty[simp]: "Vs {} = {}"
+  by (simp add: Vs_def)
+
+lemma vs_insert: "Vs (insert e E) = e \<union> Vs E"
+  unfolding Vs_def by simp
+
+lemma vs_union: "Vs (A \<union> B) = Vs A \<union> Vs B"
+  unfolding Vs_def by simp
+
+lemma vs_compr: "Vs {{u, v} |v. v \<in> ns} = (if ns = {} then {} else {u} \<union> ns)"
+  unfolding Vs_def by auto
+
+lemma card_Vs_diff: 
+  "\<lbrakk>G \<subseteq> G'; finite (Vs G)\<rbrakk> \<Longrightarrow> card (Vs G' - Vs G) = card (Vs G') - card (Vs G)"
+  by(auto intro!: card_Diff_subset[OF _ Vs_subset])
+
+subsection \<open>Degrees\<close>
 
 definition degree where
   "degree G v = card' ({e. v \<in> e} \<inter> G)"
@@ -256,6 +279,8 @@ lemma less_edges_less_degree:
 lemma degree_insert_leq: "degree G e \<le> degree (insert e' G) e"
   by (simp add: subset_edges_less_degree subset_insertI)
 
+subsection \<open>Neighbours\<close>
+
 definition "neighbourhood G v = {u. {u,v} \<in> G}"
 
 lemma in_neighD[dest]: "v \<in> neighbourhood G u \<Longrightarrow> {u, v} \<in> G"
@@ -277,6 +302,36 @@ lemma self_not_in_Neighbourhood:
 lemma Neighbourhood_neighbourhood_union_inter:
   "Neighbourhood G V = \<Union> (neighbourhood G ` V) - V"
   by(auto simp add: Neighbourhood_def neighbourhood_def  insert_commute)
+
+definition neighbours_of_Vs where
+  "neighbours_of_Vs G X  = {v. \<exists> u \<in> X. \<exists> e \<in> G. v \<noteq> u \<and> u \<in> e \<and> v\<in> e}"
+
+lemma neighbours_of_Vs_is_union:
+  shows "neighbours_of_Vs G X = \<Union> {r. \<exists> x\<in>X. r = (neighbours_of_Vs G {x})}"
+proof -
+  show ?thesis unfolding neighbours_of_Vs_def by blast
+qed
+
+lemma neighbours_of_Vs_subset:
+  assumes "A \<subseteq> X"
+  shows "neighbours_of_Vs G A \<subseteq> neighbours_of_Vs G X"
+  unfolding neighbours_of_Vs_def 
+  by (smt (verit, best) Collect_mono assms subset_eq)
+
+lemma neighbours_of_Vs_insert: 
+  "neighbours_of_Vs M (insert x F) = neighbours_of_Vs M F \<union> neighbours_of_Vs M {x}"
+  unfolding neighbours_of_Vs_def  by blast
+
+lemma graph_subs_reach:
+  assumes "M \<subseteq> G"
+  shows "neighbours_of_Vs M X \<subseteq> neighbours_of_Vs G X"
+  using assms subset_eq unfolding neighbours_of_Vs_def  by fastforce
+
+lemma neighbours_of_Vs_un: 
+  "neighbours_of_Vs G (Y \<union> X) = (neighbours_of_Vs G Y - neighbours_of_Vs G X) \<union> neighbours_of_Vs G X"
+  unfolding neighbours_of_Vs_def using UnE by blast
+
+subsection \<open>Bigraphs\<close>
 
 locale graph_defs =
   fixes G :: "'a set set"
@@ -344,6 +399,10 @@ lemma graph_invar_subset[intro]:
   using dblton_graph_subset
   by (metis dblton_graph_finite_Vs finite_subset)
 
+lemma graph_invar_diff: "graph_invar G \<Longrightarrow> graph_invar (G - X)"
+  using Vs_subset[of "G - X" G]
+  by (auto intro!: finite_subset[of "Vs (G - X)" "Vs G"])
+
 lemma  undirected_of_directed_of_undirected_idem: 
   "graph_invar G \<Longrightarrow> {{v1, v2} |v1 v2. (v1,v2) \<in> {(u, v). {u, v} \<in> G}} = G" 
   by fast
@@ -387,21 +446,6 @@ lemma graph_invar_insert[simp]: "u \<noteq> v \<Longrightarrow> graph_invar G \<
   by (fastforce simp: Vs_def  intro!: dblton_graphI)
 
 type_synonym 'a graph = "'a set set"
-
-lemma edge_commute: "{u,v} \<in> G \<Longrightarrow> {v,u} \<in> G"
-  by (simp add: insert_commute)
-
-lemma vs_empty[simp]: "Vs {} = {}"
-  by (simp add: Vs_def)
-
-lemma vs_insert: "Vs (insert e E) = e \<union> Vs E"
-  unfolding Vs_def by simp
-
-lemma vs_union: "Vs (A \<union> B) = Vs A \<union> Vs B"
-  unfolding Vs_def by simp
-
-lemma vs_compr: "Vs {{u, v} |v. v \<in> ns} = (if ns = {} then {} else {u} \<union> ns)"
-  unfolding Vs_def by auto
 
 lemma graph_abs_empty[simp]: "graph_invar {}"
   by (simp add: dblton_graph_def)
@@ -474,9 +518,54 @@ lemma graph_abs_no_empty:
   "\<lbrakk>graph_abs M; {} \<in> M\<rbrakk> \<Longrightarrow> False"
   by(auto simp add: graph_abs_def)
 
-lemma card_Vs_diff: 
-  "\<lbrakk>G \<subseteq> G'; finite (Vs G)\<rbrakk> \<Longrightarrow> card (Vs G' - Vs G) = card (Vs G') - card (Vs G)"
-  by(auto intro!: card_Diff_subset[OF _ Vs_subset])
+lemma finite_neighbours_of_Vs:
+  assumes" M \<subseteq> G"
+  assumes "graph_invar G"
+  shows "finite (neighbours_of_Vs M X)" 
+proof -
+  have 1: "finite (Vs M)"
+    by (meson Vs_subset assms(2) assms(1) finite_subset)
+  have 2: "(neighbours_of_Vs M X) \<subseteq> Vs M" 
+    by (smt (verit, best) mem_Collect_eq neighbours_of_Vs_def subsetI vs_member)
+  then show ?thesis using  1 2 
+    using finite_subset by blast
+qed
+
+lemma card_edge:
+  assumes "graph_invar G" "e \<in> G"
+  shows "card e = 2"
+  using assms 
+  by (auto simp add: assms card_2_iff dblton_graph_def)
+
+lemma neighbours_of_Vs_remove_vert:
+  assumes "graph_invar G"
+  assumes "S \<inter> X = {}"
+  shows "neighbours_of_Vs G X \<subseteq> S \<union> neighbours_of_Vs (G - {e. e \<in> G \<and> e \<inter> S \<noteq> {}}) X"
+proof 
+  fix y
+  assume "y \<in> neighbours_of_Vs G X"
+  then obtain x e  where x_e: "x \<in> X \<and> e \<in> G \<and> x \<noteq> y \<and> x \<in> e \<and> y \<in> e" 
+    unfolding neighbours_of_Vs_def by blast
+  then have e: "e = {x, y}"
+    using assms(1) by fastforce
+  then have "x \<notin> S" 
+    using assms(2)  x_e by blast
+  show "y \<in> S \<union> neighbours_of_Vs (G - {e. e \<in> G \<and> e \<inter> S \<noteq> {}}) X" 
+  proof(cases "y \<in> S")
+    case True
+    then show ?thesis 
+      by blast
+  next
+    case False 
+    then have "e \<inter> S = {}" 
+      using `x \<notin> S` e by blast
+    then have "e \<notin> {e. e \<in> G \<and> e \<inter> S \<noteq> {}}" 
+      using False \<open>x \<notin> S\<close> e  
+      by blast  
+    then show ?thesis 
+      unfolding neighbours_of_Vs_def using False \<open>x \<notin> S\<close> x_e by force
+  qed
+qed
 
 subsubsection \<open>Removing Vertices from Graphs\<close>
 text \<open>
@@ -1529,6 +1618,28 @@ proof(safe)
     by blast
 qed (auto simp add: component_edges_def)
 
+lemma edge_in_component_edges:
+  assumes "graph_invar G"
+  assumes "e \<in> G"
+  assumes "e \<subseteq> C" 
+  shows "e \<in> component_edges G C"
+  using assms component_edges_def by fastforce 
+
+lemma graph_component_edges_partition:
+  assumes "graph_invar G"
+  shows "\<Union> (components_edges G) = G"
+  unfolding components_edges_def
+proof(safe)
+  fix e
+  assume "e \<in> G" 
+  then obtain C where "e \<subseteq> C" "C \<in> connected_components G"
+    by (metis assms dblton_graphE edge_in_component)
+  moreover then have "e \<in> component_edges G C" 
+    by (simp add: \<open>e \<in> G\<close> assms edge_in_component_edges)
+  ultimately show "e \<in> \<Union>{component_edges G C |C.  C \<in> connected_components G}" 
+    by blast
+qed (auto simp add: component_edges_def)
+
 (*
   The edges in that bigger equivalence class can be ordered in a path, since the degree of any
   vertex cannot exceed 2. Also that path should start and end with edges from the bigger matching.
@@ -2374,7 +2485,19 @@ lemma connected_components_insert_1:
   using assms connected_components_insert_2 by fastforce
 
 lemma in_connected_component_in_edges: "v \<in> connected_component G u \<Longrightarrow> v \<in> Vs G \<or> u = v"
-  by(auto simp: connected_component_def Vs_def dest: walk_endpoints(2) elim!: reachableE vs_member_elim)
+  by(auto simp: connected_component_def Vs_def 
+          dest: walk_endpoints(2)
+         elim!: reachableE vs_member_elim)
+
+lemma graph_component_partition:
+  shows "\<Union> (connected_components G) = Vs G" 
+  unfolding connected_components_def
+proof(safe)
+  fix y
+  assume "y \<in> Vs G"
+  then show "y \<in> \<Union> {connected_component G v |v. v \<in> Vs G}" 
+    using  in_own_connected_component by fastforce
+qed (metis in_connected_component_in_edges)
 
 lemma in_con_comp_has_walk: assumes "v \<in> connected_component G u" "v \<noteq> u"
   obtains p where "walk_betw G u p v"
@@ -4608,7 +4731,7 @@ next
   qed
 qed
 
-subsubsection \<open>Bipartite Graphs\<close>
+subsection \<open>Bipartite Graphs\<close>
 text \<open>
   We are considering the online \<^emph>\<open>bipartite\<close> matching problem, hence, a definition of
   bipartiteness.
@@ -4894,5 +5017,85 @@ lemma balanced_complete_bipartiteE:
   "balanced_complete_bipartite G L R \<Longrightarrow> complete_bipartite G L R"
   "balanced_complete_bipartite G L R \<Longrightarrow> card L = card R"
   by(auto simp add: balanced_complete_bipartite_def)
+
+definition partitioned_bipartite where
+  "partitioned_bipartite G X = (X \<subseteq> Vs G \<and> 
+              (\<forall> e \<in> G. \<exists> u v. e = {u, v} \<and> (u \<in> X \<and> v \<in> Vs G - X)))"
+
+lemma part_biparite_is_bipartite: "partitioned_bipartite G X \<longrightarrow> is_bipartite G "
+  unfolding  partitioned_bipartite_def is_bipartite_def by auto
+
+lemma neighbours_of_Vs_bipartite:
+  assumes "partitioned_bipartite G A"
+  shows "neighbours_of_Vs G A = Vs G - A" 
+proof -
+  have partition:"\<forall> e \<in> G. \<exists> u v. e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs G - A)"
+    using assms unfolding partitioned_bipartite_def by auto
+  show ?thesis
+  proof
+    show "neighbours_of_Vs G A \<subseteq> Vs G - A"
+      unfolding neighbours_of_Vs_def using partition insert_absorb insert_commute by fastforce
+    show "Vs G - A \<subseteq> neighbours_of_Vs G A"
+    proof
+      fix x
+      assume "x \<in> Vs G - A"
+      then obtain e where "e \<in> G \<and> x \<in> e" 
+        using DiffD1 vs_member_elim  by metis
+      then obtain u  where 2:"e = {u, x} \<and> (u \<in> A \<and> x \<in> Vs G - A) \<and> u \<noteq> x" 
+        using partition \<open>x \<in> Vs G - A\<close> by fastforce
+      then have "u \<in> e" 
+        by blast
+      then show "x \<in> neighbours_of_Vs G A" 
+        unfolding neighbours_of_Vs_def 
+        by (smt (verit) "2" \<open>e \<in> G \<and> x \<in> e\<close> mem_Collect_eq)
+    qed
+  qed
+qed
+
+lemma partitioned_bipartite_swap:
+  assumes "partitioned_bipartite G A"
+  shows "partitioned_bipartite G (Vs G - A)" 
+  using assms unfolding partitioned_bipartite_def  by fastforce 
+
+lemma neighbours_of_Vs_intersection_is_empty:
+  assumes "partitioned_bipartite G A"
+  shows" \<forall>X \<subseteq> A. neighbours_of_Vs G X \<inter> X = {}" 
+proof safe
+  fix X x
+  assume "X \<subseteq> A" "x \<in> neighbours_of_Vs G X" "x \<in> X"
+  then show "x \<in> {}" 
+    by (metis Diff_iff assms in_mono neighbours_of_Vs_subset neighbours_of_Vs_bipartite)
+qed
+
+lemma part_bipartite_diff:
+  assumes "partitioned_bipartite G A" "graph_invar G"
+  shows "partitioned_bipartite (G - X) (A \<inter> Vs (G - X))"
+proof -
+  let ?A' = "(A \<inter> Vs (G - X))" 
+  have 2: "graph_invar (G - X)" 
+    by (metis Diff_subset assms graph_invar_subset partitioned_bipartite_def)
+  have  "A \<subseteq> Vs G" 
+    by (metis assms partitioned_bipartite_def)
+  have 3: "?A' \<subseteq> Vs (G - X)" by blast 
+  have "( \<forall> e \<in> G - X. \<exists> u v.  e = {u, v} \<and> (u \<in> ?A' \<and> v \<in> Vs (G - X) - ?A'))"
+  proof 
+    fix e
+    assume "e \<in> G - X"
+    then obtain u v where u'_v': "e = {u, v} \<and> u \<noteq> v \<and> (u \<in> A \<and> v \<in> Vs G - A)"
+      using `partitioned_bipartite G A` unfolding partitioned_bipartite_def 
+      by (metis (no_types, lifting) Diff_iff \<open>e \<in> G - X\<close>)
+
+    then have "u \<in> ?A'" 
+      using UnionI u'_v' \<open>e \<in> G - X\<close> by auto
+
+    then have "v \<in> Vs (G - X) - ?A'"
+      using IntE u'_v' \<open>e \<in> G - X\<close> by auto
+    then show "\<exists> ua va. e = {ua, va} \<and> (ua \<in> ?A' \<and> va \<in> Vs (G - X) - ?A')"
+      using \<open>u \<in> ?A'\<close> u'_v' by blast
+  qed
+  then show ?thesis 
+    using "2" 3 
+    by (simp add: partitioned_bipartite_def)
+qed
 
 end

@@ -2364,7 +2364,7 @@ proof -
 qed
 
 lemma perfect_matching_nonzero_det:
-  assumes "\<exists> M. perfect_matching G M"
+  assumes "\<exists> M. perfect_matching G M" "graph_invar G"
   shows "det (tutte_matrix) \<noteq> 0"
 proof -
   obtain M where M:"perfect_matching G M" 
@@ -2374,7 +2374,7 @@ proof -
   have "Vs M = UNIV" 
     by (metis \<open>perfect_matching G M\<close> perfect_matching_member univ)
   have "graph_invar M" 
-    by (meson M graph_invar_subset perfect_matchingE)
+    by (meson M graph_invar_subset perfect_matchingE assms(2))
   let ?singletons = "(\<lambda> i. {e - {i}| e. e \<in> M \<and> i \<in> e})" 
   have "\<forall> i \<in> Vs M. is_singleton (?singletons i)"
   proof
@@ -2567,8 +2567,10 @@ proof -
 qed
 
 theorem perfect_matching_iff_nonzero_det:
+  assumes "graph_invar G"
   shows "(\<exists> M. perfect_matching G M) \<longleftrightarrow> det (tutte_matrix) \<noteq> 0"
-  using no_perfect_matching_zero_det tutte_matrix.perfect_matching_nonzero_det 
-    tutte_matrix_axioms by blast
+  using no_perfect_matching_zero_det tutte_matrix.perfect_matching_nonzero_det[OF _ _ assms] 
+        tutte_matrix_axioms 
+  by blast
 end
 end
