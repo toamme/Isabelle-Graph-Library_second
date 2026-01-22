@@ -12,7 +12,6 @@ subsection \<open>Preparation, to be moved\<close>
 no_translations
   "_Collect p P"      <= "{p. P}"
   "_Collect p P"      <= "{p|xs. P}"
-  "_CollectIn p A P"  <= "{p : A. P}"
 
 (*TODO MOVE*)
 

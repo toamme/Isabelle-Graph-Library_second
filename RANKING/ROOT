@@ -10,7 +10,6 @@ session "RANKING" = "HOL" +
 
   theories
     "More_List"
-    "More_Graph"
     "Misc"
     "Ranking"
     "Ranking_Probabilistic"

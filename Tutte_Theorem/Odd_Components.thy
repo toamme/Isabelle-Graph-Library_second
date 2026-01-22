@@ -1,5 +1,5 @@
 theory Odd_Components
-  imports RANKING.More_Graph Hall_Frobenius Cardinality_Sums
+  imports Hall_Frobenius Cardinality_Sums
 begin
 
 section \<open>Odd and Even Connected Components\<close>

@@ -1,7 +1,7 @@
 theory Primal_Dual_Path_Search
   imports Basic_Matching.Berge Directed_Set_Graphs.More_Arith 
           Directed_Set_Graphs.More_Logic "HOL-Data_Structures.Set_Specs"
-          "HOL-Data_Structures.Map_Specs" RANKING.More_Graph Basic_Matching.Alternating_Forest_Spec 
+          "HOL-Data_Structures.Map_Specs"  Basic_Matching.Alternating_Forest_Spec 
           Key_Value_Queue_Spec Path_Search_Result
 begin
 

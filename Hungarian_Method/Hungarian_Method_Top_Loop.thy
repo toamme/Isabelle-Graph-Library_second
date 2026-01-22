@@ -8,7 +8,6 @@ section \<open>Top Loop for Hungarian Method\<close>
 no_translations
   "_Collect p P"      <= "{p. P}"
   "_Collect p P"      <= "{p|xs. P}"
-  "_CollectIn p A P"  <= "{p : A. P}"
 
 datatype result = success | failure | notyetterm
 

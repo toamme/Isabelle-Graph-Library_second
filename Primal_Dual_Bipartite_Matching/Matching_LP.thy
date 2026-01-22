@@ -1,6 +1,6 @@
 theory Matching_LP
   imports
-    Even_More_Graph
+    Basic_Matching.Matching
     Jordan_Normal_Form.Matrix 
 begin
 subsection \<open>Definitions of certain matchings, to be moved\<close>

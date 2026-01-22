@@ -9,7 +9,6 @@ sessions
   (*theories [document=false]*)
 
   theories
-    "Even_More_Graph"
     "More_Lattices_Big"
     "Measure_Misc"
     "Order_Relations"
