@@ -1,6 +1,9 @@
 theory WBP_Matching_Exec
-  imports WBP_Matching_Reductions_Exec  "HOL-Library.Product_Lexorder"
+  imports Basic_Matching.WBP_Matching_Reductions_Exec  "HOL-Library.Product_Lexorder"
+          Hungarian_Method_Instantiation
 begin
+
+hide_const PST_RBT.delete PST_RBT.update left
 
 section \<open>Executable Algorithms for Weighted Bipartite Matching\<close>
 

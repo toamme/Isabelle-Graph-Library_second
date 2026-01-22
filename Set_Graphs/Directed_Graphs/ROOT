@@ -13,12 +13,16 @@ session "Directed_Set_Graphs" = "HOL-Eisbach" +
 
   directories
     Adaptors
+    
+  theories [document = false]
+   More_Logic
+   More_Lists
+   More_Arith
+   enat_misc
 
   theories
     Tree_Filter
-    More_Lists
     Awalk
-    enat_misc
     Pair_Graph
     Awalk_Defs
     Pair_Graph_AVL

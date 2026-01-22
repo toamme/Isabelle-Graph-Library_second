@@ -1,6 +1,6 @@
 theory Hungarian_Example
   imports Hungarian_Method_Instantiation  Directed_Set_Graphs.Pair_Graph_RBT
-         WBP_Matching_Exec
+          WBP_Matching_Exec
 begin
 
 section \<open>6 Matchings on Bipartite Example Graph\<close>

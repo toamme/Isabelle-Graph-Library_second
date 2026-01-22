@@ -1,16 +1,12 @@
 theory Matching_Augmentation_Executable
   imports
-   Primal_Dual_Bipartite_Matching.Even_More_Graph
+   Matching
    Directed_Set_Graphs.Summary
    Undirected_Set_Graphs.Pair_Graph_Berge_Adaptor
    "HOL-Data_Structures.Map_Specs"
    Undirected_Set_Graphs.Directed_Undirected
+   Berge
 begin
-
-no_translations
-  "_Collect p P"      <= "{p. P}"
-  "_Collect p P"      <= "{p|xs. P}"
-  "_CollectIn p A P"  <= "{p : A. P}"
 
 lemma UD_symmetric_diff_hom:
   assumes "symmetric_digraph A" 

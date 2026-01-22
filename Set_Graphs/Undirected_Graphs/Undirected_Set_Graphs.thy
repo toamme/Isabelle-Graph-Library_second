@@ -1,7 +1,7 @@
+(*Authors: Mohammad Abdulaziz, Thomas Ammer, Adem Rimpapa*)
 theory Undirected_Set_Graphs
   imports "Directed_Set_Graphs.enat_misc" "HOL-Eisbach.Eisbach_Tools" "HOL-Library.FuncSet" 
-          "HOL-Library.Disjoint_Sets"
-(*needed for proofs on number + cardinality of comps*)
+          "HOL-Library.Disjoint_Sets" Main
 begin
 
 subsection \<open>Misc\<close>

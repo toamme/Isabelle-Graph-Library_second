@@ -5,7 +5,7 @@
 subsection \<open>More on Graphs\label{sec:more-graph}\<close>
 theory More_Graph
   imports
-    Berge_Lemma.Berge
+    Basic_Matching.Berge
     "HOL-Library.FuncSet"
     "HOL-Library.LaTeXsugar"
 begin

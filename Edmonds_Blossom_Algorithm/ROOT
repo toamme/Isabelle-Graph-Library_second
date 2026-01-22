@@ -1,4 +1,4 @@
-session "Blossom" = "Berge_Lemma" +
+session "Blossom" = Basic_Matching +
   options [document = pdf, document_output = "output"]
 
   sessions

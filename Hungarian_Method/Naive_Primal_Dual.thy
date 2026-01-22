@@ -1,6 +1,6 @@
 theory Naive_Primal_Dual
-  imports  Flow_Theory.More_Arith "HOL-Data_Structures.Set_Specs"
-    "HOL-Data_Structures.Map_Specs"  Flow_Theory.More_Logic
+  imports Directed_Set_Graphs.More_Arith "HOL-Data_Structures.Set_Specs"
+    "HOL-Data_Structures.Map_Specs"  Directed_Set_Graphs.More_Logic
     Primal_Dual_Bipartite_Matching.Matching_LP
     Undirected_Set_Graphs.Directed_Undirected
 begin

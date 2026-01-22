@@ -4,7 +4,7 @@ session "Primal_Dual_Bipartite_Matching" = "HOL-Probability" +
 sessions
     "LP_Duality"
     "Treaps"
-    "Berge_Lemma"
+    "Basic_Matching"
     "RANKING"
   (*theories [document=false]*)
 

@@ -1,4 +1,4 @@
-session "Berge_Lemma" = "Undirected_Set_Graphs" +
+session Alternating_Lists = "Undirected_Set_Graphs" +
   options [document = pdf, document_output = "output"]
 
   sessions
@@ -7,10 +7,7 @@ session "Berge_Lemma" = "Undirected_Set_Graphs" +
 
   theories
     Alternating_Lists
-    Matching
     Bipartite_Alternating_Lists
-    Berge
     
-
   document_files
     "root.tex"

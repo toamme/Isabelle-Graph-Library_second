@@ -3,8 +3,8 @@ session "Hungarian_Method" = "HOL-Library" +
 
 sessions
   Graph_Algorithms_Dev
-  "Berge_Lemma"
-  "RANKING"
+  Alternating_Lists
+  Basic_Matching
   Priority_Search_Trees
   Flow_Theory
   Primal_Dual_Bipartite_Matching
@@ -15,13 +15,9 @@ theories
 	Key_Value_Queue_Spec
 	Ordered_Map_Heap
 	Naive_Primal_Dual
-	Matching_Augmentation_Executable
-	Alternating_Forest_Executable
 	Primal_Dual_Path_Search
 	Hungarian_Method_Top_Loop
 	Hungarian_Method_Instantiation
-	Weighted_Matchings_Reductions
-	WBP_Matching_Reductions_Exec
 	WBP_Matching_Exec
 	Hungarian_Example	
 

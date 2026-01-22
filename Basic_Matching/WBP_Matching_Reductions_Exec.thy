@@ -1,8 +1,12 @@
 theory WBP_Matching_Reductions_Exec
-  imports Hungarian_Method_Instantiation Weighted_Matchings_Reductions
+  imports Directed_Set_Graphs.More_Arith Undirected_Set_Graphs.Directed_Undirected
+          Directed_Set_Graphs.Pair_Graph_RBT Graph_Algorithms_Dev.RBT_Map_Extension
+          Weighted_Matchings_Reductions
 begin
 
 section \<open>Reductions for Weighted Bipartite Matching Executable\<close>
+
+hide_const R
 
 notation abstract_real_map ("\<Parallel>_\<Parallel>")
 

@@ -1,5 +1,5 @@
 theory Bipartite
-  imports Berge_Lemma.Berge "HOL.Set" RANKING.More_Graph
+  imports Basic_Matching.Berge "HOL.Set" RANKING.More_Graph
 begin
 
 (*TODO: use definition of bipartite graphs from RANKING*)

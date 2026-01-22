@@ -2,7 +2,7 @@
 section \<open>Basic Theory on Matchings\<close>
 
 theory Matching
-  imports Undirected_Set_Graphs.Undirected_Set_Graphs Alternating_Lists
+  imports Undirected_Set_Graphs.Undirected_Set_Graphs Alternating_Lists.Alternating_Lists
 begin
 
 subsection \<open>Misc\<close>

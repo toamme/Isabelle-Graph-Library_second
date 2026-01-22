@@ -6,7 +6,7 @@ session "RANKING" = "HOL" +
     "HOL-Real_Asymp"
     "Monad_Normalisation"
     "List-Index"
-    "Berge_Lemma"
+    "Basic_Matching"
 
   theories
     "More_List"

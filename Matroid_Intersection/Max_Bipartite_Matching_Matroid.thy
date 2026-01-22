@@ -1,6 +1,6 @@
 theory Max_Bipartite_Matching_Matroid
-  imports RANKING.More_Graph  Matroid_Intersection_Algorithm
- Compute_Path "HOL-Library.Product_Lexorder"
+  imports Basic_Matching.Matching  Matroid_Intersection_Algorithm
+          Compute_Path "HOL-Library.Product_Lexorder"
 begin
 
 section \<open>Maximum Cardinality Bipartite Matching\<close>

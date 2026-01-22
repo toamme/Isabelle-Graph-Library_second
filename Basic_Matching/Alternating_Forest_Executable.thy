@@ -1,6 +1,5 @@
 theory Alternating_Forest_Executable
-  imports RANKING.More_Graph Graph_Algorithms_Dev.Parent_Map
-    Alternating_Forest_Spec
+  imports  Graph_Algorithms_Dev.Parent_Map  Alternating_Forest_Spec
 begin
 hide_const verts
 section \<open>Executable Alternating Forest\<close>

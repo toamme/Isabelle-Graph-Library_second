@@ -3,6 +3,10 @@ imports Pair_Graph_Specs "HOL-Data_Structures.RBT_Set" "HOL-Data_Structures.RBT_
        "Set2_Join_RBT" Tree_Filter
 begin
 
+lemma Map_axioms_as_needed: "Map \<langle>\<rangle> RBT_Map.update RBT_Map.delete lookup M.invar"
+  using M.Map_axioms
+  by(auto simp add: RBT_Set.empty_def)
+
 abbreviation "vset_empty == RBT_Set.empty"
 abbreviation "vset_union == union_rbt"
 abbreviation "vset_insert == insert_rbt"

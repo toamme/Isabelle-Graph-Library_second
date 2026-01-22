@@ -181,6 +181,18 @@ lemma v_in_edge_in_vwalk:
   using assms
   by (induction p rule: edges_of_vwalk.induct) auto
 
+lemma unused_edge_vwalk: 
+  "\<lbrakk>Vwalk.vwalk E p; e \<notin> set (edges_of_vwalk p); length p \<ge> 2\<rbrakk> \<Longrightarrow> Vwalk.vwalk(E-{e}) p" 
+  apply(induction rule: Vwalk.vwalk.induct[of E p], simp, simp) 
+  subgoal for v v' vs
+    by(cases vs) auto
+  done
+
+lemma unused_edge_vwalk_bet:
+  "\<lbrakk>Vwalk.vwalk_bet E u p v; e \<notin> set (edges_of_vwalk p); length p \<ge> 2\<rbrakk>
+   \<Longrightarrow> Vwalk.vwalk_bet(E-{e}) u p v"
+   by (metis unused_edge_vwalk vwalk_bet_def)
+
 lemma distinct_edges_of_vwalk:
   "distinct p \<Longrightarrow> distinct (edges_of_vwalk p)"
   by (induction p rule: edges_of_vwalk.induct) (auto dest: v_in_edge_in_vwalk)

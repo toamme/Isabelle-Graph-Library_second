@@ -2,7 +2,7 @@ session "Tutte_Theorem" = "HOL-Library" +
   options [document = pdf, document_output = "output"]
 
 sessions
-  "Berge_Lemma"
+  "Basic_Matching"
   "RANKING"
   "Transition_Systems_and_Automata"
   "Kruskal"

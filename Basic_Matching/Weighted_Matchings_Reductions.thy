@@ -1,8 +1,6 @@
 theory Weighted_Matchings_Reductions
-  imports Primal_Dual_Bipartite_Matching.Matching_LP  Hungarian_Method_Top_Loop
+  imports Matching
 begin
-(*-Do the moves
-- Rename theory, or split in two parts*)
 
 section \<open>Variants of Weighted Matching\<close>
 

@@ -1,19 +1,9 @@
 theory Primal_Dual_Path_Search
-  imports Berge_Lemma.Berge Flow_Theory.More_Arith "HOL-Data_Structures.Set_Specs"
-          "HOL-Data_Structures.Map_Specs" RANKING.More_Graph  Alternating_Forest_Spec 
-           Key_Value_Queue_Spec Path_Search_Result
+  imports Basic_Matching.Berge Directed_Set_Graphs.More_Arith 
+          Directed_Set_Graphs.More_Logic "HOL-Data_Structures.Set_Specs"
+          "HOL-Data_Structures.Map_Specs" RANKING.More_Graph Basic_Matching.Alternating_Forest_Spec 
+          Key_Value_Queue_Spec Path_Search_Result
 begin
-
-lemma conj_intro:
-  "\<lbrakk>P1;P2;P3;P4;P5;P6\<rbrakk> \<Longrightarrow> P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6" for P1 P2 P3 P4 P5 P6
-  by simp
-lemma conjD:"P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P1"
-            "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P2"
-            "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P3"
-            "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6 \<Longrightarrow> P4"
-            "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6  \<Longrightarrow> P5"
-            "P1 \<and> P2 \<and> P3 \<and> P4 \<and> P5 \<and>P6  \<Longrightarrow> P6"for P1 P2 P3 P4 P5 P6
-  by auto
 
 section \<open>Path Search for Hungarian Method\<close>
 
@@ -888,15 +878,15 @@ proof-
           using Cons.prems(7) w\<^sub>\<pi>_non_neg[of l r] by auto
     note IH_applied_all = Cons(1)[OF Cons(2,3,4,5) state_before_is 
              distinct_rs news_in_G]
-    note IH_applied = conjD(1)[OF IH_applied_all]
-                      conjD(2)[OF IH_applied_all]
-                      mp[OF spec[OF spec[OF conjD(3)[OF IH_applied_all]]]]
-                      mp[OF spec[OF spec[OF conjD(4)[OF IH_applied_all]]]]
-                      conjD(5)[OF IH_applied_all]
-                       conjD(6)[OF IH_applied_all]
+    note IH_applied = conj6D(1)[OF IH_applied_all]
+                      conj6D(2)[OF IH_applied_all]
+                      mp[OF spec[OF spec[OF conj6D(3)[OF IH_applied_all]]]]
+                      mp[OF spec[OF spec[OF conj6D(4)[OF IH_applied_all]]]]
+                      conj6D(5)[OF IH_applied_all]
+                       conj6D(6)[OF IH_applied_all]
     show ?case 
       unfolding ben'_is
-    proof(rule conj_intro, goal_cases)
+    proof(rule conj6I, goal_cases)
       case 1
       then show ?case
         using IH_applied
@@ -1047,18 +1037,18 @@ proof-
     qed
   qed
   show ?thesis1 ?thesis2
-    using conjD(1,2)[OF induction]
+    using conj6D(1,2)[OF induction]
     by simp+
   show ?thesis3 
-    using conjD(5)[OF induction] by simp
+    using conj6D(5)[OF induction] by simp
   show ?thesis4
-    using conjD(6)[OF induction] by simp
+    using conj6D(6)[OF induction] by simp
   show"\<And> r k. (r, k) \<in> heap_abstract queue'
          \<Longrightarrow> \<exists>l. ben_lookup ben' r = Some l \<and> k = w\<^sub>\<pi> l r + off l"
-    using conjD(3)[OF induction] by auto
+    using conj6D(3)[OF induction] by auto
   show "\<And> r l'. ben_lookup ben' r = Some l' \<and> (\<nexists>k. (r, k) \<in> heap_abstract queue') \<Longrightarrow>
         w\<^sub>\<pi> l' r + off l' \<le> off l"
-    using conjD(4)[OF induction] by auto
+    using conj6D(4)[OF induction] by auto
 qed
 
 lemma update_best_even_neighbours_correct:
@@ -1140,13 +1130,13 @@ proof-
     note IH_applied_all =
        Cons(1)[OF Cons(2,3) ls_in_L Cons(5,6), simplified result_def[symmetric],OF
          result_is conn_min_before_def]
-    note IH_applied = conjD(1)[OF IH_applied_all]
-                      conjD(2)[OF IH_applied_all]
-                      spec[OF spec[OF conjD(3)[OF IH_applied_all]]]
-                      spec[OF spec[OF spec[OF conjD(4)[OF IH_applied_all]]]]
-                      conjD(5)[OF IH_applied_all]
-                      conjunct1[OF conjD(6)[OF IH_applied_all]]
-                      conjunct2[OF conjD(6)[OF IH_applied_all]]
+    note IH_applied = conj6D(1)[OF IH_applied_all]
+                      conj6D(2)[OF IH_applied_all]
+                      spec[OF spec[OF conj6D(3)[OF IH_applied_all]]]
+                      spec[OF spec[OF spec[OF conj6D(4)[OF IH_applied_all]]]]
+                      conj6D(5)[OF IH_applied_all]
+                      conjunct1[OF conj6D(6)[OF IH_applied_all]]
+                      conjunct2[OF conj6D(6)[OF IH_applied_all]]
     thm Cons(7)
     thm Cons(7)[simplified foldr_Cons o_apply]
     have l_in_L: "l \<in> L" 
@@ -1157,7 +1147,7 @@ proof-
     note single_update = update_best_even_neighbour_correct[OF
             IH_applied(1,2) l_in_L IH_applied(3,4) queue'_heap']
     show ?case 
-    proof(rule conj_intro, goal_cases)
+    proof(rule conj6I, goal_cases)
       case 1
       then show ?case 
         using single_update(1) by simp

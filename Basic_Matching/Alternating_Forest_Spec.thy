@@ -1,5 +1,5 @@
 theory Alternating_Forest_Spec
-  imports RANKING.More_Graph 
+  imports Matching
 begin
 
 section \<open>Specification of Executable Alternating Forest\<close>
