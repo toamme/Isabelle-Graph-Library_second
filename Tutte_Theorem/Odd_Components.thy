@@ -1,5 +1,5 @@
 theory Odd_Components
-  imports Hall_Frobenius Cardinality_Sums
+  imports Bipartite_Matchings_Existence Cardinality_Sums
 begin
 
 section \<open>Odd and Even Connected Components\<close>

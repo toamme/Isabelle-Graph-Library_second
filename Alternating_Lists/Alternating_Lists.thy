@@ -12,6 +12,9 @@ inductive alt_list where
 "alt_list P1 P2 []" |
 "P1 x \<Longrightarrow> alt_list P2 P1 l \<Longrightarrow> alt_list P1 P2 (x#l)"
 
+lemma alt_list_singleton: "P1 x \<Longrightarrow> alt_list P1 P2 [x]"
+  by(auto intro!: alt_list.intros)
+
 inductive_simps alt_list_empty: "alt_list P1 P2 []"
 inductive_simps alt_list_step: "alt_list P1 P2 (x#l)"
 
@@ -422,5 +425,33 @@ lemma alt_list_adjacent:
 lemma alt_list_split_off_first_two:
   "alt_list P Q (x#y#xs) \<Longrightarrow> alt_list P Q xs"
   by (simp add: alt_list_step)
+
+lemma alt_list_from_indices:
+  assumes "\<And> i. \<lbrakk>i < length p; even i\<rbrakk> \<Longrightarrow> P1 (p!i) "
+          "\<And> i. \<lbrakk>i < length p; odd i\<rbrakk> \<Longrightarrow> P2 (p!i) "
+    shows "alt_list P1 P2 p"
+  using assms
+proof(induction p arbitrary: P1 P2)
+  case Nil
+  then show ?case
+    by (auto intro!: alt_list.intros)
+next
+  case (Cons a p)
+  have "alt_list P2 P1 p"
+  proof(rule Cons(1), goal_cases)
+    case (1 i)
+    then show ?case 
+      using Cons(2,3)
+      by(cases i) fastforce+
+  next
+    case (2 i)
+    then show ?case 
+      using Cons(2,3)
+      by(cases i) fastforce+
+  qed
+  thus ?case
+    using Cons.prems(1)
+    by(force intro!: alt_list.intros)
+qed
 
 end

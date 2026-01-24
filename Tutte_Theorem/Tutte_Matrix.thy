@@ -2510,7 +2510,8 @@ proof -
       using \<open>graph_invar M\<close>
       by blast
     then have 7: "{b} \<in> {e - {a} |e. e \<in> M \<and> a \<in> e}" 
-      using \<open>graph_invar M\<close> asme doubleton_eq_iff by fastforce
+      using \<open>graph_invar M\<close> asme 
+      by(auto simp add: doubleton_eq_iff intro!: exI[of _ "{a, b}"])
     have "is_singleton {e - {a} |e. e \<in> M \<and> a \<in> e}" 
       using 2 by auto
     then have "\<Union>{e - {a} |e. e \<in> M \<and> a \<in> e} = {b}" 

@@ -3,6 +3,7 @@ section \<open>Basic Theory on Matchings\<close>
 
 theory Matching
   imports Undirected_Set_Graphs.Undirected_Set_Graphs Alternating_Lists.Alternating_Lists
+          Directed_Set_Graphs.More_Lists
 begin
 
 subsection \<open>Misc\<close>
@@ -79,6 +80,11 @@ lemma symm_diff_empty[simp]:
   unfolding symmetric_diff_def
   by simp
 
+lemma symm_diff_with_empty[simp]:
+  "G \<oplus> {} = G"
+  unfolding symmetric_diff_def
+  by simp
+
 lemma sym_diff_sym:
   "s \<oplus> s' = s' \<oplus> s"
   unfolding symmetric_diff_def
@@ -143,15 +149,11 @@ next
     by (simp add: degree_not_Vs)
 qed
 
-lemma degree_symm_diff:
+lemma degree_matching_union:
   assumes "matching M" "matching M'"
-  shows "degree (M \<oplus> M') v \<le> 2"
+  shows "degree (M \<union> M') v \<le> 2"
 proof-
-  have "{e. v \<in> e} \<inter> ((M - M') \<union> (M' - M)) \<subseteq> ({e. v \<in> e} \<inter> M) \<union> ({e. v \<in> e} \<inter> M')"
-    by blast
-  hence "degree (M \<oplus> M') v \<le> degree (M \<union> M') v"
-    by (simp add: card'_mono Int_Un_distrib degree_def symmetric_diff_def)
-  also have "... \<le> degree M v + degree M' v"
+   have "degree (M \<union> M') v \<le> degree M v + degree M' v"
     by (simp add: Int_Un_distrib card'_def card_Un_le degree_def)
   also have "... \<le> degree M v + 1"
     using degree_matching[OF \<open>matching M'\<close>]
@@ -161,6 +163,13 @@ proof-
     by (subst one_add_one[symmetric]) (fastforce intro!:  add_right_mono)
   finally show ?thesis .
 qed
+
+lemma degree_symm_diff:
+  assumes "matching M" "matching M'"
+  shows "degree (M \<oplus> M') v \<le> 2"
+  using degree_matching_union[OF assms, of v] 
+        subset_edges_less_degree[OF sym_diff_subset, of M M' v] 
+  by simp
 
 lemma matching_delete:
   assumes "matching M"
@@ -312,10 +321,16 @@ definition one_sided_matching :: "'a graph \<Rightarrow> 'a graph \<Rightarrow> 
 lemma one_sided_matchingI:
   assumes "M \<subseteq> G"
   assumes "\<And>a. a \<in> A \<Longrightarrow> card {e\<in>M. a \<in> e} \<le> 1"
-  shows "one_sided_matching G M A"
-  unfolding one_sided_matching_def
+    shows "one_sided_matching G M A"
   using assms
-  by blast
+  by(auto simp add: one_sided_matching_def)
+
+lemma one_sided_matchingE:
+  assumes "one_sided_matching G M A" 
+          "\<lbrakk>M \<subseteq> G; \<And>a. a \<in> A \<Longrightarrow> card {e\<in>M. a \<in> e} \<le> 1\<rbrakk> \<Longrightarrow> P"
+    shows P
+  using assms
+  by(auto simp add: one_sided_matching_def)
 
 lemma one_sided_matching_empty[intro,simp]:
   "one_sided_matching G {} R"
@@ -625,6 +640,27 @@ proof-
   finally show ?thesis .
 qed
 
+lemma condition_for_same_card:
+  assumes "card (s \<inter> t) = card (s - t)" "finite t" "finite s"
+  shows "card t = card (t \<oplus> s)"
+proof-
+  have tsstinter: "(t - s) \<inter> (s - t) = {}" by blast
+
+  have "card t = card ((t - s) \<union> (t \<inter> s))"
+    by (simp add: Un_Diff_Int)
+  also have "... = card (t - s) + card (t \<inter> s)"
+    using assms(2)
+    by (auto intro!: card_Un_disjoint)
+  also have "... = card (t - s) + card (s - t)"
+    by (simp add: assms(1) inf.commute)
+  also have "... = card ((t - s) \<union> (s - t))"
+    using assms
+    by(subst card_Un_disjoint[symmetric]) auto
+  also have "... = card (t \<oplus> s)"
+    by (simp add: symmetric_diff_def)
+  finally show ?thesis .
+qed
+
 text\<open>An augmenting path can be used to construct a larger matching.\<close>
 
 lemma distinct_length_filter_neg: 
@@ -737,6 +773,528 @@ lemma rev_alt_path_sym_diff_alt_path:
   using assms
   by (auto intro: alt_list_cong simp: symmetric_diff_def)
 
+lemma union_of_matchings_alt_list:
+  assumes "matching M" "matching M'" "epath (M \<union> M') x p y" "hd p \<notin> M" "distinct p"
+  shows "alt_list (\<lambda> e. e \<in> M' \<and> e \<notin> M) (\<lambda> e. e \<in> M \<and> e \<notin> M') p"
+  using assms
+proof(induction p arbitrary: M M' x )
+  case (Cons e p)
+  note IH = this
+  obtain z where z: "e = {x, z}" "z \<noteq> x"
+    using Cons.prems(3) by auto
+  show ?case 
+  proof(cases p)
+    case Nil
+    then show ?thesis 
+      using IH(4,5) by (auto intro!: alt_list_singleton)
+  next
+    case (Cons e' pp)
+     hence "e \<in> M'" 
+      using IH(4,5) by auto
+    moreover have epath_z: "epath (M' \<union> M) z p y" 
+      using  IH(4)  z(1) by(auto simp add: doubleton_eq_iff  sup_commute)
+    moreover have "hd p \<notin> M'"
+    proof-
+      have "hd p \<in> M \<or> hd p \<in> M'" 
+        using IH(4) local.Cons by auto
+      moreover have "hd p \<in> M' \<Longrightarrow> False"
+      proof(goal_cases)
+        case 1
+        have "e \<noteq> e'" 
+          using IH(6) local.Cons by force
+        moreover have "z \<in> e \<inter> e'" 
+          using epath_z local.Cons z(1) by fastforce
+        ultimately show False 
+          using "1" IH(3) \<open>e \<in> M'\<close> Cons by(auto elim!: matchingE)
+      qed
+      ultimately show ?thesis 
+        by auto
+    qed
+    ultimately show ?thesis 
+      using IH(5,6)
+      by(auto intro!: alt_list.intros(2) IH(1)[of _ _ z] IH(2,3))
+  qed
+qed (auto intro: alt_list.intros(1))
+
+lemma
+  assumes "matching M" "matching M'" "path (M \<union> M') p" "length p \<ge> 2" "hd p \<notin> Vs M"
+          "dblton_graph M" "dblton_graph M'" "distinct p"
+  shows  union_of_matchings_alt_path: "alt_path M p" (is ?thesis1)
+  and union_of_matchings_alt_list_M'_M: "alt_list (\<lambda>e. e \<in> M' \<and> e \<notin> M) (\<lambda>e. e \<in> M \<and> e \<notin> M') (edges_of_path p)"
+       (is ?thesis2)
+proof-
+  show alt_list_M'_M:"alt_list (\<lambda>e. e \<in> M' \<and> e \<notin> M) (\<lambda>e. e \<in> M \<and> e \<notin> M') (edges_of_path p)"
+    using assms(4,5)  hd_edge_in_hd_vert_in
+    by(auto intro!: union_of_matchings_alt_list[OF assms(1,2), of "hd p" _ "last p"]
+                       walk_betw_imp_epath nonempty_path_walk_between 
+          simp add: assms(3,6,7,8) dblton_graph_union  distinct_edges_of_vpath)
+  show ?thesis1
+proof(rule alt_list_from_indices, goal_cases)
+  case (2 i)
+  show ?case
+    using "2"(1,2) alt_list_M'_M alternating_list_odd_index by blast
+next
+  case (1 i)
+  show ?case
+  proof(cases i)
+    case 0
+    then show ?thesis 
+      using "1"(1) assms(4,5) alt_list_M'_M hd_edge_in_hd_vert_in[OF assms(4), of M]
+      by (auto simp add: hd_conv_nth)
+  next
+    case (Suc nat)
+    hence "(edges_of_path p ! nat) \<in> M"
+      using "1"(1,2) Suc_lessD alt_list_M'_M alternating_list_odd_index even_Suc by blast
+    moreover have "(edges_of_path p ! nat) \<noteq> (edges_of_path p ! i)" 
+      using "1"(1) Suc distinct_edges_of_vpath[OF assms(8)] nth_eq_iff_index_eq
+      by force
+    moreover have "p ! i \<in> (edges_of_path p ! nat) \<inter> (edges_of_path p ! i)" 
+      using "1"(1) Suc
+      by(auto simp add: edges_of_path_length edges_of_path_index)
+    ultimately show ?thesis
+      using assms(1) by(auto elim!: matchingE)
+  qed 
+qed
+qed
+
+lemma rematch_odd_alt_path_same_card:
+  assumes "matching M" "alt_path M p" "odd (length p)" "distinct p"
+  shows   "card (M \<oplus> set (edges_of_path p)) = card M"
+proof(cases "finite M")
+  case False
+  show ?thesis
+    by (simp add: False symmetric_diff_def)
+next
+  case True
+  have dist: "distinct (edges_of_path p)"
+    using assms(4)
+    by (simp add: distinct_edges_of_vpath)
+  have "length (filter (\<lambda>e. e \<notin> M) (edges_of_path p))
+       = length (filter (\<lambda>e. e \<in> M) (edges_of_path p))"
+    using assms(2) 
+    by (auto simp add: alternating_eq_iff_even assms(3) edges_of_path_length)
+  then have "card (set (edges_of_path p) - M) = card (set (edges_of_path p) \<inter> M)"
+    using distinct_length_filter_neg[OF dist] distinct_length_filter[OF dist]
+    by (simp add: inf_commute)
+  thus ?thesis
+    using True
+    by(auto intro!: condition_for_same_card[symmetric])
+qed
+
+lemma rematch_atl_path_matching_change:
+  assumes "matching M" "alt_path M p" "distinct p"
+  shows "M \<oplus> set (edges_of_path p) = 
+         M - {(edges_of_path p)! i | i . odd i \<and> i < length p - 1} 
+         \<union> {(edges_of_path p)! i | i . even i \<and> i < length p - 1}" (is "?M' = M - ?rev \<union> ?add")
+proof(rule set_eqI, goal_cases)
+  case (1 e)
+  show ?case 
+  proof(cases "e \<in> set (edges_of_path p)")
+    case False
+    moreover have "e \<notin> ?rev" "e \<notin> ?add"
+      using False 
+      by (auto simp add: edges_of_path_length)
+    ultimately show ?thesis
+      by (auto simp add: symmetric_diff_def)
+  next
+    case True
+    then obtain i where i: "e = (edges_of_path p) ! i" "i < length p -1"
+      using edges_of_path_length[of p] by(auto simp add: in_set_conv_nth)
+    have rev_add_disjoint:"?rev \<inter> ?add = {}" 
+      by (auto simp add: assms(3) distinct_edges_of_vpath edges_of_path_length nth_eq_iff_index_eq)
+    show ?thesis
+    proof(cases i rule: parity_cases)
+      case even
+      have "e \<in> ?add"
+        using even(1) i(1,2) by blast
+      moreover hence "e \<notin> ?rev"
+        using rev_add_disjoint by auto
+      moreover have "e \<notin> M" 
+        using assms(2) edges_of_path_length[of p] even(1) i(1,2)
+        by(intro alternating_list_even_index[of "\<lambda>e. e \<notin> M" "\<lambda>e. e \<in> M" "edges_of_path p" i, 
+                           simplified i(1)[symmetric]])
+           auto
+      ultimately show ?thesis 
+        using True
+        by(auto simp add: symmetric_diff_def i(1))
+    next
+      case odd
+      have "e \<in> ?rev"
+        using odd(1) i(1,2) by blast
+      moreover hence "e \<notin> ?add"
+        using rev_add_disjoint by auto
+      moreover have "e \<in> M" 
+        using assms(2) edges_of_path_length[of p] odd(1) i(1,2)
+        by(intro alternating_list_odd_index[of "\<lambda>e. e \<notin> M" "\<lambda>e. e \<in> M" "edges_of_path p" i, 
+                           simplified i(1)[symmetric]])
+           auto
+      ultimately show ?thesis 
+        using True
+        by(auto simp add: symmetric_diff_def i(1))
+    qed
+  qed 
+qed
+
+lemma rematch_atl_path_verts_matched:
+  assumes "matching M" "alt_path M p" "distinct p"
+  shows   "(if even (length p) then set p else set (butlast p)) 
+            \<subseteq> Vs (M \<oplus> set (edges_of_path p))"
+proof-
+  have "p = [] \<Longrightarrow> ?thesis" by simp
+  moreover have "p = [x] \<Longrightarrow> ?thesis" for x by simp
+  moreover have "p = x#y#q \<Longrightarrow> ?thesis" for x y q
+  proof(rule, goal_cases)
+    case (1 z)
+    note one = this
+    show ?case
+    proof(cases "x = z")
+      case True
+      then show ?thesis 
+        using  "1"(1) assms(2)  
+        by(auto intro!: edges_are_Vs[of z y] simp add:  alt_list_step symmetric_diff_def)
+    next
+      case False
+      note false = this
+      obtain i where i_prop: "p!i = z" "i < length p"
+        using "1"(2) by (cases " even (length p)") (auto simp add: in_set_conv_nth nth_butlast)
+      have i_gtr_0:"i > 0"
+        using "1"(1) \<open>p ! i = z\<close> false nth_Cons_0 by fastforce
+      have edge_i_minus_1:"edges_of_path p ! (i-1) = {p!(i-1), p! i}"
+          using edges_of_path_index[of "i-1" p]  Suc_pred' i_gtr_0 i_prop(2) by presburger
+      show ?thesis
+      proof(cases "even i")
+        case True
+        have "i + 1 < length p"
+        proof(rule ccontr, goal_cases)
+          case 1
+          hence "i + 1 = length p" 
+            using i_prop(2) by (auto dest!: linorder_class.leI)
+          hence "z = last p"
+            using  i_gtr_0 i_prop(1,2) by (auto simp add: last_conv_nth one(1))
+          moreover have "odd (length p)" 
+            using True \<open>i + 1 = length p\<close> by presburger
+          moreover hence "z \<in> set (butlast p)" 
+            using one(2) by fastforce
+          ultimately show ?case 
+            using  assms(3) one(1) false append_butlast_last_id[of p] 
+                assms(3) distinct_append[of "butlast p" "[last p]"]   
+            by auto
+        qed
+        have edge_i: "edges_of_path p ! i = {p!(Suc i), p! i}"
+          using \<open>i + 1 < length p\<close> edges_of_path_index by auto
+        moreover have "edges_of_path p ! i \<notin> M"
+          using assms(2) True  \<open>i + 1 < length p\<close> edges_of_path_length[of p]
+          by(intro alternating_list_even_index[of "(\<lambda>e. e \<notin> M)" "(\<lambda>e. e \<in> M)" "(edges_of_path p)" i])
+            auto
+        moreover have "edges_of_path p ! i \<in> set (edges_of_path p)"
+          using \<open>i + 1 < length p\<close> edges_of_path_length[of p]
+          by simp
+        ultimately have "edges_of_path p ! i \<in> M \<oplus> set (edges_of_path p)"
+          by(auto simp add: symmetric_diff_def)
+        thus ?thesis 
+          using edge_i i_prop(1) by blast
+      next
+        case False
+        hence "edges_of_path p ! (i-1) \<notin> M"
+          using "1"(1)  assms(2) i_gtr_0 i_prop(2)
+          by(intro alternating_list_even_index[of "(\<lambda>e. e \<notin> M)"
+                             "(\<lambda>e. e \<in> M)" "(edges_of_path p)" "i - 1"])
+            (auto simp add: edges_of_path_length)
+        moreover have "edges_of_path p ! (i-1) \<in> set (edges_of_path p)"
+          using  i_gtr_0 i_prop(2)
+          by(auto simp add: in_set_conv_nth edges_of_path_length intro!: exI[of _ "i-1"])
+        ultimately have "edges_of_path p ! (i-1) \<in> M \<oplus> set (edges_of_path p)"
+          by(auto simp add: symmetric_diff_def)
+        thus ?thesis 
+          using edge_i_minus_1 i_prop(1) by blast
+      qed
+    qed
+  qed
+  ultimately show ?thesis
+    by(cases p rule: list_cases3) auto
+qed
+
+lemma verts_of_even_eges:
+      "Vs {edges_of_path p ! i | i. i < length p - 1 \<and> even i} = 
+       (if even (length p) then set p else set (butlast p))" (is ?ths1)
+  and verts_of_odd_edges:
+      "Vs {edges_of_path p ! i | i. i < length p - 1 \<and> odd i} = 
+       (if even (length p) then set (butlast (tl p)) else set (tl p))" (is ?ths2)
+proof-
+  have "?ths1 \<and> ?ths2"
+  proof(induction p rule: edges_of_path.induct)
+    case 1
+    then show ?case by auto
+  next
+    case (2 v)
+    then show ?case by auto
+  next
+    case (3 v v' l)
+    note IH = conjunct1[OF this] conjunct2[OF this]
+    show ?case
+    proof(rule, goal_cases)
+      case 1
+      have edges_are: "{edges_of_path (v # v' # l) ! i |i. i < length (v # v' # l) - 1 \<and> even i} = 
+            insert {v, v'} {edges_of_path  (v' # l) ! i |i. i < length (v'#l) - 1 \<and> odd i}"
+      proof(rule, all \<open>rule\<close>, goal_cases)
+        case (1 e)
+        then obtain i where i: "i < length (v # v' # l) - 1" "even i" 
+                            "e = edges_of_path (v # v' # l) ! i" by auto
+        show ?case 
+        proof(cases "i = 0")
+          case False
+          thus ?thesis
+            using False i(1)
+            by(auto intro!: exI[of _ "i - 1"] simp add: i(3,2))
+        qed (simp add: i(3))
+      next
+        case (2 e)
+        show ?case
+        proof(cases "e = {v, v'}")
+          case True
+          then show ?thesis 
+            by (auto intro!: exI[of _ 0])
+        next
+          case False
+          then obtain i where "e = edges_of_path (v' # l) ! i" "i < length (v' # l) - 1" "odd i"
+            using 2 by auto
+          then show ?thesis 
+            by(auto intro!: exI[of _ "Suc i"])
+        qed
+      qed
+      show ?case 
+        unfolding edges_are vs_insert IH(2)
+        by (auto dest: in_set_butlastD)
+    next
+      case 2
+      have edges_are: "{edges_of_path (v # v' # l) ! i |i. i < length (v # v' # l) - 1 \<and> odd i} = 
+                       {edges_of_path  (v' # l) ! i |i. i < length (v'#l) - 1 \<and> even i}"
+      proof(rule, all \<open>rule\<close>, goal_cases)
+        case (1 e)
+        then obtain i where i: "i < length (v # v' # l) - 1" "odd i" 
+                            "e = edges_of_path (v # v' # l) ! i" by auto
+        show ?case 
+        proof(cases "i = 0")
+          case False
+          thus ?thesis
+            using False i(1)
+            by(auto intro!: exI[of _ "i - 1"] simp add: i(3,2))
+        next
+          case True
+          thus ?thesis
+            using i(2) by blast
+        qed
+      next
+        case (2 e)
+          then obtain i where "e = edges_of_path (v' # l) ! i" "i < length (v' # l) - 1" "even i"
+            using 2 by auto
+          then show ?case
+            by(auto intro!: exI[of _ "Suc i"])
+        qed
+      show ?case 
+        unfolding edges_are vs_insert  IH(1)
+        by (auto dest: in_set_butlastD)
+    qed
+  qed
+  thus ?ths1 ?ths2
+    by auto
+qed
+
+lemma rematch_atl_path_Vs_change:
+  assumes "matching M" "alt_path M p" "distinct p" "length p \<ge> 2"
+  shows "Vs (M \<oplus> set (edges_of_path p)) = 
+         (if even (length p) then {hd p, last p} \<union> (Vs M) else insert (hd p) (Vs M) - {last p})"
+         (is "Vs ?left = ?right")
+proof-
+  note left_simp = rematch_atl_path_matching_change[OF assms(1-3)]
+  show ?thesis
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 x)
+  then obtain e where e: "e \<in> ?left" "x \<in> e" 
+    using vs_member[of x] by auto
+  show ?case
+  proof(cases rule: UnE[OF e(1)[simplified left_simp]])
+    case 1
+    note one = this
+    show ?thesis 
+    proof(cases "even (length p)")
+      case True
+      then show ?thesis 
+        using "1" e(2) by auto
+    next
+      case False
+      have "x = last p \<Longrightarrow> False"
+      proof(goal_cases)
+        case 1
+        have "length p - 2 < length (edges_of_path p)" 
+          using assms(4) edges_of_path_length[of p] 
+          by simp
+        hence a1: "edges_of_path p ! (length p - 2) = {p ! (length p-2) , p ! (length p -1)}"
+          using assms(4)
+          by(subst edges_of_path_index[of "length p-2" p])
+            (auto dest!: Suc_diff_le)
+        have last_edge_is: "edges_of_path p ! (length p - 2) = {last p, last (butlast p)}" 
+          using assms(4)
+        proof(subst a1, subst last_conv_nth, force, subst last_conv_nth, goal_cases)
+          case 1
+          thus ?case
+            by(cases p) auto
+        next
+          case 2
+          have "length (butlast p) - 1 = length p - 2" 
+            by fastforce
+          moreover hence "butlast p ! (length p - 2) = p ! (length p - 2)"
+            using edges_of_path_length[of p]  assms(4)
+            by (auto simp add: nth_butlast)
+          ultimately show ?case
+            by auto
+        qed
+        moreover have "edges_of_path p ! (length p - 2) \<in> M" 
+          using assms False \<open>length p - 2 < length (edges_of_path p)\<close>
+          by(intro alternating_list_odd_index[of "\<lambda>e. e \<notin> M" "\<lambda>e. e \<in> M" "edges_of_path p"])
+            auto
+        ultimately have "{last p, last (butlast p)} \<in> M" 
+          by simp
+        moreover have "e \<noteq> {last p, last (butlast p)}" 
+          using  \<open>length p - 2 < length (edges_of_path p)\<close> calculation e(1) last_edge_is nth_mem
+              symm_diff_mutex[of e M "set (edges_of_path p)"]
+          by force
+        ultimately show ?case
+          using  "1" assms(1) e(2) one
+          by(auto elim!: matchingE)
+      qed
+      from False this show ?thesis 
+        using "1" e(2) by auto
+    qed
+  next
+    case 2
+    then obtain i where i: "e = edges_of_path p ! i" "even i" "i < length p - 1"
+      by auto
+    have e_is: "e = {p!i, p! Suc i}" 
+      using edges_of_path_index i(1,3) less_diff_conv by auto
+    have if_i_0:"i = 0 \<Longrightarrow> x = hd p \<or> x = hd (tl p)"
+      using i e(2) assms(4) by(cases p rule: list_cases3)(auto simp add: e_is)
+    show ?thesis
+    proof(cases "x = p!i")
+      case True
+      note true = this
+      then show ?thesis 
+      proof(cases "i = 0")
+        case True
+        hence "x = hd p" 
+          using  assms(4) true
+          by(cases p rule: list_cases3) auto
+        then show ?thesis 
+          using assms(4,3)
+          by(cases p rule: list_cases3) auto
+      next
+        case False
+        hence "edges_of_path p ! (i-1) = {p! (i-1), p!i}" 
+          using edges_of_path_index[of "i-1" p] i(3) 
+          by auto
+        moreover have "edges_of_path p ! (i-1) \<in> M"
+          using assms False i(2,3)
+          by(intro alternating_list_odd_index[of "\<lambda>e. e \<notin> M" "\<lambda>e. e \<in> M" "edges_of_path p" "i-1"])
+            (auto simp add: edges_of_path_length)
+        ultimately have "x \<in> Vs M"
+          using true by blast
+        moreover have "odd (length p) \<Longrightarrow> x \<noteq> last p"
+          using true  assms(3,4) i(3)
+          by(cases p rule: rev_cases)
+           (auto simp add: in_set_conv_nth nth_append)
+        ultimately show ?thesis  
+          by auto
+      qed
+    next
+      case False
+      hence Fls: "x = p ! Suc i" 
+        using e(2) e_is by blast
+       have "Suc i < length p -1 \<Longrightarrow> edges_of_path p ! Suc i \<in> M"
+          using assms Fls i(2,3)
+          by(intro alternating_list_odd_index[of "\<lambda>e. e \<notin> M" "\<lambda>e. e \<in> M" "edges_of_path p" "Suc i"])
+            (auto simp add: edges_of_path_length)
+        moreover have "Suc i < length p -1 \<Longrightarrow> edges_of_path p ! Suc i = {p!Suc i, p ! Suc (Suc i)}"
+          by(intro edges_of_path_index[of "Suc i" p]) simp
+        ultimately have "Suc i < length p -1 \<Longrightarrow> x \<in> Vs M" 
+          using Fls by blast
+        moreover have "odd (length p) \<Longrightarrow> x \<noteq> last p" 
+          using assms(3,4) i(2,3) by(cases p rule: rev_cases) (force simp add: Fls  nth_append)+
+        moreover have "odd (length p) \<Longrightarrow> Suc i < length p -1" 
+          using  i(2,3) odd_Suc_minus_one[of "length p"]
+          by presburger
+        moreover have "(Suc i < length p - Suc 0 \<Longrightarrow> False) \<Longrightarrow> x = last p"
+          using Fls  Suc_lessI assms(4) i(3) last_conv_nth[of p] 
+          by fastforce
+        ultimately show ?thesis 
+          using False i(3) Fls assms(4) by auto
+      qed
+    qed
+  next
+    case (2 x)
+    thus ?case 
+    proof(cases "x \<in> set p")
+      case True
+      have "x = hd p \<Longrightarrow> x \<in> Vs (M \<oplus> set (edges_of_path p))"
+      proof(goal_cases)
+        case 1 
+        hence "x \<in> edges_of_path p ! 0"
+          using assms(4) edges_of_path_index[of 0 p]
+          by(cases p rule: list_cases3) auto
+        moreover have "edges_of_path p ! 0 \<in>  set (edges_of_path p)"
+          by (simp add: assms(4) edges_of_path_nempty)
+        moreover have "edges_of_path p ! 0 \<notin> M" 
+          using alternating_list_even_index assms(2,4) edges_of_path_nempty by blast 
+        ultimately show ?thesis
+          by (simp add: in_symmetric_diff_iff vs_member_intro)
+      qed
+      moreover have 
+       "\<lbrakk>even (length p); x = last p\<rbrakk> \<Longrightarrow> x \<in> Vs (M \<oplus> set (edges_of_path p))"
+      proof(goal_cases)
+        case 1 
+        hence "x \<in> edges_of_path p ! (length p - 2)"
+          using assms(4) edges_of_path_index[of "length p - 2" p]
+          by(cases p rule: list_cases3) (auto simp add: last_conv_nth)
+        moreover have "edges_of_path p ! (length p - 2) \<in>  set (edges_of_path p)"
+          using  assms(4) edges_of_path_length[of p]
+          by simp
+        moreover have "edges_of_path p ! (length p - 2) \<notin> M" 
+          using assms(2,4) edges_of_path_nempty 1
+          by(intro  alternating_list_even_index[of
+                     "\<lambda>e. e \<notin> M" "\<lambda>e. e \<in> M" "edges_of_path p" "length p - 2"])
+           (auto simp add: edges_of_path_length)
+        ultimately show ?thesis
+          by (simp add: in_symmetric_diff_iff vs_member_intro)
+      qed
+      moreover have 
+        "\<lbrakk>x \<noteq> hd p; x \<noteq> last p \<or> odd (length p)\<rbrakk> \<Longrightarrow> x \<in> Vs (M \<oplus> set (edges_of_path p))"
+      proof(goal_cases)
+        case 1
+        obtain i where "x \<in> edges_of_path p ! i" "even i" "i < length p - 1"
+          using 1 non_last_vertex_or_even_list_in_even_edge[OF assms(3,4), of x] True 2
+          by force
+        thus ?case 
+          unfolding rematch_atl_path_matching_change[OF assms(1-3)] 
+          by auto
+      qed
+      ultimately show ?thesis
+        using 2 by auto
+    next
+      case False
+      hence "x \<in> Vs M"
+        using assms(3,4) 2 
+        by(cases "even (length p)", all \<open>cases p rule: list_cases3\<close>) auto
+      then obtain e where e: "e \<in> M" "x \<in> e"
+        using vs_member[of x] by auto
+      moreover hence "e \<notin> set (edges_of_path p)"
+        using False v_in_edge_in_path_gen by fastforce
+      ultimately have "e\<in> M \<oplus> set (edges_of_path p)"
+        by (simp add: symmetric_diff_def)
+      thus ?thesis
+        using e vs_member[of x] by auto
+    qed
+  qed
+qed
+
 subsection \<open>Matchings and Optimisation\<close>
 
 subsubsection \<open>Cardinality Matching\<close>
@@ -795,6 +1353,13 @@ lemma max_card_matchingI:
   using assms
   unfolding max_card_matching_def
   by blast
+
+lemma max_card_matchingI':
+  assumes "graph_matching G M"
+  assumes "\<And>M'. graph_matching G M' \<Longrightarrow> card M' \<le> card M"
+  shows "max_card_matching G M"
+  using assms
+  by(auto intro: max_card_matchingI)
 
 lemma max_card_matchingD:
   assumes "max_card_matching G M"
@@ -1217,6 +1782,12 @@ lemma perfect_matching_card':
   shows "card M = card (Vs G) div 2"
   using  perfect_matching_card assms by fastforce
 
+lemma perfect_matching_if_projected_to_matched_verts:
+  assumes "graph_matching G M"
+  shows "perfect_matching (graph_inter_Vs G (Vs M)) M"
+  using assms 
+  by(fastforce intro!: perfect_matchingI simp add: graph_inter_Vs_def Vs_def)
+
 subsubsection \<open>Weighted Matchings\<close>
 
 definition "max_weight_matching E w M =
@@ -1461,6 +2032,16 @@ subsubsection \<open>Matching Specific Vertices\<close>
 definition cover_matching where
   "cover_matching G M A = (matching M \<and> M \<subseteq> G \<and> A \<subseteq> Vs M)"
 
+lemma cover_matchingI:
+  "\<lbrakk>matching M; M \<subseteq> G; A \<subseteq> Vs M\<rbrakk> \<Longrightarrow> cover_matching G M A"
+and cover_matchingE:
+  "\<lbrakk>cover_matching G M A; \<lbrakk>matching M; M \<subseteq> G; A \<subseteq> Vs M\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by(auto simp add: cover_matching_def)
+
+lemma cover_matching_bigger_graph:
+   "\<lbrakk>cover_matching G M A; G \<subseteq> G'\<rbrakk> \<Longrightarrow> cover_matching G' M A"
+  by(auto elim!: cover_matchingE intro!: cover_matchingI)
+
 lemma cover_matching_neighbours_of_Vs_card:
   fixes G :: "'a set set"
   assumes "cover_matching G M A" "graph_invar G"
@@ -1468,6 +2049,36 @@ lemma cover_matching_neighbours_of_Vs_card:
   using assms card_ther_vertex 
   unfolding cover_matching_def 
   by fastforce
+
+lemma finite_number_of_cover_matchings:
+  assumes "finite G"
+  shows "finite (Collect (\<lambda> M. cover_matching G M X))"
+  using assms
+  by(auto intro!: finite_subset[of _ "Pow G"] simp add: cover_matching_def)
+
+lemma max_card_cover_matching_exists:
+  assumes "finite G" "cover_matching G M X"
+  obtains M' where "cover_matching G M' X" 
+                   "\<And> M. cover_matching G M X \<Longrightarrow> card M \<le> card M'"
+  apply(rule maximiser_of_function_nempty_finite[of "Collect (\<lambda> M. cover_matching G M X)" card])
+  using finite_number_of_cover_matchings[OF assms(1)] assms(2)
+  by auto
+
+lemma cover_matching_is_graph_matching:
+  "cover_matching G M X \<Longrightarrow> graph_matching G M"
+  by(auto elim!: cover_matchingE)
+
+lemma cover_matching_subset:
+  "\<lbrakk>cover_matching G M X; Y \<subseteq> X\<rbrakk> \<Longrightarrow>cover_matching G M Y"
+  by(auto elim!: cover_matchingE intro!: cover_matchingI)
+
+lemma obtain_covering_edge:
+  assumes "cover_matching G M X" "x \<in> X"
+  obtains e where "e \<in> M" "x \<in> e"
+  using assms
+  by(auto elim!: cover_matchingE 
+      simp add: vs_member 
+      dest!: subsetD[of X "Vs M" x])
 
 subsection \<open>Bipartite Matching\<close>
 
@@ -1849,5 +2460,4 @@ proof -
     unfolding partitioned_bipartite_def
     using \<open>A \<subseteq> Vs M\<close> \<open>graph_invar M\<close>  by auto
 qed
-
 end

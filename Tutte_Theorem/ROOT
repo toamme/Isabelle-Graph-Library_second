@@ -9,7 +9,7 @@ sessions
 
 
 theories
-	"Hall_Frobenius"
+	"Bipartite_Matchings_Existence"
 	"Cardinality_Sums"
 	"Odd_Components"
 	"Tutte_Theorem"

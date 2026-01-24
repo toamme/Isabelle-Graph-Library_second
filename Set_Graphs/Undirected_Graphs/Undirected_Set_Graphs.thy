@@ -1,7 +1,7 @@
 (*Authors: Mohammad Abdulaziz, Thomas Ammer, Adem Rimpapa*)
 theory Undirected_Set_Graphs
   imports "Directed_Set_Graphs.enat_misc" "HOL-Eisbach.Eisbach_Tools" "HOL-Library.FuncSet" 
-          "HOL-Library.Disjoint_Sets" Main
+          "HOL-Library.Disjoint_Sets" Main "Directed_Set_Graphs.More_Lists"
 begin
 
 subsection \<open>Misc\<close>
@@ -279,6 +279,135 @@ lemma less_edges_less_degree:
 lemma degree_insert_leq: "degree G e \<le> degree (insert e' G) e"
   by (simp add: subset_edges_less_degree subset_insertI)
 
+lemma at_least_two_edges_degree_geq_2:
+  "\<lbrakk>x \<in> e; e\<in> G;x \<in> e'; e' \<in> G; e \<noteq> e'\<rbrakk> \<Longrightarrow> degree G x \<ge> 2"
+proof(goal_cases)
+  case 1
+  note one = this
+  have collection_is:"Collect ((\<in>) x) \<inter> G \<supseteq> {e, e'}"
+  proof(rule, goal_cases)
+    case (1 ee)
+    then show ?case 
+      using one by auto
+  qed
+  show ?thesis
+    using collection_is 
+    by(auto simp add: degree_def card'_def one(5)
+        intro!: order.trans[of 2 "card {e, e'}" "card (Collect ((\<in>) x) \<inter> G)"] card_mono)
+qed
+
+lemma unique_edge_degree_one:
+  "\<lbrakk>x \<in> e; e\<in> G; \<And> e'. \<lbrakk>x \<in> e'; e' \<in> G\<rbrakk> \<Longrightarrow> e = e'\<rbrakk> \<Longrightarrow> degree G x = 1"
+proof(goal_cases)
+  case 1
+  note one = this
+  have collection_is:"Collect ((\<in>) x) \<inter> G = {e}"
+  proof(rule, all \<open>rule\<close>, goal_cases)
+    case (1 e')
+    then show ?case 
+      using one(3)[of e'] by simp
+  next
+    case (2 x)
+    then show ?case 
+      using one(1,2) by simp
+  qed
+  show ?thesis
+    by(auto simp add: degree_def card'_def collection_is enat_0 one_eSuc)
+qed
+
+lemma general_handshaking_lemma:
+  assumes "finite (Vs G)"
+  shows "sum (degree G) (Vs G) = sum card G"
+  unfolding degree_def
+proof(subst comm_monoid_add_class.sum.cong[OF refl,
+      of "Vs G" _ "\<lambda> x. enat (card (Collect ((\<in>) x) \<inter> G))"], goal_cases)
+  case 2
+  show ?case 
+  proof(subst enat_sum_distr, goal_cases)
+    case 2
+    show ?case
+    proof(rule arg_cong[of _ _  enat], goal_cases)
+      case 1
+      have "finite G" 
+        by (simp add: assms finite_Vs_then_finite)
+      thus ?case
+        using assms
+        unfolding semiring_0_class.sum_distrib_left monoid_mult_class.mult_1_right
+      proof(induction G rule: finite_induct)
+        case (insert e F)
+        have Vs_insert:"Vs (insert e F) = e \<union> (Vs F - e)"
+          by (simp add: vs_insert)
+        have finite_Vs: "finite (Vs F)"
+          using insert.prems
+          by (simp add: vs_insert)
+        have finite_e: "finite e" 
+          using Vs_insert insert.prems by force
+        have finite_neighbs_of_e's_verts: "x \<in> e \<Longrightarrow> finite (Collect ((\<in>) x) \<inter> F)" for x
+          by (simp add: insert.hyps(1))
+        have e_not_in_collect: "e \<notin> (Collect ((\<in>) x) \<inter> F)" for x
+          by (simp add: insert.hyps(2))
+        have rw1:"(\<Sum>x\<in>Vs (insert e F). card ({a. x \<in> a} \<inter> insert e F)) = 
+             (\<Sum>x\<in>(Vs F - e). card ({a. x \<in> a} \<inter> insert e F)) + 
+             (\<Sum>x\<in> e. card ({a. x \<in> a} \<inter> insert e F))"
+          using finite_Vs  finite_e unfolding Vs_insert 
+          by(subst comm_monoid_add_class.sum.union_disjoint) auto 
+        have rw2:"(\<Sum>x\<in>(Vs F - e). card ({a. x \<in> a} \<inter> insert e F))
+                     = (\<Sum>x\<in>(Vs F - e). card ({a. x \<in> a} \<inter> F))"
+          by(auto intro!: comm_monoid_add_class.sum.cong)
+         have rw3:"(\<Sum>x\<in> e. card ({a. x \<in> a} \<inter> insert e F)) = 
+                       (\<Sum>x\<in> e. (card ({a. x \<in> a} \<inter> F) + 1))"
+          by(auto intro!: comm_monoid_add_class.sum.cong[OF refl] 
+                 simp add:  card_insert_disjoint[OF
+                           finite_neighbs_of_e's_verts e_not_in_collect])
+       have rw4:"(\<Sum>x\<in> e. (card ({a. x \<in> a} \<inter> F) + 1)) = 
+                       (\<Sum>x\<in> e. (card ({a. x \<in> a} \<inter> F))) +  card e"
+          unfolding comm_monoid_add_class.sum.distrib 
+          by auto
+        have rw5: "sum card (insert e F) = sum card F + card e"
+          by (simp add: insert.hyps(1,2))
+        have rw6: "sum card F = (\<Sum>x\<in>Vs F. card ({a. x \<in> a} \<inter> F))"
+          by (auto intro: insert(3)[symmetric] simp add: finite_Vs)
+        have rw7: "(\<Sum>x\<in>Vs F - e. card (Collect ((\<in>) x) \<inter> F)) 
+                   + (\<Sum>x\<in>e. card (Collect ((\<in>) x) \<inter> F)) =
+                   (\<Sum>x\<in>Vs F. card (Collect ((\<in>) x) \<inter> F))"
+          using finite_e
+        proof(induction e rule: finite_induct)
+          case empty
+          then show ?case by simp
+        next
+          case (insert x e)
+            have rw1: "(\<Sum>x\<in>insert x e. card ({a. x \<in> a} \<inter> F)) = 
+                  (\<Sum>x\<in> e. card ({a. x \<in> a} \<inter> F)) +  card ({a. x \<in> a} \<inter> F)"
+              by (simp add: insert.hyps(1,2))
+          show ?case 
+          proof(cases "x \<in> Vs F")
+            case True
+            have "(\<Sum>x\<in>Vs F - e. card (Collect ((\<in>) x) \<inter> F)) =
+                 (\<Sum>x\<in>Vs F - insert x e \<union> {x}. card (Collect ((\<in>) x) \<inter> F))"
+              using True insert(2) by (auto intro!: arg_cong[of _ _ "sum _ "])
+            hence "(\<Sum>x\<in>Vs F - e. card (Collect ((\<in>) x) \<inter> F)) = 
+                  (\<Sum>x\<in>Vs F - insert x e. card (Collect ((\<in>) x) \<inter> F))
+                  + (\<Sum>x\<in>{x}. card (Collect ((\<in>) x) \<inter> F))"
+              using finite_Vs by (auto simp add: sum.union_disjoint[symmetric])
+            thus  ?thesis
+              by(auto simp add: rw1 insert(3)[symmetric])
+           next
+             case False
+             hence "Collect ((\<in>) x) \<inter> F = {}"
+               by blast
+             thus ?thesis
+               using False
+               by(auto simp add: rw1 insert(3)[symmetric])
+          qed
+        qed
+        show ?case
+          using rw4 rw3
+          by (auto simp add: rw1 rw2 rw5 rw6 rw7)
+      qed simp
+    qed
+  qed (simp add: assms)
+qed (simp add: assms finite_Vs_then_finite)
+
 subsection \<open>Neighbours\<close>
 
 definition "neighbourhood G v = {u. {u,v} \<in> G}"
@@ -293,6 +422,14 @@ lemma not_in_NeighbourhoodE:
  "v \<notin> Neighbourhood G V \<Longrightarrow>
  ((\<And> u. \<lbrakk>{u, v} \<in> G; u \<in> V; v \<notin> V\<rbrakk> \<Longrightarrow> False) \<Longrightarrow> P)
   \<Longrightarrow> P"
+  by(auto simp add: Neighbourhood_def)
+
+lemma Neighbourhood_in_G: "Neighbourhood G X \<subseteq> Vs G"
+  by(auto simp add: Neighbourhood_def)
+
+lemma in_NeighbourhoodE: 
+  "\<lbrakk>y \<in> Neighbourhood G X;
+    \<And> x. \<lbrakk>{x, y} \<in> G; x \<in> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by(auto simp add: Neighbourhood_def)
 
 lemma self_not_in_Neighbourhood:
@@ -330,6 +467,22 @@ lemma graph_subs_reach:
 lemma neighbours_of_Vs_un: 
   "neighbours_of_Vs G (Y \<union> X) = (neighbours_of_Vs G Y - neighbours_of_Vs G X) \<union> neighbours_of_Vs G X"
   unfolding neighbours_of_Vs_def using UnE by blast
+
+definition "deltas G X = {e | u e. e \<in> G \<and> u\<in> X \<and> u \<in> e}"
+
+lemma deltas_subset: "deltas G x \<subseteq> G"
+  by(auto simp add: deltas_def)
+
+subsection \<open>Subgraphs\<close>
+
+definition "graph_inter_Vs G X = {e | e. e \<in> G \<and> e \<subseteq> X}"
+
+lemma graph_inter_Vs_subset: "graph_inter_Vs G X \<subseteq> G" "Vs (graph_inter_Vs G X) \<subseteq> X"
+  by(auto simp add: graph_inter_Vs_def  vs_member)
+
+lemma graph_inter_subset:
+  "G \<subseteq> G' \<Longrightarrow> graph_inter_Vs G X \<subseteq> graph_inter_Vs G' X"
+  by(auto simp add: graph_inter_Vs_def)
 
 subsection \<open>Bigraphs\<close>
 
@@ -667,7 +820,31 @@ lemma remove_vertices_in_diff: "{u,v} \<in> G \<setminus> X \<Longrightarrow> {u
 
 lemma subgraph_remove_some_ex:
   "\<exists>x. x \<in> Vs G \<and> x \<notin> Vs M \<Longrightarrow> M \<subseteq> G \<Longrightarrow> M \<subseteq> G \<setminus> {SOME x. x \<in> Vs G \<and> x \<notin> Vs M}"
-    by (auto intro: in_remove_verticesI dest!: someI_ex)
+  by (auto intro: in_remove_verticesI dest!: someI_ex)
+
+lemma graph_invar_graph_inter_Vs:
+  assumes "graph_invar G" 
+  shows "graph_invar (graph_inter_Vs G X)"
+  by(rule graph_invar_subset[OF assms graph_inter_Vs_subset(1)])
+
+lemma graph_invar_deltas:
+  assumes "graph_invar G" 
+  shows "graph_invar (deltas G X)"
+  by(rule graph_invar_subset[OF assms deltas_subset])
+
+lemma doublton_graph_edge_card_sums:
+ assumes "graph_invar G"
+ shows "sum card G = 2 * card G"
+  using assms 
+  by(subst comm_monoid_add_class.sum.cong[OF refl, of _ _ "\<lambda> e. 2"])
+    (auto intro!: card_edge)
+
+lemma bigraph_handshaking_lemma:
+  assumes "graph_invar G"
+  shows "sum (degree G) (Vs G) = 2 * card G"
+  using assms
+  by(subst general_handshaking_lemma)
+    (auto simp add: doublton_graph_edge_card_sums)
 
 subsection\<open>Paths, connected components, and symmetric differences\<close>
 
@@ -911,6 +1088,38 @@ lemma path_edges_subset:
 lemma edges_of_path_symmetric_split:"edges_of_path (xs@[x,y]@ys) = edges_of_path (xs@[x]) @[{x,y}] @ edges_of_path (y#ys)"
   by (metis append_is_Nil_conv edges_of_path.simps(2) edges_of_path.simps(3) edges_of_path_append_2 
 edges_of_path_append_3 hd_append2 last_ConsL last_ConsR list.discI list.sel(1))
+
+lemma non_last_vertex_or_even_list_in_even_edge:
+     assumes "distinct p" "length p \<ge> 2" "x \<in> set p"
+             "x \<noteq> last p \<or> even (length p)"
+     obtains i where "even i" "i < length p - 1" "x \<in> edges_of_path p ! i"
+proof(goal_cases)
+  case 1
+  obtain i where i: "p ! i = x" "i < length p"
+    using assms(3) by(auto simp add: in_set_conv_nth)
+  have  "even i" "i < length p - 1" "x \<in> edges_of_path p ! i"
+    if evi:"even i"
+  proof-
+    show a: "i < length p - 1"
+      using evi assms  i(1,2) last_conv_nth[of p] not_less_less_Suc_eq
+      by fastforce
+    thus  "x \<in> edges_of_path p ! i"
+      by (simp add: edges_of_path_index i(1))
+  qed (rule evi)
+    moreover have  "even (i-1)" "i-1 < length p - 1" "x \<in> edges_of_path p ! (i-1)"
+      if odi:"odd i"  
+    proof-
+      show  "even (i-1)"
+        by (simp add: that)
+      show "i-1 < length p - 1"
+        using i(2) odd_pos that by fastforce
+      thus "x \<in> edges_of_path p ! (i-1)"
+        by (simp add: edges_of_path_index i(1) that)
+    qed
+    ultimately show ?case
+      by(cases "even i")
+        (auto intro: 1[of i] 1[of "i-1"])
+  qed
 
 lemma induct_list012[case_names nil single sucsuc]:
   "\<lbrakk>P []; \<And>x. P [x]; \<And>x y zs. \<lbrakk> P zs; P (y # zs) \<rbrakk> \<Longrightarrow> P (x # y # zs)\<rbrakk> \<Longrightarrow> P xs"
@@ -3663,8 +3872,8 @@ next
     using xy_prop by blast
 qed
 
-lemma epath_distinct_epath:"epath G u p v \<Longrightarrow>
-l = length p \<Longrightarrow> \<exists> q. epath G u q v \<and> set q \<subseteq> set p \<and> distinct q" 
+lemma epath_distinct_epath:
+"\<lbrakk>epath G u p v; l = length p\<rbrakk> \<Longrightarrow> \<exists> q. epath G u q v \<and> set q \<subseteq> set p \<and> distinct q" 
 proof(induction l arbitrary: u p v rule: less_induct)
   case (less l)
   show ?case
@@ -4144,6 +4353,215 @@ proof-
   show "card C \<ge> 2"
     using finite_comp \<open>X \<in> C\<close> \<open>X \<noteq> Y\<close> \<open>Y \<in> C\<close>
     by(auto simp: eval_nat_numeral not_less_eq_eq[symmetric] dest: card_le_Suc0_iff_eq)
+qed
+
+lemma degree_in_component_is_degree:
+  assumes "dblton_graph G"
+  shows "degree (component_edges G (connected_component G x)) x = degree G x"
+proof-
+  have "\<lbrakk>{x, v} \<in> G; x \<noteq> v\<rbrakk> \<Longrightarrow>
+         \<exists>xa y.
+            {x, v} = {xa, y} \<and>
+            xa \<in> connected_component G x \<and> y \<in> connected_component G x \<and> {xa, y} \<in> G" for v
+    by(auto intro!: exI[of "\<lambda> xa.\<exists> y. {x, v} = {xa, y} \<and> _ xa y" x] 
+        exI[of "\<lambda> y. {x, v} = {x, y} \<and> _ y" v]
+        simp add: in_own_connected_component edges_reachable in_connected_componentI)
+  thus ?thesis
+    using assms
+    by(auto simp add: degree_def component_edges_def insert_commute 
+        intro!: arg_cong[of  _ _ card'])
+qed
+
+lemma degree_in_component_is_degree_two_verts:
+  assumes "dblton_graph G" "x \<in> connected_component G y"
+  shows "degree (component_edges G (connected_component G y)) x = degree G x"
+  using connected_components_member_eq[OF assms(2)] degree_in_component_is_degree[OF assms(1), of x]
+  by simp
+
+lemma Vs_of_component_edges_is_component:
+  "\<lbrakk>x \<in> connected_component G y; y \<noteq> x; dblton_graph G\<rbrakk> \<Longrightarrow> 
+      Vs (component_edges G (connected_component G y)) = connected_component G y"
+proof(rule, goal_cases)
+  case 2
+  have obtain_edge:"\<exists> z. xx \<noteq> z \<and> {xx, z} \<in> G" if "xx \<in> connected_component G y" for xx
+  proof(cases "xx = y")
+    case False
+    have y_xx:"y \<in> connected_component G xx"
+      using that connected_components_member_sym by force
+    then obtain p where "walk_betw G xx p y" 
+      using 2(2) 
+      by(auto intro: in_connected_component_has_walk in_connected_componentE[OF y_xx]
+          in_connected_componentE[OF 2(1)] in_con_comp_has_walk[OF connected_components_member_sym[OF 2(1)]])
+    then obtain p where "walk_betw G xx p y" "distinct p" 
+      using "2"(2) False by(auto dest: walk_betw_different_verts_to_ditinct)
+    moreover hence "length p \<ge> 2" 
+      using "2"(2) False by(auto intro: walk_betw_length)
+    ultimately have "\<exists> z. xx \<noteq> z \<and> {xx, z} \<in> G"
+      using 2(2) False by(all \<open>cases p rule: list_cases3\<close>)(auto simp add: walk_betw_def)
+    thus ?thesis 
+      by simp
+  next
+    case True
+    then obtain p where "walk_betw G xx p x" 
+      using  "2"(1,2) in_con_comp_has_walk[of x G y] by auto
+    then obtain p where "walk_betw G xx p x" "distinct p" 
+      using "2"(2) True by(auto dest: walk_betw_different_verts_to_ditinct)
+    moreover hence "length p \<ge> 2" 
+      using "2"(2) True by(auto intro: walk_betw_length)
+    ultimately have "\<exists> z. xx \<noteq> z \<and> {xx, z} \<in> G"
+      using 2(2) True by(all \<open>cases p rule: list_cases3\<close>)(auto simp add: walk_betw_def)
+    thus ?thesis 
+      by simp
+  qed
+  show ?case 
+  proof(rule, goal_cases)
+    case (1 x)
+    then obtain z where "x \<noteq> z" "{x, z} \<in> G"
+      by(auto dest: obtain_edge)
+    moreover hence "z \<in> connected_component G y" 
+      using  "1" connected_components_member_eq[of x G y] in_con_comp_insert[of z x "G - {{x, z}}"]
+        insert_Diff 
+      by force
+    ultimately show ?case
+      using 1
+      by (auto simp add: Vs_def component_edges_def 
+          intro!: exI[of _ "{x, z}"] exI[of "\<lambda> xx.\<exists> ya. {x, z} = {xx, ya} \<and> _ xx ya" x]
+          exI[of "\<lambda> ya. {x, z} = {x, ya} \<and> _ ya" z])
+  qed
+qed (auto simp add: Vs_def component_edges_def)
+
+lemma component_walk_vertex_degress:
+  assumes "\<And> x. x \<in> set p \<Longrightarrow> degree G x \<le> 2" "length p \<ge> 2" "distinct p"
+    "walk_betw G u p v" "set p = connected_component G u" "graph_invar G"
+  shows "\<And> x. x \<in> set p \<Longrightarrow> degree G x \<ge> 1"
+    "\<And> x. \<lbrakk>x \<in> set p; x \<noteq> u; x \<noteq> v\<rbrakk> \<Longrightarrow> degree G x = 2"
+    "degree G u = 1 \<longleftrightarrow> degree G v = 1"
+proof-
+  have dbltn_G: "dblton_graph G"
+    by (simp add: assms(6))
+  have obtain_e_with_x:"x \<in> set p \<Longrightarrow> \<exists> e. x \<in> e \<and> e \<in> set (edges_of_path p)" for x
+    using path_vertex_has_edge[OF assms(2), of x] by auto
+  define C where "C = component_edges G (connected_component G u)"
+  have e_of_p_in_C: "set (edges_of_path p) \<subseteq> C" 
+    using  assms(4,5) 
+    by(auto simp add:  C_def dest: walk_between_nonempty_pathD(1) edges_path_subset_edges)
+  have degree_p:"x \<in> set p \<Longrightarrow> degree C x \<ge> 1" for x
+  proof(goal_cases)
+    case 1
+    then obtain e where "x \<in> e" "e \<in> set (edges_of_path p)"
+      using obtain_e_with_x by auto
+    moreover hence "e \<in> C" 
+      using  assms(4) e_of_p_in_C path_ball_edges by(auto simp add: walk_betw_def)
+    ultimately show ?case 
+      by (simp add: degree_Vs vs_member_intro)
+  qed
+  have p_in_comp_u:"x \<in> set p \<Longrightarrow> x \<in> connected_component G u" for x
+    by (simp add: assms(5))
+  thus "x \<in> set p \<Longrightarrow> degree G x \<ge> 1" for x
+    using p_in_comp_u degree_p  assms(4) degree_Vs in_connected_component_in_edges by fastforce
+  have degree_in_p_leq_2: "x \<in> set p \<Longrightarrow> degree C x \<le> 2" for x
+    using assms(1)[of x] degree_in_component_is_degree_two_verts[OF dbltn_G p_in_comp_u, of x] 
+    by(auto simp add: C_def)
+  have inner_verts_deg_2:"\<lbrakk>x \<in> set p; x \<noteq> u; x \<noteq> v\<rbrakk> \<Longrightarrow> degree C x = 2" for x
+  proof(goal_cases)
+    case 1
+    obtain p1 p2 where "p =p1@[x]@p2" 
+      using "1"(1) in_set_conv_decomp[of x p] by auto
+    then obtain p1 p2 y z where p_split: "p = p1@[y,x,z]@p2"  
+      using 1 assms(4)
+      by(cases p2, all \<open>cases p1 rule: rev_cases\<close>)(auto simp add: walk_betw_def)
+    hence all_different: "y\<noteq>x" "x \<noteq> z" "z\<noteq> y"
+      using assms(3) by auto
+    have "{y,x} \<in> set (edges_of_path p)" "{x, z} \<in> set (edges_of_path p)"
+      using edges_of_path_append_subset by (fastforce simp add: p_split)+
+    hence "{y, x} \<in> C" "{x, z} \<in> C" 
+      using assms(4) path_ball_edges e_of_p_in_C by auto
+    thus ?thesis
+      using assms(3) degree_2[of y x C z] p_split assms(1)[of x] 
+        degree_in_component_is_degree_two_verts[OF dbltn_G p_in_comp_u, of x]
+      by(auto simp add: C_def)
+  qed
+  thus "\<lbrakk>x \<in> set p; x \<noteq> u; x \<noteq> v\<rbrakk> \<Longrightarrow> degree G x = 2" for x
+    using degree_in_component_is_degree_two_verts[OF dbltn_G p_in_comp_u, of x] 
+    by(auto simp add: C_def)
+  have graph_invar_C:"graph_invar C" 
+    using assms(6) component_edges_subset[of G ]  graph_abs_mono[of G C]
+    by(auto simp add: graph_abs_def C_def)
+  have uv_in_p: "u \<in> set p" "v \<in> set p" 
+    using assms(4)
+    by (auto simp add: walk_betw_def dest: last_in_set[of p] hd_in_set[of p])
+  moreover hence u_neq_v:"u \<noteq> v" 
+    using  assms(2,3,4) 
+    by(cases p rule: list_cases_both_sides) (auto simp add: walk_betw_def)
+  ultimately have Vs_C_is: "Vs C = set p" 
+    unfolding C_def using assms(4,2,3) 
+    by(subst Vs_of_component_edges_is_component[of v])(auto intro: has_path_in_connected_component simp add: dbltn_G assms(5))
+  have length_p_minus_2:"length p -2 = card (set p - {u, v})" 
+    using uv_in_p u_neq_v assms(3)
+    by(subst card_Diff_insert[of u "set p" "{v}"]) (auto simp add: distinct_card)
+  note handshakingC = bigraph_handshaking_lemma[OF graph_invar_C, simplified Vs_C_is]
+  moreover have "sum (degree C) (set p) = sum (degree C) (set p - {u, v}) + degree C u + degree C v"
+  proof(subst comm_monoid_add_class.sum.remove[of "set p" u "degree C"], goal_cases)
+    case 3
+    show ?case
+    proof(subst comm_monoid_add_class.sum.remove[of "set p - {u}" v "degree C"], goal_cases)
+      case 3
+      moreover have "set p - {u} - {v} = set p - {u, v}"
+        using u_neq_v uv_in_p by auto
+      ultimately show ?case
+        by(auto simp add: algebra_simps)
+    qed (insert  u_neq_v uv_in_p(2), auto)
+  qed (auto simp add: uv_in_p(1))
+  moreover have "sum (degree C) (set p - {u, v}) = sum (\<lambda> x. 2) (set p - {u, v})"
+    by(auto intro!: comm_monoid_add_class.sum.cong[OF refl] simp add: inner_verts_deg_2)
+  moreover have "sum (\<lambda> x. 2) (set p - {u, v}) = 2 * (length p -2)"
+    by(simp add: length_p_minus_2)
+  ultimately have " enat (2 * card C) = 2 * (length p -2) + degree C u + degree C v "
+    by (auto simp add: mult_2 mult_2_right of_nat_eq_enat)
+  moreover have "degree C u = 1 \<or> degree C u = 2" 
+  proof(cases "degree C u", goal_cases)
+    case (1 nat)
+    moreover have "enat nn + 1 + 1 + 1 \<le> 2  \<Longrightarrow> False" for nn
+      by (metis enat_ord_simps(1) iless_Suc_eq le_add2 linorder_not_le one_add_one one_enat_def
+          plus_1_eSuc(2) plus_enat_simps(1))
+    ultimately show ?case 
+      using degree_in_p_leq_2[OF uv_in_p(1)] degree_p[OF uv_in_p(1)] 
+      by(cases nat rule: nat_cases_up_to_3 )
+        (auto simp add: enat_0 numeral_2_eq_2  eSuc_plus_1 )
+  next
+    case 2
+    then show ?case 
+      using degree_in_p_leq_2[OF uv_in_p(1)] by simp
+  qed
+  moreover have "degree C v = 1 \<or> degree C v = 2" 
+  proof(cases "degree C v", goal_cases)
+    case (1 nat)
+    moreover have "enat nn + 1 + 1 + 1 \<le> 2  \<Longrightarrow> False" for nn
+      by (metis enat_ord_simps(1) iless_Suc_eq le_add2 linorder_not_le one_add_one one_enat_def
+          plus_1_eSuc(2) plus_enat_simps(1))
+    ultimately show ?case 
+      using degree_in_p_leq_2[OF uv_in_p(2)] degree_p[OF uv_in_p(2)] 
+      by(cases nat rule: nat_cases_up_to_3 )
+        (auto simp add: enat_0 numeral_2_eq_2  eSuc_plus_1 )
+  next
+    case 2
+    then show ?case 
+      using degree_in_p_leq_2[OF uv_in_p(2)] by simp
+  qed
+  moreover have "enat (2 * (length p - 2)) + 1 + 2 =  enat (2* (length p -2) + 3)" 
+    by (metis add.commute add_numeral_left mult_2 numeral_Bit1_eq_inc_double numeral_One numeral_plus_one
+        of_nat_add of_nat_eq_enat one_add_one one_enat_def)
+  moreover have "enat (2 * (length p - 2)) + 2 + 1 = enat (2* (length p -2) + 3)"
+    by (metis add.assoc calculation(4) one_add_one)
+  moreover have "(2 * card C) \<noteq> (2 * (length p - 2) + 3)" 
+    by(cases "even (2 * card C)", all \<open>cases "even (2 * (length p - 2) + 3)"\<close>)
+      (force+, auto)
+  ultimately have "(degree C u = 1) = (degree C v = 1)"
+    by auto
+  thus "(degree G u = 1) = (degree G v = 1)"
+    using degree_in_component_is_degree_two_verts[OF dbltn_G p_in_comp_u, OF uv_in_p(1)] 
+      degree_in_component_is_degree_two_verts[OF dbltn_G p_in_comp_u, OF uv_in_p(2)] 
+    by(auto simp add: C_def)
 qed
 
 subsection \<open>Acyclic Graphs\<close>
@@ -4747,6 +5165,11 @@ lemma bipartiteI:
   unfolding bipartite_def
   by auto
 
+lemma bipartiteE:
+ "\<lbrakk>bipartite G L R;
+   \<lbrakk>L \<inter> R = {}; \<And> e. e \<in> G \<Longrightarrow> \<exists>u v. e = {u,v} \<and> u \<in> L \<and> v \<in> R\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by(auto simp add: bipartite_def)
+
 lemma bipartite_disjointD:
   assumes "bipartite G X Y"
   shows "X \<inter> Y = {}"
@@ -5022,6 +5445,15 @@ definition partitioned_bipartite where
   "partitioned_bipartite G X = (X \<subseteq> Vs G \<and> 
               (\<forall> e \<in> G. \<exists> u v. e = {u, v} \<and> (u \<in> X \<and> v \<in> Vs G - X)))"
 
+lemma partitioned_bipartiteI:
+ "\<lbrakk>X \<subseteq> Vs G; \<And> e. e \<in> G \<Longrightarrow> \<exists> u v. e = {u, v} \<and> (u \<in> X \<and> v \<in> Vs G - X)\<rbrakk>
+   \<Longrightarrow> partitioned_bipartite G X"
+and partitioned_bipartiteE:
+ "\<lbrakk>partitioned_bipartite G X;
+  \<lbrakk>X \<subseteq> Vs G; \<And> e. e \<in> G \<Longrightarrow> \<exists> u v. e = {u, v} \<and> (u \<in> X \<and> v \<in> Vs G - X)\<rbrakk> \<Longrightarrow> P\<rbrakk>
+  \<Longrightarrow> P"
+  by(auto simp add: partitioned_bipartite_def)
+
 lemma part_biparite_is_bipartite: "partitioned_bipartite G X \<longrightarrow> is_bipartite G "
   unfolding  partitioned_bipartite_def is_bipartite_def by auto
 
@@ -5098,4 +5530,50 @@ proof -
     by (simp add: partitioned_bipartite_def)
 qed
 
+lemma bipartite_neighbours_of_Vs_Neighbourhood:
+  assumes "partitioned_bipartite G A" "X \<subseteq> A"
+  shows "neighbours_of_Vs G X = Neighbourhood G X"
+  using assms
+  by(auto simp add: neighbours_of_Vs_def Neighbourhood_def partitioned_bipartite_def
+            intro!: bexI[of "\<lambda> u. x \<noteq> u \<and> (\<exists>e\<in>G. u \<in> e \<and> x \<in> e)"_ X for x]
+                    exI[of "\<lambda>u. {u, x} \<in> G \<and> u \<in> X \<and> x \<notin> X" for x])
+
+lemma partitioned_bipartite_project_to_verts:
+  "partitioned_bipartite G A \<Longrightarrow> partitioned_bipartite (deltas G (A \<inter> X)) (A \<inter> X)"
+proof(rule partitioned_bipartiteI, goal_cases)
+  case 1
+  then show ?case 
+    by(auto simp add: deltas_def 
+        elim!: partitioned_bipartiteE vs_member_elim[OF subsetD, of A G ] )
+next
+  case (2 e)
+  then show ?case 
+    by(auto  simp add: deltas_def 
+        elim!: partitioned_bipartiteE 
+        dest!: spec 
+        intro!: exI[of  "\<lambda> u. \<exists> va. {ua, v} = {u, va} \<and> _ u va v" for v ua]
+        exI[of  "\<lambda> va. {ua, v} = {u, va} \<and> _ u va v" for v ua u]) 
+qed
+
+lemma partioned_bipartite_project:
+  "partitioned_bipartite G A 
+  \<Longrightarrow> partitioned_bipartite (graph_inter_Vs G X) (A \<inter> (Vs (graph_inter_Vs G X)))"
+proof(rule partitioned_bipartiteI, rule, goal_cases)
+  case (1 x)
+  then obtain e where e: "x \<in> e" "e \<in> (graph_inter_Vs G X)"
+    using vs_member[of x "graph_inter_Vs G X"]
+    by(auto elim!: partitioned_bipartiteE) 
+  thus ?case 
+    by auto
+next
+  case (2 e)
+  hence e_in_G_X: "e \<in> G" "e \<subseteq> X"
+    by(auto simp add: graph_inter_Vs_def)
+  then obtain u v where uv: "e = {u, v}" "u \<in> A" "v \<in> Vs G - A"
+    using 2(1) by(auto elim!: partitioned_bipartiteE)
+  show ?case
+    using uv 2(2) 
+    by (auto intro!: exI[of "\<lambda> ua. \<exists> va. {u, v} = {ua, va} \<and> _  ua va" u]
+        exI[of  "\<lambda> va. {u, v} = {u, va} \<and> _ va"])
+qed
 end
