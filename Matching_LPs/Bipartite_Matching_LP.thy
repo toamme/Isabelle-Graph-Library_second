@@ -82,7 +82,8 @@ lemma bijections:"bij_betw Vs_enum (L \<union> R) {0..<card (L \<union> R)}"
 proof-
   have L_collect_rewrite:"(L \<union> R) \<inter> {x . x \<notin> L} =  R"
     by blast
-  have helper:"x < card (L \<union> R) \<Longrightarrow> \<forall>xa\<in>R. x \<noteq> to_nat_on R xa + card L \<Longrightarrow> \<exists>xa\<in>L. x = to_nat_on L xa" for x
+  have helper:"\<lbrakk>x < card (L \<union> R); \<forall>xa\<in>R. x \<noteq> to_nat_on R xa + card L\<rbrakk>
+               \<Longrightarrow> \<exists>xa\<in>L. x = to_nat_on L xa" for x
   proof(goal_cases)
     case 1
     have x_le_L:"x < card L"
@@ -102,10 +103,10 @@ proof-
      show ?thesis 
        using L_enum_inv[OF x_le_L] from_nat_into[of L x] x_le_L by force
    qed
-   have helpers: "x \<in> L \<Longrightarrow> y \<in> L \<Longrightarrow> to_nat_on L x = to_nat_on L y \<Longrightarrow> x = y"
-                 " x \<in> L \<Longrightarrow> y \<in> R \<Longrightarrow> y \<notin> L \<Longrightarrow> to_nat_on L x = to_nat_on R y + card L \<Longrightarrow> x = y"
-                 "x \<in> R \<Longrightarrow> x \<notin> L \<Longrightarrow> y \<in> L \<Longrightarrow> to_nat_on R x + card L = to_nat_on L y \<Longrightarrow> x = y"
-                 "x \<in> R \<Longrightarrow> x \<notin> L \<Longrightarrow> y \<in> R \<Longrightarrow> y \<notin> L \<Longrightarrow> to_nat_on R x = to_nat_on R y \<Longrightarrow> x = y"
+   have helpers: "\<lbrakk>x \<in> L; y \<in> L; to_nat_on L x = to_nat_on L y\<rbrakk> \<Longrightarrow> x = y"
+                 "\<lbrakk>x \<in> L; y \<in> R; y \<notin> L; to_nat_on L x = to_nat_on R y + card L\<rbrakk> \<Longrightarrow> x = y"
+                 "\<lbrakk>x \<in> R; x \<notin> L; y \<in> L; to_nat_on R x + card L = to_nat_on L y\<rbrakk> \<Longrightarrow> x = y"
+                 "\<lbrakk>x \<in> R; x \<notin> L; y \<in> R; y \<notin> L; to_nat_on R x = to_nat_on R y\<rbrakk> \<Longrightarrow> x = y"
                  for x y
        using L_inv_enum L_enum_less_card  R_inv_enum  R_enum_less_card by fastforce+
   show "bij_betw Vs_enum (L \<union> R) {0..<card (L \<union> R)}"
@@ -118,8 +119,9 @@ proof-
     by(auto simp add: bij_betw_def inj_on_def countable_finite to_nat_on_less_card)
 qed
 
-lemma inversions: "x \<in> L \<union> R \<Longrightarrow> Vs_enum_inv (Vs_enum x) = x"
-                  "e \<in> G \<Longrightarrow> G_enum_inv (G_enum e) = e"
+lemma inversions: 
+  "x \<in> L \<union> R \<Longrightarrow> Vs_enum_inv (Vs_enum x) = x"
+  "e \<in> G \<Longrightarrow> G_enum_inv (G_enum e) = e"
   by(auto simp add: Vs_enum_def Vs_enum_inv_def countable_finite L_enum_less_card)
 
 interpretation lp: matching_lp_basic "L \<union> R" G Vs_enum Vs_enum_inv G_enum G_enum_inv
@@ -145,10 +147,10 @@ lemma n_sum: "n = card L + card R"
   using parts_minimal
   by (auto simp: card_Un_disjoint n_def)
 
-lemma geq_L_less_n_less_R: "card L \<le> i \<Longrightarrow> i < n \<Longrightarrow> i - card L < card R"
+lemma geq_L_less_n_less_R: "\<lbrakk>card L \<le> i; i < n\<rbrakk> \<Longrightarrow> i - card L < card R"
   by (auto simp: n_sum)
 
-lemma geq_L_less_n_less_R': "\<not> i < card L \<Longrightarrow> i < n \<Longrightarrow> i - card L < card R"
+lemma geq_L_less_n_less_R': "\<lbrakk>\<not> i < card L; i < n\<rbrakk> \<Longrightarrow> i - card L < card R"
   by (auto intro: geq_L_less_n_less_R)
 
 lemma Vs_cases: 
@@ -239,10 +241,10 @@ lemma from_nat_into_G_E:
   using assms bipartite_graph
   by (metis bipartite_edgeE from_nat_into_G_E_aux)
 
-lemma Vs_enum_neqI: "v \<in> Vs G \<Longrightarrow> v' \<in> Vs G \<Longrightarrow> v \<noteq> v' \<Longrightarrow> Vs_enum v \<noteq> Vs_enum v'"
+lemma Vs_enum_neqI: "\<lbrakk>v \<in> Vs G; v' \<in> Vs G; v \<noteq> v'\<rbrakk> \<Longrightarrow> Vs_enum v \<noteq> Vs_enum v'"
   by (metis Vs_inv_enum)
 
-lemma G_enum_neqI: "e \<in> G \<Longrightarrow> e' \<in> G \<Longrightarrow> e \<noteq> e' \<Longrightarrow> G_enum e \<noteq> G_enum e'"
+lemma G_enum_neqI: "\<lbrakk>e \<in> G; e' \<in> G; e \<noteq> e'\<rbrakk> \<Longrightarrow> G_enum e \<noteq> G_enum e'"
   by (simp add: countable_finite)
 
 lemma the_lE:
@@ -286,7 +288,8 @@ lemma feasible_matching:
   assumes "M \<subseteq> G"
   assumes "incidence_matrix *\<^sub>v primal_sol M \<le> 1\<^sub>v n"
   shows "matching M"
-proof (use assms in \<open>simp add: incidence_matrix_def primal_sol_def mult_mat_vec_def scalar_prod_def less_eq_vec_def\<close>, intro ccontr[where P = "matching M"])
+proof (use assms in \<open>simp add: incidence_matrix_def primal_sol_def 
+           mult_mat_vec_def scalar_prod_def less_eq_vec_def\<close>, intro ccontr[where P = "matching M"])
   assume "M \<subseteq> G"
   let ?indices = "\<lambda>i. {0..<m} \<inter> {i. from_nat_into G i \<in> M} \<inter> {x. Vs_enum_inv i \<in> from_nat_into G x}"
   assume at_most_One: "\<forall>i<n. (card (?indices i)) \<le> Suc 0"
@@ -339,5 +342,4 @@ lemmas card_matching_bound_by_feasible_dual = lp.card_matching_bound_by_feasible
 lemmas max_card_matching_bound_by_feasible_dual= lp.max_card_matching_bound_by_feasible_dual
 
 end
-
 end

@@ -4,7 +4,7 @@
 
 theory AdWords
   imports 
-    Bipartite_Matching_LP
+    Matching_LPs.Bipartite_Matching_LP
     More_Lattices_Big
     "HOL-Combinatorics.Multiset_Permutations"
 begin

@@ -6,7 +6,7 @@ theory Faces
     Jordan_Normal_Form.Matrix
     Jordan_Normal_Form.DL_Rank_Submatrix
     Subsystems
-    Primal_Dual_Bipartite_Matching.Matching_LP
+    Matching_LP
 begin 
 (*
 

@@ -5,6 +5,7 @@ sessions
     "LP_Duality"
     "Treaps"
     "Basic_Matching"
+    "Matching_LPs"
   (*theories [document=false]*)
 
   theories
@@ -12,8 +13,6 @@ sessions
     "Measure_Misc"
     "Order_Relations"
     "Order_Relations_From_Priorities"
-    "Bipartite_Matching_LP"
-    "Bipartite_Vertex_Weighted_Matching_LP"
     "Bipartite_Vertex_Priorities"
     "Ranking_Order"
     "Ranking_Order_Probabilistic"

@@ -5,7 +5,7 @@
 theory Ranking_Order_Probabilistic_Vertex_Weighted
   imports
     Ranking_Order
-    Bipartite_Vertex_Weighted_Matching_LP
+    Matching_LPs.Bipartite_Vertex_Weighted_Matching_LP
     Order_Relations_From_Priorities
     Bipartite_Vertex_Priorities
 begin

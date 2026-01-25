@@ -1,5 +1,5 @@
 theory Tot_Unimod_graph
-  imports Totally_Unimodular Even_More_Graph_2 Primal_Dual_Bipartite_Matching.Matching_LP
+  imports Totally_Unimodular Even_More_Graph_2 Matching_LP
 begin
 (*
 no_notation Matching_LP.one_vec ("1\<^sub>v")

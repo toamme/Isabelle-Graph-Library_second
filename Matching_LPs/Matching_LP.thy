@@ -11,19 +11,20 @@ definition "feasible_max_dual V E w (y::'v \<Rightarrow> real) =
 Vs E \<subseteq> V \<and> finite V)"
 
 lemma feasible_max_dualI:
-"(\<And> v. v \<in> V \<Longrightarrow> y v \<ge> 0) \<Longrightarrow>
-(\<And> e u v. e \<in> E \<Longrightarrow> e ={u, v} \<Longrightarrow> y u +  y v \<ge> w e)
-\<Longrightarrow> Vs E \<subseteq> V \<Longrightarrow> finite V
-\<Longrightarrow> feasible_max_dual V E w y"
+  "\<lbrakk>\<And> v. v \<in> V \<Longrightarrow> y v \<ge> 0;
+    \<And> e u v. e \<in> E \<Longrightarrow> e ={u, v} \<Longrightarrow> y u +  y v \<ge> w e;
+    Vs E \<subseteq> V; finite V\<rbrakk>
+  \<Longrightarrow> feasible_max_dual V E w y"
 and feasible_max_dualE:
-"feasible_max_dual V E w y \<Longrightarrow>((\<And> v. v \<in> V \<Longrightarrow> y v \<ge> 0) \<Longrightarrow>
-(\<And> e u v. e \<in> E \<Longrightarrow> e ={u, v} \<Longrightarrow> y u +  y v \<ge> w e)
-\<Longrightarrow> Vs E \<subseteq> V \<Longrightarrow> finite V \<Longrightarrow> P) \<Longrightarrow> P"
+  "\<lbrakk>feasible_max_dual V E w y;
+    \<lbrakk>\<And> v. v \<in> V \<Longrightarrow> y v \<ge> 0; \<And> e u v. e \<in> E \<Longrightarrow> e ={u, v} \<Longrightarrow> y u +  y v \<ge> w e;
+     Vs E \<subseteq> V; finite V\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
 and feasible_max_dualD:
-"feasible_max_dual V E w y \<Longrightarrow> v \<in> V \<Longrightarrow> y v \<ge> 0"
-"feasible_max_dual V E w y \<Longrightarrow> e \<in> E \<Longrightarrow> e ={u, v} \<Longrightarrow> y u +  y v \<ge> w e"
-"feasible_max_dual V E w y \<Longrightarrow>  Vs E \<subseteq> V"
-"feasible_max_dual V E w y \<Longrightarrow>  finite V"
+  "\<lbrakk>feasible_max_dual V E w y; v \<in> V\<rbrakk> \<Longrightarrow> y v \<ge> 0"
+  "\<lbrakk>feasible_max_dual V E w y; e \<in> E; e ={u, v}\<rbrakk> \<Longrightarrow> y u +  y v \<ge> w e"
+  "feasible_max_dual V E w y \<Longrightarrow>  Vs E \<subseteq> V"
+  "feasible_max_dual V E w y \<Longrightarrow>  finite V"
   by(auto simp add: feasible_max_dual_def)
 
 definition "min_feasible_max_dual V E w y =
@@ -31,51 +32,48 @@ definition "min_feasible_max_dual V E w y =
  (\<forall> y'. feasible_max_dual V E w y' \<longrightarrow> sum y V \<le> sum y' V))"
 
 lemma min_feasible_max_dualE:
-"min_feasible_max_dual V E w y \<Longrightarrow>
-(feasible_max_dual V E w y \<Longrightarrow>
-(\<And> y'. feasible_max_dual V E w y' \<Longrightarrow> sum y V \<le> sum y' V) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "\<lbrakk>min_feasible_max_dual V E w y;
+     \<lbrakk>feasible_max_dual V E w y; \<And> y'. feasible_max_dual V E w y' \<Longrightarrow> sum y V \<le> sum y' V\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
 and min_feasible_max_dualI:
-"feasible_max_dual V E w y \<Longrightarrow>
-(\<And> y'. feasible_max_dual V E w y' \<Longrightarrow> sum y V \<le> sum y' V) \<Longrightarrow> 
-min_feasible_max_dual V E w y"
+  "\<lbrakk>feasible_max_dual V E w y; \<And> y'. feasible_max_dual V E w y' \<Longrightarrow> sum y V \<le> sum y' V\<rbrakk>
+   \<Longrightarrow> min_feasible_max_dual V E w y"
 and min_feasible_max_dualD:
-"min_feasible_max_dual V E w y \<Longrightarrow>feasible_max_dual V E w y"
-"min_feasible_max_dual V E w y \<Longrightarrow> feasible_max_dual V E w y' \<Longrightarrow> sum y V \<le> sum y' V"
+  "min_feasible_max_dual V E w y \<Longrightarrow>feasible_max_dual V E w y"
+  "\<lbrakk>min_feasible_max_dual V E w y; feasible_max_dual V E w y'\<rbrakk> \<Longrightarrow> sum y V \<le> sum y' V"
   by(auto simp add: min_feasible_max_dual_def)
 
 definition "tight_subgraph E w y = {{u, v} | u v. {u, v} \<in> E \<and> w {u, v} = y u + y v}"
 
 lemma in_tight_subgraphI:
-"e = {u, v} \<Longrightarrow> {u, v} \<in> E \<Longrightarrow> w {u, v} = y u + y v \<Longrightarrow> e \<in> tight_subgraph E w y"
+  "\<lbrakk>e = {u, v}; {u, v} \<in> E; w {u, v} = y u + y v\<rbrakk> \<Longrightarrow> e \<in> tight_subgraph E w y"
 and in_tight_subgraphE:
-" e \<in> tight_subgraph E w y \<Longrightarrow>
- (\<And> u v. e = {u, v} \<Longrightarrow> {u, v} \<in> E \<Longrightarrow> w {u, v} = y u + y v \<Longrightarrow> P) \<Longrightarrow> P"
+  "\<lbrakk>e \<in> tight_subgraph E w y;
+    \<And> u v. \<lbrakk>e = {u, v}; {u, v} \<in> E; w {u, v} = y u + y v\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
 and in_tight_subgraphD:
-" e \<in> tight_subgraph E w y \<Longrightarrow> e = {u, v}  \<Longrightarrow> w {u, v} = (y::'v \<Rightarrow> real) u + y v"
+  "\<lbrakk>e \<in> tight_subgraph E w y; e = {u, v}\<rbrakk>  \<Longrightarrow> w {u, v} = (y::'v \<Rightarrow> real) u + y v"
   by(auto simp add: tight_subgraph_def doubleton_eq_iff insert_commute)
 
 definition "non_zero_vertices V y = {v | v. v \<in> V \<and> y v \<noteq> 0}"
 
 lemma in_non_zero_verticesI:
-"v \<in> V \<Longrightarrow> y v \<noteq> 0 \<Longrightarrow> v \<in> non_zero_vertices V y"
+  "\<lbrakk>v \<in> V; y v \<noteq> 0\<rbrakk> \<Longrightarrow> v \<in> non_zero_vertices V y"
 and in_non_zero_verticesE:
-"v \<in> non_zero_vertices V y \<Longrightarrow> 
-(v \<in> V \<Longrightarrow> y v \<noteq> 0 \<Longrightarrow> P) \<Longrightarrow> P"
+  "\<lbrakk>v \<in> non_zero_vertices V y; \<lbrakk>v \<in> V; y v \<noteq> 0\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by(auto simp add:  non_zero_vertices_def)
 
 definition "feasible_min_perfect_dual E w (y::'v \<Rightarrow> real) = 
- ((\<forall> e \<in> E. \<forall> u v. e ={u, v} \<longrightarrow> y u +  y v \<le> w e) )"
+ ((\<forall> e \<in> E. \<forall> u v. e = {u, v} \<longrightarrow> y u +  y v \<le> w e) )"
 
 lemma feasible_min_perfect_dualI:
-"(\<And> e u v. e \<in> E \<Longrightarrow> e ={u, v} \<Longrightarrow> y u +  y v \<le> w e)
-\<Longrightarrow> feasible_min_perfect_dual E w y"
+  "\<lbrakk>\<And> e u v. \<lbrakk>e \<in> E; e = {u, v}\<rbrakk> \<Longrightarrow> y u +  y v \<le> w e\<rbrakk>
+   \<Longrightarrow> feasible_min_perfect_dual E w y"
 and feasible_min_perfect_dualE:
-"feasible_min_perfect_dual E w y \<Longrightarrow>(
-(\<And> e u v. e \<in> E \<Longrightarrow> e ={u, v} \<Longrightarrow> y u +  y v \<le> w e)
- \<Longrightarrow> P) \<Longrightarrow> P"
+  "\<lbrakk>feasible_min_perfect_dual E w y;
+    (\<And> e u v. \<lbrakk>e \<in> E; e = {u, v}\<rbrakk> \<Longrightarrow> y u +  y v \<le> w e) \<Longrightarrow>P\<rbrakk> \<Longrightarrow> P"
 and feasible_min_perfect_dualD:
-"feasible_min_perfect_dual E w y \<Longrightarrow> e \<in> E \<Longrightarrow> e ={u, v} \<Longrightarrow> y u +  y v \<le> w e"
+  "\<lbrakk>feasible_min_perfect_dual E w y; e \<in> E; e = {u, v}\<rbrakk> \<Longrightarrow> y u +  y v \<le> w e"
   by(auto simp add: feasible_min_perfect_dual_def)
 
 definition "max_feasible_min_perfect_dual E w y =
@@ -83,18 +81,18 @@ definition "max_feasible_min_perfect_dual E w y =
  (\<forall> y'. feasible_min_perfect_dual E w y' \<longrightarrow> sum y (Vs E) \<ge> sum y' (Vs E)))"
 
 lemma max_feasible_min_perfect_dualE:
-"max_feasible_min_perfect_dual  E w y \<Longrightarrow>
-(feasible_min_perfect_dual  E w y \<Longrightarrow>
-(\<And> y'. feasible_min_perfect_dual  E w y' \<Longrightarrow> sum y (Vs E) \<ge> sum y' (Vs E)) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "\<lbrakk>max_feasible_min_perfect_dual E w y;
+    \<lbrakk>feasible_min_perfect_dual E w y;
+     \<And> y'. feasible_min_perfect_dual  E w y' \<Longrightarrow> sum y (Vs E) \<ge> sum y' (Vs E)\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
 and max_feasible_min_perfect_dualI:
-"feasible_min_perfect_dual E w y \<Longrightarrow>
-(\<And> y'. feasible_min_perfect_dual E w y' \<Longrightarrow> sum y (Vs E) \<ge> sum y' (Vs E)) \<Longrightarrow> 
-max_feasible_min_perfect_dual E w y"
+  "\<lbrakk>feasible_min_perfect_dual E w y;
+   \<And> y'. feasible_min_perfect_dual E w y' \<Longrightarrow> sum y (Vs E) \<ge> sum y' (Vs E)\<rbrakk>
+   \<Longrightarrow> max_feasible_min_perfect_dual E w y"
 and max_feasible_min_perfect_dualD:
-"max_feasible_min_perfect_dual E w y \<Longrightarrow>feasible_min_perfect_dual E w y"
-"max_feasible_min_perfect_dual E w y \<Longrightarrow> feasible_min_perfect_dual E w y'
- \<Longrightarrow> sum y (Vs E) \<ge> sum y' (Vs E)"
+  "max_feasible_min_perfect_dual E w y \<Longrightarrow>feasible_min_perfect_dual E w y"
+  "\<lbrakk>max_feasible_min_perfect_dual E w y; feasible_min_perfect_dual E w y'\<rbrakk>
+   \<Longrightarrow> sum y (Vs E) \<ge> sum y' (Vs E)"
   by(auto simp add: max_feasible_min_perfect_dual_def)
 
 subsection \<open>Translations between matchings and LPs\<close>
@@ -231,7 +229,7 @@ named_theorems matching_lp_theorems
 
 lemma bij_Vs_enum_inv[matching_lp_theorems]: "bij_betw Vs_enum_inv {0..< card V} V"
 proof-
-  have "x < card V \<Longrightarrow> y < card V \<Longrightarrow> Vs_enum_inv x = Vs_enum_inv y \<Longrightarrow> x = y" for x y
+  have "\<lbrakk>x < card V; y < card V; Vs_enum_inv x = Vs_enum_inv y\<rbrakk> \<Longrightarrow> x = y" for x y
     by (metis Vs_enum_Vs_enum_inv atLeastLessThan_iff bij_Vs_enum bij_betw_def imageE zero_le)
   moreover have "xa < card V \<Longrightarrow> Vs_enum_inv xa \<in> V" for xa
     by (metis (full_types) atLeastLessThan_iff bij_Vs_enum bij_betw_def imageE
@@ -244,7 +242,7 @@ qed
 
 lemma bij_G_enum_inv[matching_lp_theorems]: "bij_betw G_enum_inv {0..< card G} G"
 proof-
-  have "x < card G \<Longrightarrow> y < card G \<Longrightarrow> G_enum_inv x = G_enum_inv y \<Longrightarrow> x = y" for x y
+  have "\<lbrakk>x < card G; y < card G; G_enum_inv x = G_enum_inv y\<rbrakk> \<Longrightarrow> x = y" for x y
     by (metis G_enum_G_enum_inv atLeastLessThan_iff bij_G_enum bij_betw_def imageE
         zero_le)
   moreover have "xa < card G \<Longrightarrow> G_enum_inv xa \<in> G" for xa
@@ -271,9 +269,11 @@ definition weight_vect::"('a set \<Rightarrow> real) \<Rightarrow> real vec" whe
 definition dual_sol::"('a \<Rightarrow> real) \<Rightarrow> real vec" where
   "dual_sol y = vec n (\<lambda> i. y (Vs_enum_inv i))"
 
-lemmas [matching_lp_theorems] = primal_sol_def incidence_matrix_def weight_vect_def dual_sol_def n_def
+lemmas [matching_lp_theorems] = 
+  primal_sol_def incidence_matrix_def weight_vect_def dual_sol_def n_def
 
-lemma incidence_matrix_carrier_mat[intro, matching_lp_theorems]: "incidence_matrix \<in> carrier_mat n m"
+lemma incidence_matrix_carrier_mat[intro, matching_lp_theorems]: 
+  "incidence_matrix \<in> carrier_mat n m"
   unfolding incidence_matrix_def by simp
 
 lemma dim_primal_sol[simp,matching_lp_theorems]: "dim_vec (primal_sol M) = m"
@@ -354,13 +354,15 @@ and G_enum_less_card_G[simp,matching_lp_theorems]: "e \<in> G \<Longrightarrow> 
   using atLeastLessThan_iff bij_G_enum_inv bij_G_enum bij_betwE
   by force+
 
-lemma Vs_enum_inv_inj_below_n[matching_lp_theorems]:"Vs_enum_inv i = Vs_enum_inv j \<Longrightarrow> i < n \<Longrightarrow> j < n \<Longrightarrow> i = j"
+lemma Vs_enum_inv_inj_below_n[matching_lp_theorems]:
+  "\<lbrakk>Vs_enum_inv i = Vs_enum_inv j; i < n; j < n\<rbrakk> \<Longrightarrow> i = j"
   using Vs_enum_inv by fastforce
 
 lemma dual_sol_i_is[matching_lp_theorems]: "i < n \<Longrightarrow> dual_sol y $ i =  y (Vs_enum_inv i)"
   by(auto simp add: dual_sol_def)
 
-lemma G_enum_inv_same_args_same[matching_lp_theorems]:"i < m \<Longrightarrow> j < m \<Longrightarrow> G_enum_inv i = G_enum_inv j \<Longrightarrow> i = j"
+lemma G_enum_inv_same_args_same[matching_lp_theorems]:
+  "\<lbrakk>i < m; j < m; G_enum_inv i = G_enum_inv j\<rbrakk> \<Longrightarrow> i = j"
   by (metis G_enum_inv)
 
 lemma matching_zero_one_entries[matching_lp_theorems]:
@@ -500,9 +502,9 @@ lemma
     "(incidence_matrix\<^sup>T *\<^sub>v dual_sol y  - weight_vect w) \<bullet> primal_sol M = 0"
     "(weight_vect w - incidence_matrix\<^sup>T *\<^sub>v dual_sol y) \<bullet> primal_sol M = 0"
    and zero_slack_if_tight_matching_covers_non_zero_verts[matching_lp_theorems]:
-        "non_zero_vertices V y \<subseteq> Vs M \<Longrightarrow>
+    "non_zero_vertices V y \<subseteq> Vs M \<Longrightarrow>
                (incidence_matrix *\<^sub>v primal_sol M - 1\<^sub>v n) \<bullet> dual_sol y = 0"
-        "non_zero_vertices V y \<subseteq> Vs M \<Longrightarrow> (1\<^sub>v n - incidence_matrix *\<^sub>v primal_sol M ) \<bullet> dual_sol y = 0"
+    "non_zero_vertices V y \<subseteq> Vs M \<Longrightarrow> (1\<^sub>v n - incidence_matrix *\<^sub>v primal_sol M ) \<bullet> dual_sol y = 0"
 proof-
   have a1: "dblton_graph G" "matching M"
     by(auto simp add: assms(2,1))
@@ -540,12 +542,12 @@ proof-
       using that(1,2) by force
     hence "(incidence_matrix *\<^sub>v primal_sol M) $ i = 0"
       using assms(1) matching_zero_one_entries that(1) by auto
-    hence a1: "j < m \<Longrightarrow> Vs_enum_inv i \<in> G_enum_inv j \<Longrightarrow> G_enum_inv j \<in> M \<Longrightarrow> False" for j
+    hence  "\<lbrakk>j < m; Vs_enum_inv i \<in> G_enum_inv j; G_enum_inv j \<in> M\<rbrakk> \<Longrightarrow> False" for j
       using asm(1)
       by(auto simp add: incidence_matrix_def primal_sol_def  mult_mat_vec_def scalar_prod_def)
-    have a2:" e \<in> M \<Longrightarrow> Vs_enum_inv i \<in> e \<Longrightarrow> False" for e 
-      using G_inv_enum assms(1)   G_enum_less_card_G[of e]  a1[of "G_enum e"] 
-      by auto
+    hence a2:"\<lbrakk>e \<in> M; Vs_enum_inv i \<in> e\<rbrakk> \<Longrightarrow> False" for e 
+      using G_inv_enum assms(1)   G_enum_less_card_G[of e] 
+      by fastforce
     have a3:"Vs_enum_inv i \<in> V"
       using Vs_enum_inv_in_G that(1) by auto
     have "y (Vs_enum_inv i) = 0"
@@ -554,7 +556,8 @@ proof-
     thus ?thesis
       using  that(1) by (auto simp add: dual_sol_i_is)
   qed
-  thus ths2:"non_zero_vertices V y \<subseteq> Vs M \<Longrightarrow>(incidence_matrix *\<^sub>v primal_sol M - 1\<^sub>v n) \<bullet> dual_sol y = 0"
+  thus ths2:
+    "non_zero_vertices V y \<subseteq> Vs M \<Longrightarrow>(incidence_matrix *\<^sub>v primal_sol M - 1\<^sub>v n) \<bullet> dual_sol y = 0"
     using sum.not_neutral_contains_not_neutral by (force simp add: scalar_prod_def )
   have dim_I_times_y:"incidence_matrix\<^sup>T *\<^sub>v dual_sol y \<in> carrier_vec m"
     by (simp add: carrier_dim_vec incidence_matrix_def)
@@ -576,7 +579,8 @@ corollary max_weight_if_tight_matching_covers_bads[matching_lp_theorems]:
           "graph_invar G" "M \<subseteq> tight_subgraph G w y"
           "non_zero_vertices V y \<subseteq> Vs M"
     shows "max_weight_matching G w M" "min_feasible_max_dual V G w y"
-  using assms dual_dot_y_vect_y_sum[of y, symmetric] primal_dot_weight_vect_weight_sum[of M w, symmetric]
+  using assms dual_dot_y_vect_y_sum[of y, symmetric] 
+        primal_dot_weight_vect_weight_sum[of M w, symmetric]
    by(auto intro!: general_complementary_slackness[OF incidence_matrix_carrier_mat]
                    max_matching_pd_optimality zero_slack_if_tight_matching
                    zero_slack_if_tight_matching_covers_non_zero_verts)
