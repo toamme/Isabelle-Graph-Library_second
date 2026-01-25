@@ -363,7 +363,7 @@ proof(rule ccontr)
  odd_comps_in_diff G X - {C} \<union> odd_comps_in_diff (component_edges (graph_diff G X) C) {x}"
     using add_subset_change_odd_components[of G X C "{x}"] assms by auto
   have "graph_invar (component_edges (graph_diff G X) C)" 
-    by (smt (verit) Undirected_Set_Graphs.component_edges_subset assms(1) graph_diff_subset graph_invar_subset)
+    by (smt (verit) Connected_Components.component_edges_subset assms(1) graph_diff_subset graph_invar_subset)
   have "finite ?docX" 
     using diff_components_finite[of "(component_edges (graph_diff G X) C)"]
     using \<open>graph_invar (component_edges (graph_diff G X) C)\<close> by blast
@@ -1076,7 +1076,7 @@ proof(induction "card (Vs G)" arbitrary: G rule: less_induct)
                   unfolding component_edges_def
                   by blast
                 then have "e \<in> graph_diff G X" 
-                  using asme Undirected_Set_Graphs.component_edges_subset by blast
+                  using asme Connected_Components.component_edges_subset by blast
                 have "v \<notin> e" 
                   by (metis \<open>e \<subseteq> C'\<close> \<open>x \<notin> C\<close> comp_C connected_components_member_sym odd_x subsetD)
                 then have "e \<inter> (X \<union> {v}) = {}" 
@@ -1094,7 +1094,7 @@ proof(induction "card (Vs G)" arbitrary: G rule: less_induct)
               then have "e \<subseteq> C'" unfolding component_edges_def
                 by blast
               then have "e \<in> (graph_diff G (X\<union>{v}))" 
-                using asme Undirected_Set_Graphs.component_edges_subset by blast
+                using asme Connected_Components.component_edges_subset by blast
               then have "e \<inter> X = {}" 
                 unfolding graph_diff_def by blast
               then have "e \<in> (graph_diff G X)"
@@ -1106,7 +1106,7 @@ proof(induction "card (Vs G)" arbitrary: G rule: less_induct)
             qed
             then show "path (graph_diff G (X \<union> {v})) p"
               using `path (component_edges (graph_diff G X) C')  p` 
-              by (metis Undirected_Set_Graphs.component_edges_subset path_subset)
+              by (metis Connected_Components.component_edges_subset path_subset)
           qed
           then show "z \<in> connected_component (graph_diff G (X \<union> {v})) x" 
             by (simp add: has_path_in_connected_component)
@@ -2434,7 +2434,7 @@ proof(induction "card (Vs G)" arbitrary: G rule: less_induct)
     proof-
       have help1: 
         "C \<in> odd_comps_in_diff G X \<Longrightarrow> finite (Vs (graph_diff (component_edges G C) Z'))" for C
-        using  Vs_subset[OF Undirected_Set_Graphs.component_edges_subset[of G]] 
+        using  Vs_subset[OF Connected_Components.component_edges_subset[of G]] 
                Vs_subset[OF graph_diff_subset[of "component_edges G _" Z']]
         by (force intro: finite_subset[of _ "Vs G"] 
                simp add: Vs_subset M2_in_G less.prems(1))+
@@ -2452,7 +2452,7 @@ proof(induction "card (Vs G)" arbitrary: G rule: less_induct)
     then obtain M where M:"perfect_matching (\<Union>?E') M" by auto
     have "\<Union>?E' \<subseteq> G" 
       apply safe
-      using graph_diff_subset Undirected_Set_Graphs.component_edges_subset \<open>?M2 \<subseteq> G\<close> by blast+
+      using graph_diff_subset Connected_Components.component_edges_subset \<open>?M2 \<subseteq> G\<close> by blast+
     have 89:"Vs (odd_comps_in_diff G X) = Vs G - X" 
     proof(safe)
       {  fix x

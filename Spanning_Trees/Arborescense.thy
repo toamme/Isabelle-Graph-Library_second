@@ -528,7 +528,7 @@ proof(rule strong_exchange_propertyI, goal_cases)
     proof(cases "A = {}")
       case True
       then show ?thesis 
-        using  Undirected_Set_Graphs.reachable_refl[of u' A]  u'v'(1) u'v'(2)
+        using  reachable_refl[of u' A]  u'v'(1) u'v'(2)
           connected_component_one_edge[of u' "{u', v'}"]  not_reachable_empt[of u' ]
         by auto
     next

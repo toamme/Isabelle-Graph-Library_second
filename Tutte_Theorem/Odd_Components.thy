@@ -1053,7 +1053,7 @@ next
               have "{v, v'} \<in>  (component_edges (graph_diff G X) C)" 
                 using graph_diff_subset path2.hyps(1) by blast
               then have "{v, v'} \<in> (graph_diff G X)" 
-                using component_edges_subset  Undirected_Set_Graphs.component_edges_subset 
+                using component_edges_subset  Connected_Components.component_edges_subset 
                       insert_Diff insert_subset
                 by blast
               then have "{v, v'} \<inter> X = {}"
@@ -1529,7 +1529,7 @@ next
           using asmC'odd by blast
         let ?C = "(component_edges (graph_diff G X) C)"
         have "graph_invar ?C"
-          by (meson Undirected_Set_Graphs.component_edges_subset assms(1) graph_invar_diff graph_invar_subset)
+          by (meson Connected_Components.component_edges_subset assms(1) graph_invar_diff graph_invar_subset)
         have "C' \<subseteq> Vs ?C" 
           by (meson C'diffY component_in_E)
         have "Vs ?C \<subseteq> C"
@@ -1673,7 +1673,7 @@ next
               have "{v, v'} \<in> (component_edges (graph_diff G X) C)" 
                 using graph_diff_subset path2.hyps(1) by blast
               then have "{v, v'} \<in> (graph_diff G X)" 
-                using Undirected_Set_Graphs.component_edges_subset by fastforce
+                using Connected_Components.component_edges_subset by fastforce
               then have "{v, v'} \<inter> X = {}"
                 unfolding graph_diff_def by fastforce
               then have "{v, v'} \<in> (graph_diff G (X \<union> Y))" 
@@ -1745,7 +1745,7 @@ next
             by (smt (z3) Int_Un_distrib Int_Un_eq(4) Un_Int_assoc_eq Un_absorb Un_commute \<open>C' \<subseteq> C\<close>
                 \<open>c \<in> e \<and> e \<in> ?C \<and> e \<inter> Y = {}\<close> assms(3) odd_comps_in_diff_not_in_X subset_trans)
           have "e \<in> G" 
-            using `c \<in> e \<and> e \<in> ?C \<and> e \<inter> Y = {}` Undirected_Set_Graphs.component_edges_subset 
+            using `c \<in> e \<and> e \<in> ?C \<and> e \<inter> Y = {}` Connected_Components.component_edges_subset 
                   graph_diff_member 
             by blast
           then have "e \<in> (graph_diff G (X \<union> Y))" 

@@ -1000,7 +1000,7 @@ proof -
     using vs_connected_component[of "u_edges p" C] assms(2)
     by (meson assms(1) u_edges_is_graph)
   then have "graph_invar (component_edges (u_edges p) C)"
-    using Undirected_Set_Graphs.component_edges_subset assms(1) u_edges_is_graph
+    using Connected_Components.component_edges_subset assms(1) u_edges_is_graph
     by force
   then  have " perfect_matching (component_edges (u_edges p) C) ?m_edges"
     unfolding perfect_matching_def 

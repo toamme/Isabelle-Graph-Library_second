@@ -1,5 +1,5 @@
 theory Bipartite_Alternating_Lists
-  imports Alternating_Lists
+  imports Alternating_Lists Undirected_Set_Graphs.Bipartite
 begin
 
 lemma bipartite_alternation:

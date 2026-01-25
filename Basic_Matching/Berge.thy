@@ -3,8 +3,9 @@
 *)
 
 theory Berge
-imports Matching
+imports Matching Undirected_Set_Graphs.Connected_Components
 begin
+
 
 subsection\<open>Direction 1 of Berge\<close>
 text\<open>If there is a bigger matching, then there is an augmenting path\<close>

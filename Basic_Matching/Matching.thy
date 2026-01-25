@@ -2,8 +2,9 @@
 section \<open>Basic Theory on Matchings\<close>
 
 theory Matching
-  imports Undirected_Set_Graphs.Undirected_Set_Graphs Alternating_Lists.Alternating_Lists
+  imports Alternating_Lists.Alternating_Lists
           Directed_Set_Graphs.More_Lists
+          Undirected_Set_Graphs.Bipartite
 begin
 
 subsection \<open>Misc\<close>

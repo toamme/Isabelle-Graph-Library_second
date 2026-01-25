@@ -3,6 +3,7 @@ section \<open>Supplementary Theory for Orlin's Algorithm\<close>
 theory Orlins_Preparation
   imports Path_Aug_Opt "HOL-Data_Structures.Set_Specs" 
           Undirected_Set_Graphs.Pair_Graph_Berge_Adaptor Directed_Set_Graphs.Pair_Graph_Specs  
+          Undirected_Set_Graphs.Connected_Components
           Undirected_Set_Graphs.Directed_Undirected
 begin
 
