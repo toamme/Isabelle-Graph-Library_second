@@ -1590,7 +1590,7 @@ proof-
       (auto elim!: invar_basicE 
         simp add: r_def[symmetric] pair_eq_fst_snd_eq[OF queue_heap_min_def])
   note basic_invars = invar_basicD[OF assms(2)]
-  have "r \<noteq> l" "l \<noteq> l'" "r \<noteq> l'"
+  have r_l_l'_distinct:"r \<noteq> l" "l \<noteq> l'" "r \<noteq> l'"
     using r_l_props(2) r_unclassified  bipartite_edgeD(2)[OF r_l'_in_G  G(1)] r_in_R 
           F_def l'_not_even by auto
   hence forest_extension_precond: "forest_extension_precond F \<M> l r l'"
@@ -1762,130 +1762,252 @@ proof-
   have F_invar:"forest_invar \<M> (forest state)" "vset_invar (evens (forest state))"
     "vset_invar (odds (forest state))"
     using assms(2) by(auto elim!: invar_basicE intro: evens_and_odds)
-
+  hence F_even_odd_disjoint:"vset_to_set (evens F) \<inter> vset_to_set (odds F) = {}"
+    using F_def evens_and_odds(4) by blast
+  have vset_is_old_F_sames:
+      "vset_isin (odds (forest state)) x \<longleftrightarrow> x \<in> vset_to_set (odds F)"
+       "vset_isin (evens (forest state)) x \<longleftrightarrow> x \<in> vset_to_set (evens F)" for x
+    using F_def F_invar(2,3) vset.set_isin by auto
   show "invar_feasible_potential (search_path_loop_cont_upd state)"
     unfolding upd_state_is_state'
+    text \<open>A part of the proof for this invariant is discussed in the paper.
+          The vertices $u$, $v$, $w$ in the paper are $l$, $r$ and $l'$ in the
+          formalisation, respectively.\<close>
   proof(rule invar_feasible_potentialI, goal_cases)
     case (1 u v)
+    text \<open>Wlog. assume $u'$ and $v'$ on the left and the right hand side, respectively.\<close>
     then obtain u' v' where u'v': "{u', v'} = {u, v}" "u' \<in> L" "v' \<in> R"  "{u', v'} \<in> G"
       using G(1) by(force elim!: bipartite_edgeE)
+    text \<open>This is the case analysis whether $u'$ and $v'$ are even or odd after this iteration
+          of the algorithm, respectively.
+          We then have 4, 2, 2 and 1 subcases.\<close>
     have u'v'_cases: P 
-      if "\<lbrakk>u' \<in> insert l (aevens state); v' \<in> insert r (aodds state)\<rbrakk> \<Longrightarrow> P"
-        "\<lbrakk>u' \<notin> insert l (aevens state); v' \<in> insert r (aodds state)\<rbrakk> \<Longrightarrow> P"
-        "\<lbrakk>u' \<in> insert l (aevens state); v' \<notin> insert r (aodds state)\<rbrakk> \<Longrightarrow> P"
-        "\<lbrakk>u' \<notin> insert l (aevens state); v' \<notin> insert r (aodds state)\<rbrakk> \<Longrightarrow> P" for P
+      if "\<lbrakk>u' \<in> insert l' (aevens state); v' \<in> insert r (aodds state)\<rbrakk> \<Longrightarrow> P"
+        "\<lbrakk>u' \<notin> insert l' (aevens state); v' \<in> insert r (aodds state)\<rbrakk> \<Longrightarrow> P"
+        "\<lbrakk>u' \<in> insert l' (aevens state); v' \<notin> insert r (aodds state)\<rbrakk> \<Longrightarrow> P"
+        "\<lbrakk>u' \<notin> insert l' (aevens state); v' \<notin> insert r (aodds state)\<rbrakk> \<Longrightarrow> P" for P
       using that by blast
     have "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' \<le> \<w> u' v'"
     proof(rule u'v'_cases, goal_cases)
+      text \<open>This is the case for which the proof is fully discussed in the paper.\<close>
       case 1
-      have simple_step1: "\<pi> l + (\<pi> v' + missed_at state v') \<le> \<w> l v' + missed_at state l"
-        if "u' = l" "v' \<notin> aevens state"
-          "v' \<in> aodds state"
-          "l \<in> aevens state"
-        using invar_feasible_potentialD[OF assms(3) u'v'(4)] that
-        by(simp add: working_potential_def vset(5)[OF F_invar(2)] 
-            vset(5)[OF F_invar(3)])
-      have simple_step2: "\<pi> u' + (\<pi> v' + missed_at state v') \<le> \<w> u' v' + missed_at state u'"
-        if  "v' \<notin> aevens state" "u' \<in> aevens state""v' \<in> aodds state"
-        using invar_feasible_potentialD[OF assms(3) u'v'(4)] that
-        by(simp add: working_potential_def vset(5)[OF F_invar(2)] 
-            vset(5)[OF F_invar(3)])
-      have hard_step: "\<w> l r + (\<pi> u' + missed_at state l) \<le> \<w> u' r + (\<pi> l + missed_at state u')"
-        if "v' = r" "u' \<in> aevens state " 
+      hence u'v'_in:
+        "vset_isin (evens (forest state')) u'" "\<not> vset_isin (evens (forest state')) v'"
+        "vset_isin (odds (forest state')) v'"
+        using r_unclassified l'_not_even_or_odd F_even_odd_disjoint
+        by(auto simp add: state'_def F'_is(2-5) vset.set_isin F_def r_l_l'_distinct(3))
+      hence **: "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' =
+               \<pi> u' - missed_at state' u' + \<pi> v' + missed_at state' v'"
+        by(auto simp add: working_potential_def)
+      text \<open>Case (1a)\<close>
+      have case_1a: ?case if "u' \<noteq> l'" "v' \<noteq> r"
       proof-
-        have "w\<^sub>\<pi> l r + missed_at state l \<le> w\<^sub>\<pi> u' r + missed_at state u'"
-          using F_invar(1) finite_forest(1) that u'v'(4) 
-          by(auto intro!: linorder_class.Min.coboundedI exI[of _ u'] simp add: r_l_props(3))
-        then show ?thesis
+        have "missed_at state' u'= missed_at state u'"
+          "missed_at state' v'= missed_at state v'"
+          using that "1"(1,2) r_unclassified l'_not_even_or_odd
+          by(auto simp add: state'_def missed'_is F_def)
+        hence "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' = \<pi>\<^sup>* state u' + \<pi>\<^sup>* state v'"
+          using F_even_odd_disjoint 1(1,2) that(1,2)
+          by(auto simp add: working_potential_def u'v'_in vset_is_old_F_sames F_def)
+        thus ?thesis
+          by (simp add: assms(3) invar_feasible_potentialD u'v'(4))
+      qed
+      text \<open>Case (1b)\<close>
+      have case_1b: ?case if "u' \<noteq> l'" "v' = r"
+      proof-
+        have "missed_at state' v' = missed_at state l + w\<^sub>\<pi> l r"
           using that
-          by(auto simp add: w\<^sub>\<pi>_def)
+          by(auto simp add: state'_def missed'_is acc'_def missed_\<epsilon>_def)
+        hence "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' \<le> 
+                \<pi> u' - missed_at state' u' + \<pi> v' + missed_at state u' + w\<^sub>\<pi> u' r"
+          using 1(1) that(1)  u'v'(4)[simplified that(2)] basic_invars(1) finite_forest(1)
+          by(auto simp add: ** r_l_props(3)[simplified add.commute[of "w\<^sub>\<pi> l r"]]
+              intro!: Min.coboundedI exI[of _ u'])
+        also have "... = \<pi> u' + \<pi> v' + w\<^sub>\<pi> u' r"
+          using that(1) that(2) u'v'_in(1,2)
+          by(auto simp add: state'_def missed'_is)
+        also have "... = \<w>  u' v'"
+          using that(2) by(auto simp add: w\<^sub>\<pi>_def)
+        finally show ?thesis 
+          by simp
       qed
-      from 1 show ?case using G(7)[OF  u'v'(4)]  
-        using l'_not_even l'_not_even_or_odd r_l_props(2) r_not_even_or_odd 
-          evens_and_odds(4)[OF F_invar(1)] 
-          bipartite_edgeD(2)[OF r_l'_in_G G(1) r_in_R] r_in_R 
-        by(auto intro: simple_step1 simple_step2 hard_step 
-            simp add: algebra_simps missed'_is F_def missed_\<epsilon>_def acc'_def w\<^sub>\<pi>_def 
-            F'_is(2,3) vset(5)[OF F'_is(4)] vset(5)[OF F'_is(5)] vset(5)[OF F_invar(2)] 
-            vset(5)[OF F_invar(3)] state'_def working_potential_def)
-    next
-      case 2
-      have helper1: "\<pi> l' + (\<pi> v' + missed_at state v') \<le> \<w> l' v' + (missed_at state l + w\<^sub>\<pi> l r)"
-        if  "l \<in> aevens state" "(r \<in> aevens state \<or> r \<in> aodds state \<Longrightarrow> False)"
-          "l' \<notin> aevens state" "v' \<in> aodds state" "u' = l'"
-          "l' \<notin> aodds state" "v' \<notin> aevens state"
-        using invar_feasible_potentialD[OF assms(3)  r_l_props(1)] that
-          invar_feasible_potentialD[OF assms(3) u'v'(4)] r_l_props(1) u'v'(4)   
-        by(auto simp add: w\<^sub>\<pi>_def working_potential_def vset(5)[OF F_invar(2)] 
-            vset(5)[OF F_invar(3)]  if_split[of "\<lambda> x. x + _ \<le> \<w> _ _"] G(6))
-      have helper2: "\<pi> u' + (\<pi> v' + missed_at state v') \<le> \<w> u' v' + (missed_at state l + w\<^sub>\<pi> l r)"
-        if "l \<in> aevens state" "r \<in> aevens state \<or> r \<in> aodds state \<Longrightarrow> False"
-          "u' \<notin> aevens state" "v' \<in> aodds state" "u' \<notin> aodds state" 
-          "v' \<notin> aevens state"
-        using invar_feasible_potentialD[OF assms(3)  r_l_props(1)] that
-          invar_feasible_potentialD[OF assms(3) u'v'(4)] r_l_props(1) u'v'(4)   
-        by(auto simp add: w\<^sub>\<pi>_def working_potential_def vset(5)[OF F_invar(2)] 
-            vset(5)[OF F_invar(3)]  if_split[of "\<lambda> x. x + _ \<le> \<w> _ _"] G(6))
-      from 2 show ?case 
-        using  r_l_props(2) r_not_even_or_odd evens_and_odds(4)[OF F_invar(1)] 
-          r_in_R G(7)[OF u'v'(4)] invar_basicD(10)[OF assms(2)]
-          bipartite_edgeD(4)[OF u'v'(4) G(1)] 
-        by (auto intro: helper1 helper2 
-            simp add: missed_\<epsilon>_def acc'_def F_def vset(5)[OF F'_is(4)]
-            state'_def working_potential_def  vset(5)[OF F'_is(5)]
-            vset(5)[OF F_invar(2)] vset(5)[OF F_invar(3)] F'_is(2,3) 
-            missed'_is algebra_simps)
-    next
-      case 3
-      have  helper1: "\<w> l r + (\<pi> u' + (\<pi> v' + missed_at state l))
-                       \<le> \<w> u' v' + (\<pi> l + (\<pi> r + missed_at state u'))"
-        if "v' \<notin> aodds state" "v' \<notin> aevens state" "u' \<in> aevens state"
+      text \<open>Case (1c)\<close>
+      have case_1c: ?case if "u' = l'" "v' \<noteq> r"
       proof-
-        note That = that
-        obtain lu where lu: "Some lu = ben_lookup (best_even_neighbour state) v'"
-          "{v', lu} \<in> G"
-          "lu \<in> aevens state"
-          "w\<^sub>\<pi> lu v' + missed_at state lu =
-               Min {w\<^sub>\<pi> l v' + missed_at state l | l. l \<in> aevens state \<and> {l, v'} \<in> G}"
-          using That edges_are_Vs_2
-            invar_best_even_neighbour_mapD(2)[OF assms(7), of v'] u'v'(4) 
-          by force
-        have "w\<^sub>\<pi> lu v' + missed_at state lu \<le> w\<^sub>\<pi> u' v' + missed_at state u'"
-          using F_invar(1) finite_forest(1) that u'v'(4) 
-          by(auto intro!: linorder_class.Min.coboundedI exI[of _ u'] 
-              simp add: lu(4))
-        moreover have "w\<^sub>\<pi> l r + missed_at state l \<le> w\<^sub>\<pi> lu v' + missed_at state lu"
-          using lu(1) insert_commute u'v'(4) That 
-          by(intro k(2)[simplified k_is, of v'])
-            (auto simp add: invar_best_even_neighbour_heapD[OF assms(6)])
-        ultimately show ?thesis
-          by(auto simp add: w\<^sub>\<pi>_def)
+        have "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' = 
+               \<pi> l' - w\<^sub>\<pi> l r - missed_at state l + \<pi> v' + missed_at state' v'"
+          using that F_even_odd_disjoint 1(2)
+          by(auto simp add: working_potential_def state'_def
+              missed'_is acc'_def missed_\<epsilon>_def F'_is(2-5) vset.set_isin F_def)
+        also have "... =  \<pi> l' - (\<w> l r  - \<pi>\<^sup>* state l - \<pi>\<^sup>* state r) + \<pi> v'
+                            + missed_at state' v' - acc state"
+          using  r_not_even_or_odd F_even_odd_disjoint r_l_props(2)
+          by (auto simp add:  working_potential_def vset_is_old_F_sames F_def w\<^sub>\<pi>_def)
+        also have "... \<le> \<pi> l'  + \<pi> v' + missed_at state' v' - acc state"
+          using invar_feasible_potentialD[OF assms(3), of l r]  r_l_props(1)
+          by(auto simp add: insert_commute)
+        also have "... = \<pi>\<^sup>* state u' + \<pi>\<^sup>* state v'"
+          using l'_not_even that(1) F_even_odd_disjoint l'_not_even_or_odd u'v'_in(1,2) 1(2)
+          by(auto simp add: working_potential_def vset_is_old_F_sames 
+              state'_def missed'_is acc'_def missed_\<epsilon>_def that(2) F_def)
+        also have "... \<le> \<w> u' v'"
+          using u'v'(4) assms(3)
+          by (auto elim!: invar_feasible_potentialE)
+        finally show ?thesis 
+          by simp
       qed
-      from 3 show ?case             
-        using l'_not_even r_l_props(2) r_not_even_or_odd l'_in_L u'v'(2)
-          evens_and_odds(4)[OF F_invar(1)]  bipartite_edgeD(3)[OF  u'v'(4) G(1)]
-          invar_basicD(9)[OF assms(2)]  helper1 
-        by (auto simp add: state'_def working_potential_def vset(5)[OF F'_is(5)] 
-            vset(5)[OF F'_is(4)] F'_is(2,3) missed_\<epsilon>_def acc'_def 
-            F_def missed'_is algebra_simps w\<^sub>\<pi>_def)
-    next
-      case 4
-      have "\<pi>\<^sup>* state' u' = \<pi>\<^sup>* state u'" 
-        using 4 r_unclassified  l'_not_even_or_odd invar_basicD(10)[OF assms(2)] bipartite_edgeD(2)[OF u'v'(4) G(1)]
-          u'v'(3)
-        by(auto simp add: state'_def working_potential_def vset(5)[OF F'_is(5)] 
-            vset(5)[OF F'_is(4)] F'_is(2,3) missed'_is 
-            vset(5)[OF F_invar(2)] vset(5)[OF F_invar(3)] F_def)
-      moreover have "\<pi>\<^sup>* state' v' = \<pi>\<^sup>* state v'" 
-        using 4 invar_basicD(9,10)[OF assms(2)] u'v'(3) bipartite_vertex(1)[OF _ G(1)]
-          edges_are_Vs_2[OF u'v'(4)]
-        by(auto simp add: state'_def working_potential_def vset(5)[OF F'_is(5)] 
-            vset(5)[OF F'_is(4)] F'_is(2,3) missed'_is 
-            vset(5)[OF F_invar(2)] vset(5)[OF F_invar(3)] F_def)
-      ultimately show ?case 
-        using assms(3) u'v'(4)
-        by(auto elim!: invar_feasible_potentialE)
-    qed
+      text \<open>Case (1d)\<close>
+      have case_1d: ?case if "u' = l'" "v' = r"
+      proof-
+        have "missed_at state' = abstract_real_map (missed_lookup missed')"
+          by(auto simp add: state'_def)
+        hence  "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' = \<pi> u' + \<pi> v'"
+          by(auto simp add: ** missed'_is that(1,2)[symmetric])
+        also have "... \<le> \<w> u' v'"
+          by (simp add: G(7) u'v'(4))
+        finally show ?thesis 
+          by simp
+      qed
+      then show ?case 
+        using case_1a case_1b case_1c case_1d 
+        by auto
+      text \<open>The next cases are only hinted in the paper.\<close>
+       next
+         case 2
+         hence u'_v'_isins:
+           "\<not>vset_isin (evens (forest state')) u'" "\<not> vset_isin (odds (forest state')) u'"
+           "\<not> vset_isin (evens (forest state')) v'" "vset_isin (odds (forest state')) v'"
+           using r_unclassified l'_not_even_or_odd F_even_odd_disjoint u'v'(2)
+                 bipartite_edgeD(3)[OF u'v'(4) G(1)] r_in_R  basic_invars(10) 
+                 bipartite_eqI[OF G(1) u'v'(4), of u' v']
+            by(auto simp add: state'_def F'_is(2-5) vset.set_isin F_def r_l_l'_distinct(3))
+         hence **: "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' =
+            \<pi> u'  + \<pi> v' + missed_at state' v' -  acc state'"
+           by(simp add: working_potential_def)
+         have case_2a: ?case
+           if "v' = r" 
+         proof-
+           have "missed_at state' v' = acc state'" 
+             by(auto simp add: state'_def missed'_is that)
+           hence "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' = \<pi> u' + \<pi> v'"
+             by(simp add: **)
+           also have "...\<le> \<w> u' v'"
+             using G(7) u'v'(4) by auto
+           finally show ?thesis 
+             by simp
+         qed
+         have case_2b: ?case
+           if "v' \<noteq> r"
+         proof-
+           have "missed_at state' v' = missed_at state v'"
+             using that  l'_not_even_or_odd 2(2)
+             by(auto simp add: state'_def missed'_is F_def)
+           moreover have "missed_at state' u' = missed_at state u'"
+             using that bipartite_eqI[OF G(1) u'v'(4), of u' v']  u'v'(2,3) r_in_R 2(1)
+             by(auto simp add: state'_def missed'_is)
+           moreover have "acc state' = w\<^sub>\<pi> l r + missed_at state l"
+             by(auto simp add: state'_def acc'_def missed_\<epsilon>_def)
+           ultimately have "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' =
+                \<pi> u'  + \<pi> v' + missed_at state v' -  (w\<^sub>\<pi> l r + missed_at state l)"
+             by(simp add: **)
+           moreover have "w\<^sub>\<pi> l r + missed_at state l + w\<^sub>\<pi> u' v' \<ge> missed_at state v'"
+           proof-
+             have "\<pi> u' + \<pi> v' - acc state + missed_at state v' \<le> \<w> u' v'"
+                 (*unfolding \<pi>* of old state*)
+                 using "2"(1,2)  F_even_odd_disjoint   G(7)[OF u'v'(4)] basic_invars(10)
+                        bipartite_eqI[OF G(1) u'v'(4), of u' v']   u'_v'_isins(2,4)
+                        that invar_feasible_potentialD[OF assms(3) u'v'(4)] that
+                 by(cases "u' \<in> aodds state", all \<open>cases "v' \<in> aevens state"\<close>)
+                   (auto simp add: w\<^sub>\<pi>_def working_potential_def  F_def 
+                             vset.set_isin[OF F_invar(2)] vset.set_isin[OF F_invar(3)])
+               moreover have "\<pi> l + \<pi> r + acc state - missed_at state l \<le> \<w> l r"
+                 (*unfolding \<pi>* of old state*)
+                 using "2"(1,2)  F_even_odd_disjoint G(6)[OF r_l_props(1)]  basic_invars(10)
+                       r_l_props(2) r_not_even_or_odd that
+                       invar_feasible_potentialD[OF assms(3) r_l_props(1)]
+                 by(cases "r \<in> aodds state", all \<open>cases "r \<in> aevens state"\<close>)
+                   (auto simp add: w\<^sub>\<pi>_def working_potential_def  F_def
+                        vset.set_isin[OF F_invar(2)] vset.set_isin[OF F_invar(3)])
+               ultimately show ?thesis
+                 by(auto simp add: w\<^sub>\<pi>_def)
+             qed
+           ultimately show "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' \<le> \<w> u' v'"
+             by (auto simp add: algebra_simps  w\<^sub>\<pi>_def)
+         qed 
+         then show ?case 
+           using case_2a case_2b 
+           by auto
+       next
+         case 3
+         hence u'_v'_isins:
+           "vset_isin (evens (forest state')) u'"
+           "\<not> vset_isin (evens (forest state')) v'" "\<not>vset_isin (odds (forest state')) v'"
+           using F_even_odd_disjoint u'v'(2) bipartite_edgeD(3)[OF u'v'(4) G(1)] 
+                 bipartite_eqI[OF G(1) u'v'(4), of u' v'] basic_invars(9) l'_in_L
+            by(auto simp add: state'_def F'_is(2-5) vset.set_isin F_def r_l_l'_distinct(3))
+          hence **: "\<pi>\<^sup>* state' u' + \<pi>\<^sup>* state' v' =
+            \<pi> u'  + \<pi> v' - missed_at state' u' +  acc state'"
+            by(simp add: working_potential_def)
+          have case_3a: ?case
+            if "u' = l'"
+          proof-
+            have "missed_at state' u' = acc state'"
+              by(auto simp add: that state'_def missed'_is)
+            thus ?thesis
+              by(simp add: ** G(7) u'v'(4))
+          qed
+          have case_3b: ?case
+            if That: "u' \<noteq> l'"
+          proof-
+            have "missed_at state' u' + w\<^sub>\<pi> u' v'\<ge> acc state'"
+            proof-
+              obtain lu where lu: "Some lu = ben_lookup (best_even_neighbour state) v'"
+                "{v', lu} \<in> G" "lu \<in> aevens state"
+                "w\<^sub>\<pi> lu v' + missed_at state lu =
+                      Min {w\<^sub>\<pi> l v' + missed_at state l | l. l \<in> aevens state \<and> {l, v'} \<in> G}"
+                using invar_best_even_neighbour_mapD(2)[OF assms(7), of v', OF _ _ _ exI[of _ u']] 
+                  u'v'(4) "3"(1,2) That basic_invars(9) bipartite_edgeD(3)[OF u'v'(4) G(1)] 
+                  edges_are_Vs_2 
+                by fastforce
+              hence  "w\<^sub>\<pi> lu v' + missed_at state lu \<le> w\<^sub>\<pi> u' v' + missed_at state u'"
+                using F_invar(1) finite_forest(1) that u'v'(4) 3(1)
+                by(auto intro!: linorder_class.Min.coboundedI exI[of _ u'] 
+                    simp add: lu(4))
+              moreover have "w\<^sub>\<pi> lu v' + missed_at state lu \<ge> w\<^sub>\<pi> l r + missed_at state l"
+                using lu(1) u'v'(2,4) basic_invars(9) 3(2)
+                by(intro k(2)[simplified k_is, of v'])
+                  (auto simp add: invar_best_even_neighbour_heapD[OF assms(6)]
+                    dest: bipartite_edgeD(3)[OF _ G(1)])
+              ultimately show ?thesis
+                using  w\<^sub>\<pi>_non_neg[OF u'v'(4)] finite_forest(1)[OF basic_invars(1)]
+                by(auto simp add: state'_def missed'_is acc'_def missed_\<epsilon>_def that)
+            qed
+            hence "\<pi> u' + \<pi> v' - missed_at state' u' + acc state' \<le> \<pi> u' + \<pi> v' + w\<^sub>\<pi> u' v'"
+              by auto
+            also have "... = \<w> u' v'"
+              by(auto simp add: w\<^sub>\<pi>_def)
+            finally show ?thesis
+              by(simp add: **)
+          qed
+          show ?case 
+            using case_3a case_3b 
+            by auto
+       next
+         case 4
+         hence "\<not> vset_isin (evens (forest state')) u'" "\<not> vset_isin (odds (forest state')) u'"
+               "\<not> vset_isin (evens (forest state')) v'" "\<not> vset_isin (odds (forest state')) v'"
+               "\<not> vset_isin (evens (forest state)) u'" "\<not> vset_isin (odds (forest state)) u'"
+               "\<not> vset_isin (evens (forest state)) v'" "\<not> vset_isin (odds (forest state)) v'"
+           using bipartite_edgeD(3)[OF r_l'_in_G G(1)] l'_in_L u'v'(2,3)
+                 bipartite_eqI[OF G(1) 1, of u' v']  u'v'(1) basic_invars(10,9)
+                 bipartite_edgeD(3)[OF u'v'(4) G(1)]
+             by(auto simp add: state'_def F_def F'_is(2-5)  vset.set_isin vset_is_old_F_sames)
+           hence "\<pi>\<^sup>* state' u' = \<pi>\<^sup>* state u'" "\<pi>\<^sup>* state' v' = \<pi>\<^sup>* state v'"
+             by(auto simp add: working_potential_def)
+           then show ?case
+             using assms(3) u'v'(4) 
+             by (auto dest: invar_feasible_potentialD)
+         qed
     thus ?case
       using G(6)[OF u'v'(4)] u'v'(1)
       by(auto simp add: doubleton_eq_iff)
