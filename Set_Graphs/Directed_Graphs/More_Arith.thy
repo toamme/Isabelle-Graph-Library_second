@@ -587,35 +587,35 @@ lemma sum_integral: "\<lbrakk>finite A; \<And> x . x\<in> A \<Longrightarrow> is
 
 subsection \<open>Multiples\<close>
 
-definition "epsilon_multiples (\<epsilon>::real) f X = (\<forall> x \<in> X. \<exists> n::nat. f x = n * \<epsilon>)"
+definition "multiples_of (\<epsilon>::real) f X = (\<forall> x \<in> X. \<exists> n::nat. f x = n * \<epsilon>)"
 
-lemma epsilon_multiplesI:
-  "(\<And> x. x \<in> X \<Longrightarrow> \<exists> n::nat. f x = n * (\<epsilon>::real)) \<Longrightarrow> epsilon_multiples \<epsilon> f X"
-  and epsilon_multiplesE:
-  "\<lbrakk>epsilon_multiples (\<epsilon>::real) f X; (\<And> x. x \<in> X \<Longrightarrow> \<exists> n::nat. f x = n * \<epsilon>) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  and epsilon_multiplesD:
-  "\<lbrakk>epsilon_multiples (\<epsilon>::real) f X; x \<in> X\<rbrakk> \<Longrightarrow> \<exists> n::nat. f x = n * \<epsilon>"
-  by(auto simp add: epsilon_multiples_def)
+lemma multiples_ofI:
+  "(\<And> x. x \<in> X \<Longrightarrow> \<exists> n::nat. f x = n * (\<epsilon>::real)) \<Longrightarrow> multiples_of \<epsilon> f X"
+  and multiples_ofE:
+  "\<lbrakk>multiples_of (\<epsilon>::real) f X; (\<And> x. x \<in> X \<Longrightarrow> \<exists> n::nat. f x = n * \<epsilon>) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  and multiples_ofD:
+  "\<lbrakk>multiples_of (\<epsilon>::real) f X; x \<in> X\<rbrakk> \<Longrightarrow> \<exists> n::nat. f x = n * \<epsilon>"
+  by(auto simp add: multiples_of_def)
 
-lemma epsilon_multiples_sum: 
- "\<lbrakk>finite X; epsilon_multiples \<epsilon> f X\<rbrakk> \<Longrightarrow> epsilon_multiples \<epsilon> id {sum f X}"
+lemma multiples_of_sum: 
+ "\<lbrakk>finite X; multiples_of \<epsilon> f X\<rbrakk> \<Longrightarrow> multiples_of \<epsilon> id {sum f X}"
 proof(induction X rule: finite_induct)
   case empty
   then show ?case 
-    by(auto simp add: epsilon_multiples_def)
+    by(auto simp add: multiples_of_def)
 next
   case (insert x X)
   obtain n where "(n::nat)*\<epsilon> = sum f X"
     using insert(3,4)
-    by(force simp add: epsilon_multiples_def)
+    by(force simp add: multiples_of_def)
   moreover obtain n' where "(n'::nat) * \<epsilon> = f x"
     using insert (4)
-    by(force simp add: epsilon_multiples_def)
+    by(force simp add: multiples_of_def)
   ultimately have "(n+n') *\<epsilon> = sum f (insert x X)"
     using insert(2,1)
     by(auto simp add: comm_monoid_add_class.sum.insert[simplified] algebra_simps)
   thus ?case 
-    by(auto simp add: epsilon_multiples_def intro!: exI[of _ "n + n'"])
+    by(auto simp add: multiples_of_def intro!: exI[of _ "n + n'"])
 qed
 
 subsection \<open>Calculations\<close>
