@@ -1,3 +1,7 @@
+(*
+Authors: Christoph Madlener and Thomas Ammer
+*)
+
 theory Matching_LP
   imports
     Basic_Matching.Matching
