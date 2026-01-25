@@ -3,7 +3,6 @@ session "Tutte_Theorem" = "HOL-Library" +
 
 sessions
   "Basic_Matching"
-  "RANKING"
   "Transition_Systems_and_Automata"
   "Kruskal"
 

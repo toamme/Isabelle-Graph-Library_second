@@ -5,7 +5,6 @@ sessions
     "LP_Duality"
     "Treaps"
     "Basic_Matching"
-    "RANKING"
   (*theories [document=false]*)
 
   theories
