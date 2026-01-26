@@ -3,9 +3,10 @@ theory Naive_Primal_Dual
     "HOL-Data_Structures.Map_Specs"  Directed_Set_Graphs.More_Logic
     Matching_LPs.Matching_LP
     Undirected_Set_Graphs.Directed_Undirected
+    Egervary
 begin
 
-section \<open>The Algorithm Resulting from Shrijver\<close>
+section \<open>The Algorithm Resulting from Egerváry's Theorem in Schrijver's Book\<close>
 
 subsection \<open>Preparation, to be moved\<close>
 
@@ -870,67 +871,55 @@ proof-
                else potential \<pi> v)"
     using vs(2) vs'(2)
     by(unfold \<pi>''_def vs'(3) pmap''_is)(auto simp add: \<pi>'_def vs(3) pmap'_is)
-  show "feasible_max_dual LR G w (potential (naive_primal_dual_call \<pi>))"
-    unfolding pmap''_is_call
-  proof(rule feasible_max_dualI, goal_cases)
-    case (1 v)
-    show ?case 
-      using  feasible_max_dualD(1)[OF assms(3) 1] alpha_gtr_0
-      by(auto simp add: pmap''_effect S_NS_props(5) vset.set_isin intro!: alpha_less(2))
-  next
-    case (2 e u v)
-    hence "{v, u} \<in> G" "{u, v} \<in> G" by (auto simp add: insert_commute)
-    moreover have "\<lbrakk>u \<in> vset_set S; v \<in> vset_set S\<rbrakk> \<Longrightarrow> False"
-      using "2"(1,2) S_NS_props(2) basic_graph_props(7,8) subsetD by fastforce
-    moreover have "\<lbrakk>u \<in> vset_set S; u \<in> vset_set NS\<rbrakk> \<Longrightarrow> False" 
-      by(auto simp add: S_NS_props(3) self_not_in_Neighbourhood)
-    moreover have 
-       "\<lbrakk>potential \<pi> u + potential \<pi> v = weight u v;  u \<in> vset_set S; v \<notin> vset_set NS\<rbrakk>
-         \<Longrightarrow>  False"
-      using 2 calculation(3)
-      by(auto simp add: S_NS_props(3) tight_graph_props(2)
-          edge_slack_def algebra_simps doubleton_eq_iff elim: not_in_NeighbourhoodE)  
-    ultimately show ?case 
-      using feasible_max_dualD(2)[OF assms(3) 2] feasible_max_dualD(1)[OF assms(3)]
-        alpha_less(1)[of u v] w_weight_cong[of u v] alpha_less(1)[of v u] sym_weights[of v u]
-        2 tight_graph_props(2) alpha_gtr_0
-      by(auto simp add:  pmap''_effect edge_slack_def algebra_simps vset.set_isin[OF S_NS_props(5)]
-          vset.set_isin[OF S_NS_props(6)] S_NS_props(3) Neighbourhood_def) fastforce 
-  qed (auto intro: feasible_max_dualE[OF assms(3)])
-  have LR_split: "LR = vset_set S \<union> vset_set NS \<union> (LR - (vset_set S \<union> vset_set NS))"
-    "vset_set S \<inter> vset_set NS = {}"
-    "(vset_set S \<union> vset_set NS) \<inter> (LR - (vset_set S \<union> vset_set NS)) = {}"
-    using S_NS_in_LR S_NS_props(2)
-    by(auto simp add: LR_def S_NS_props(3) self_not_in_Neighbourhood)
-  have some_finites: "finite (vset_set S \<union> vset_set NS)"
-    "finite (LR - (vset_set S \<union> vset_set NS))"
-    "finite (vset_set S)" "finite (vset_set NS)"
-    using basic_graph_props(13)
-    by (auto simp add: S_NS_props(6) finite_S(2) finite_vset)
+  have pc_1:"\<not> (\<exists>e\<in>G. e \<subseteq> vset_set S)" 
+  proof(rule ccontr, goal_cases)
+    case 1
+    then obtain e where "e \<subseteq> vset_set S" "e \<in> G"
+      by auto
+    moreover then obtain u v where "e ={u, v}" "u \<noteq> v" 
+      using graph_invar_G by blast
+    ultimately show ?case
+      using S_NS_props(2) basic_graph_props(7,8)[of u v]
+      by auto
+  qed
+  moreover have pc_2:"vset_set NS = Neighbourhood (tight_subgraph G w (potential \<pi>)) (vset_set S)"
+    using w_weight_cong
+    unfolding S_NS_props(3) tight_graph_props(2)
+    by(fastforce intro!: arg_cong[of _ _ "\<lambda> G. Neighbourhood G _"]
+               simp add: tight_subgraph_def edge_slack_def)
+  moreover have pc_3:"{u, v} \<in> Delta (G - tight_subgraph G w (potential \<pi>)) (vset_set S) \<Longrightarrow>
+           \<epsilon> \<le> potential \<pi> u + potential \<pi> v - w {u, v}" for u v
+  proof(goal_cases)
+    case 1
+    then obtain u' v' where u'v': "u' \<in> vset_set S" "v' \<notin> vset_set S" "{u, v} = {u', v'}"
+                            "{u', v'} \<in> G - tight_subgraph G w (potential \<pi>)"
+      by(auto simp add: Delta_def)
+    moreover hence "\<epsilon> \<le> potential \<pi> u' + potential \<pi> v' - w {u', v'}"
+      using finite_slacks finite_ys S_NS_props(5)
+      by(force simp add: alpha_is Delta_def tight_subgraph_def vset.set_isin
+                         doubleton_eq_iff edge_slack_def w_weight_cong
+                 intro!: linorder_class.Min.coboundedI
+                         exI[of "\<lambda> ua. \<exists> v. _ ua v \<and> ua \<in> vset_set S \<and> _ ua v" u']
+                         exI[of "\<lambda> v. _ v \<and> _ \<and>  {u', v} \<in> G \<and> _ v" v'])
+    ultimately show ?case
+      by (auto simp add: doubleton_eq_iff insert_commute)
+  qed
+  moreover have pc_4:"v \<in> vset_set S \<Longrightarrow> \<epsilon> \<le> potential \<pi> v" for v
+    by (simp add: S_NS_props(5) alpha_less(2) vset.set_isin)
+  ultimately show "feasible_max_dual LR G w (potential (naive_primal_dual_call \<pi>))"
+    using alpha_gtr_0
+    by(auto intro!: PD_adjustment_max_weight(1)[OF assms(3),of "vset_set S" "vset_set NS" \<epsilon>]
+          simp add: pmap''_is_call pmap''_effect)
+   have  sum_change:" sum (potential \<pi>'') LR =
+           sum (potential \<pi>) LR -(card (vset_set S) - card (vset_set NS)) * \<epsilon>"
+     using pc_1 pc_2 pc_3 pc_4 alpha_gtr_0 S_NS_props(1)  S_NS_props(4)
+     by(subst PD_adjustment_max_weight(2)[OF assms(3),of "vset_set S" "vset_set NS" \<epsilon>])
+       (auto simp add: pmap''_is_call pmap''_effect find_bad_props(2) algebra_simps)
+   have LR_split: "LR = vset_set S \<union> vset_set NS \<union> (LR - (vset_set S \<union> vset_set NS))"
+     using S_NS_props(3,2) S_NS_in_LR(1,2)
+     by(auto simp add: LR_def  self_not_in_Neighbourhood)
   have x_both_in_S_and_NS_False:"x \<in> vset_set S \<Longrightarrow> x \<in> vset_set NS \<Longrightarrow> False" for x
     by (simp add: S_NS_props(3) self_not_in_Neighbourhood)
-  have change_sum_S:"sum (potential \<pi>) (vset_set S) - card (vset_set S) * \<epsilon> =
-            sum (potential \<pi>'') (vset_set S)"
-    unfolding pmap''_effect
-    apply(subst (2) sum_cong[where g = "\<lambda> x. potential \<pi> x - \<epsilon>"])
-    by(auto dest!: x_both_in_S_and_NS_False 
-         simp add: comm_monoid_add_class.sum.distrib[of _ "\<lambda> x. - \<epsilon>", simplified])
-  have change_sum_NS:"sum (potential \<pi>) (vset_set NS) + card (vset_set NS) * \<epsilon> =
-            sum (potential \<pi>'') (vset_set NS)"
-    by(auto dest!: x_both_in_S_and_NS_False 
-        simp add: pmap''_effect comm_monoid_add_class.sum.distrib[of _ "\<lambda> x.  \<epsilon>", simplified]) 
-  have not_change_other: "sum (potential \<pi>'') (LR - (vset_set S \<union> vset_set NS)) = 
-                            sum (potential \<pi>) (LR - (vset_set S \<union> vset_set NS))"
-    by(auto dest!: x_both_in_S_and_NS_False 
-        simp add: pmap''_effect comm_monoid_add_class.sum.distrib[of _ "\<lambda> x. \<epsilon>", simplified]) 
-  have sum_change:" sum (potential \<pi>'') LR =
-           sum (potential \<pi>) LR -(card (vset_set S) - card (vset_set NS)) * \<epsilon>"
-    apply(subst LR_split(1), subst (2) LR_split(1))
-    apply(subst comm_monoid_add_class.sum.union_disjoint[OF some_finites(1,2) LR_split(3)])+
-    using alpha_gtr_0 S_NS_props(4) 
-    by (auto simp add: comm_monoid_add_class.sum.union_disjoint[OF some_finites(3,4) LR_split(2)] 
-        change_sum_S[symmetric] change_sum_NS[symmetric] not_change_other 
-        algebra_simps )
   show ?long_thesis
     unfolding pmap''_is_call
   proof(rule exI[of _ "(card (vset_set S) - card (vset_set NS)) * \<epsilon>"], goal_cases)
@@ -1027,22 +1016,22 @@ qed
 subsection \<open>Correctness\<close>
 
 lemma naive_primal_dual_ret_cond_correctness:
-  assumes "naive_primal_dual_ret_cond pmap" "p_invar pmap"
-    "feasible_max_dual LR G w (abstract_real_map (p_lookup pmap))"
-  shows "max_weight_matching G w (g_to_set (naive_primal_dual_ret pmap))"
-    "min_feasible_max_dual LR G w (potential pmap)"
+  assumes "naive_primal_dual_ret_cond \<pi>" "p_invar \<pi>"
+    "feasible_max_dual LR G w (abstract_real_map (p_lookup \<pi>))"
+  shows "max_weight_matching G w (g_to_set (naive_primal_dual_ret \<pi>))"
+    "min_feasible_max_dual LR G w (potential \<pi>)"
 proof-
-  define tights where "tights = build_tight_graph pmap"
-  define bads where "bads = find_bads pmap"
+  define tights where "tights = build_tight_graph \<pi>"
+  define bads where "bads = find_bads \<pi>"
   obtain M where M_def:"match M = find_matching_or_witness tights bads"
     using assms(1)
     by(auto elim!: naive_primal_dual_ret_condE 
         simp add: tights_def bads_def)
-  have M_is_ret:"naive_primal_dual_ret pmap = M"
+  have M_is_ret:"naive_primal_dual_ret \<pi> = M"
     using  M_def[symmetric]
     by(auto simp add: tights_def bads_def naive_primal_dual_ret_def Let_def)
-  note tight_graph_props = build_tight_graph_props[of pmap, folded tights_def]
-  note find_bad_props = find_bads_props[of pmap, folded bads_def]
+  note tight_graph_props = build_tight_graph_props[of \<pi>, folded tights_def]
+  note find_bad_props = find_bads_props[of \<pi>, folded bads_def]
   have tights_bipartite: "bipartite (g_to_set tights) L R"
     by(rule bipartite_subgraph)(auto simp add: tight_graph_props(2) basic_graph_props(4))
   have M_props: "graph_matching (g_to_set tights) (g_to_set M)" "vset_set bads \<subseteq> Vs (g_to_set M)" "g_invar M"
@@ -1050,31 +1039,31 @@ proof-
     by auto
   have M_matching_G:  "graph_matching G (g_to_set M)"
     by(auto intro!: matching_graph_mono[OF M_props(1)] simp add: tight_graph_props(2))
-  have tights_are_tights:"g_to_set tights = tight_subgraph G w (potential pmap)"
+  have tights_are_tights:"g_to_set tights = tight_subgraph G w (potential \<pi>)"
     using w_weight_cong
     by(force simp add: tight_graph_props(2) tight_subgraph_def edge_slack_def) 
-  have M_in_tight: "g_to_set M \<subseteq> tight_subgraph G w (potential pmap)" 
+  have M_in_tight: "g_to_set M \<subseteq> tight_subgraph G w (potential \<pi>)" 
     using M_props(1) tights_are_tights by auto
-  have non_zeros_in_M: "non_zero_vertices LR (potential pmap) \<subseteq> Vs (g_to_set M)"
+  have non_zeros_in_M: "non_zero_vertices LR (potential \<pi>) \<subseteq> Vs (g_to_set M)"
     using M_props(2)  feasible_max_dualD(1)[OF assms(3)]
     by(force simp add: find_bad_props non_zero_vertices_def)
-  show "max_weight_matching G w (g_to_set (naive_primal_dual_ret pmap))"
-    "min_feasible_max_dual LR G w (potential pmap)"
+  show "max_weight_matching G w (g_to_set (naive_primal_dual_ret \<pi>))"
+    "min_feasible_max_dual LR G w (potential \<pi>)"
     using assms(3) M_matching_G graph_invar_G M_in_tight  non_zeros_in_M
     by(auto intro!: max_weight_if_tight_matching_covers_bads simp add: M_is_ret)
 qed
 
 lemma naive_primal_dual_partial_correctness_general:
-  assumes "naive_primal_dual_dom pmap" "p_invar pmap"
-    "feasible_max_dual LR G w (abstract_real_map (p_lookup pmap))"
-  shows  "max_weight_matching G w (g_to_set (naive_primal_dual pmap))"
-    "\<exists> pmap. min_feasible_max_dual LR G w (potential pmap)"
+  assumes "naive_primal_dual_dom \<pi>" "p_invar \<pi>"
+    "feasible_max_dual LR G w (abstract_real_map (p_lookup \<pi>))"
+  shows  "max_weight_matching G w (g_to_set (naive_primal_dual \<pi>))"
+    "\<exists> \<pi>. min_feasible_max_dual LR G w (potential \<pi>)"
   using assms(2-)
 proof(all \<open>induction rule: naive_primal_dual.pinduct[OF assms(1)]\<close>, goal_cases)
-  case (1 pmap)
+  case (1 \<pi>)
   note IH =this
   show ?case 
-  proof(cases pmap rule: naive_primal_dual_cases)
+  proof(cases \<pi> rule: naive_primal_dual_cases)
     case 1
     show ?thesis 
       using naive_primal_dual_ret_cond_correctness(1)[OF 1 IH(3,4)]
@@ -1085,9 +1074,9 @@ proof(all \<open>induction rule: naive_primal_dual.pinduct[OF assms(1)]\<close>,
     show ?thesis 
     proof(rule naive_primal_dual_call_condE[OF 2], goal_cases)
       case (1 tights bads S NS)
-      hence call_is: "naive_primal_dual_call pmap =
-       vset_iterate_pmap NS (\<lambda>v. p_update v (potential pmap v + real_of_ereal (find_\<epsilon> pmap S)))
-       (vset_iterate_pmap S (\<lambda>v. p_update v (potential pmap v - real_of_ereal (find_\<epsilon> pmap S))) pmap)"
+      hence call_is: "naive_primal_dual_call \<pi> =
+       vset_iterate_pmap NS (\<lambda>v. p_update v (potential \<pi> v + real_of_ereal (find_\<epsilon> \<pi> S)))
+       (vset_iterate_pmap S (\<lambda>v. p_update v (potential \<pi> v - real_of_ereal (find_\<epsilon> \<pi> S))) \<pi>)"
         by(auto simp add: naive_primal_dual_call_def Let_def)
       from 1 show ?case 
         by(auto simp add: naive_primal_dual_simps(2)[OF 2 IH(1)] 2 IH(3,4)
@@ -1096,10 +1085,10 @@ proof(all \<open>induction rule: naive_primal_dual.pinduct[OF assms(1)]\<close>,
     qed
   qed
 next
-  case (2 pmap)
+  case (2 \<pi>)
   note IH =this
   show ?case 
-  proof(cases pmap rule: naive_primal_dual_cases)
+  proof(cases \<pi> rule: naive_primal_dual_cases)
     case 1
     show ?thesis 
       using naive_primal_dual_ret_cond_correctness[OF 1 IH(3,4)]
@@ -1110,9 +1099,9 @@ next
     show ?thesis 
     proof(rule naive_primal_dual_call_condE[OF 2], goal_cases)
       case (1 tights bads S NS)
-      hence call_is: "naive_primal_dual_call pmap =
-       vset_iterate_pmap NS (\<lambda>v. p_update v (potential pmap v + real_of_ereal (find_\<epsilon> pmap S)))
-       (vset_iterate_pmap S (\<lambda>v. p_update v (potential pmap v - real_of_ereal (find_\<epsilon> pmap S))) pmap)"
+      hence call_is: "naive_primal_dual_call \<pi> =
+       vset_iterate_pmap NS (\<lambda>v. p_update v (potential \<pi> v + real_of_ereal (find_\<epsilon> \<pi> S)))
+       (vset_iterate_pmap S (\<lambda>v. p_update v (potential \<pi> v - real_of_ereal (find_\<epsilon> \<pi> S))) \<pi>)"
         by(auto simp add: naive_primal_dual_call_def Let_def)
       from 1 show ?case 
         by(auto simp add: naive_primal_dual_simps(2)[OF 2 IH(1)] 2 IH(3,4)
@@ -1124,7 +1113,8 @@ qed
 
 lemma initial_feasible:
   "feasible_max_dual LR G w (abstract_real_map (p_lookup init_potential))" (is ?thesis1)
-  and  initial_multiples_of: "multiples_of \<epsilon> w G \<Longrightarrow> multiples_of \<epsilon> (potential init_potential) LR" (is "?asm \<Longrightarrow> ?thesis2")
+and  initial_multiples_of: 
+  "multiples_of \<epsilon> w G \<Longrightarrow> multiples_of \<epsilon> (potential init_potential) LR" (is "?asm \<Longrightarrow> ?thesis2")
 proof-
   have finite_for_v: "finite {weight v u |u. {u, v} \<in> G}" for v
     apply(cases "v \<in> Vs G")
@@ -1169,43 +1159,44 @@ qed
 lemma naive_primal_dual_partial_correctness:
   assumes "naive_primal_dual_dom init_potential"
   shows  "max_weight_matching G w (g_to_set (naive_primal_dual init_potential))"
-    "\<exists> pmap. min_feasible_max_dual LR G w (potential pmap)"
+    "\<exists> \<pi>. min_feasible_max_dual LR G w (potential \<pi>)"
   by(auto intro!: naive_primal_dual_partial_correctness_general assms
       simp add: init_potential_props(1) initial_feasible)
 
 subsection \<open>Termination and Total Correctness\<close>
 
 lemma naive_primal_dual_termination_general:
-  assumes   "multiples_of \<epsilon> w G" "p_invar pmap" 
-    "feasible_max_dual LR G w (abstract_real_map (p_lookup pmap))"  
-    "multiples_of \<epsilon> (potential pmap) LR"
-  shows    "naive_primal_dual_dom pmap"
+  assumes   "multiples_of \<epsilon> w G" "p_invar \<pi>" 
+    "feasible_max_dual LR G w (abstract_real_map (p_lookup \<pi>))"  
+    "multiples_of \<epsilon> (potential \<pi>) LR"
+  shows    "naive_primal_dual_dom \<pi>"
 proof-
-  obtain n where n_is:"sum (potential pmap) LR = (real n) * \<epsilon>"
+  obtain n where n_is:"sum (potential \<pi>) LR = (real n) * \<epsilon>"
     using multiples_of_sum[OF _ assms(4), simplified multiples_of_def, simplified]
       basic_graph_props(13) by blast
   show ?thesis
     using assms(2,3,4) n_is
-  proof(induction n arbitrary: pmap rule: less_induct)
+  proof(induction n arbitrary: \<pi> rule: less_induct)
     case (less n)
     show ?case
-    proof(cases pmap rule: naive_primal_dual_cases)
+    proof(cases \<pi> rule: naive_primal_dual_cases)
       case 1
       then show ?thesis 
         by(auto intro: naive_primal_dom_ret)
     next
       case 2
       obtain \<alpha> where alpha_props:"\<alpha> > 0"
-        "sum (potential (naive_primal_dual_call pmap)) LR + \<alpha> = sum (potential pmap) LR"
+        "sum (potential (naive_primal_dual_call \<pi>)) LR + \<alpha> = sum (potential \<pi>) LR"
         "multiples_of \<epsilon> id {\<alpha>}"
-        "multiples_of \<epsilon> (potential (naive_primal_dual_call pmap)) LR"
+        "multiples_of \<epsilon> (potential (naive_primal_dual_call \<pi>)) LR"
         using naive_primal_dual_one_step(3)[OF 2 less(2,3)] assms(1)less(4) by auto
       obtain n1 where n1: "\<alpha> = real n1 * \<epsilon>" 
         using alpha_props(3) multiples_ofD by fastforce
-      obtain n2 where n2: "sum (potential pmap) LR = real n2 * \<epsilon>"
+      obtain n2 where n2: "sum (potential \<pi>) LR = real n2 * \<epsilon>"
         using less(5) multiples_ofD by fastforce
-      obtain n3 where n3: "sum (potential (naive_primal_dual_call pmap)) LR = real n3 * \<epsilon>"
-        using multiples_of_sum[OF  basic_graph_props(13) alpha_props(4), simplified multiples_of_def, simplified]
+      obtain n3 where n3: "sum (potential (naive_primal_dual_call \<pi>)) LR = real n3 * \<epsilon>"
+        using multiples_of_sum[OF  basic_graph_props(13) alpha_props(4), 
+               simplified multiples_of_def, simplified]
         by auto
       have eps_gtr_0: "\<epsilon> > 0" 
         using alpha_props(1) n1 of_nat_less_0_iff zero_less_mult_iff by blast
@@ -1224,10 +1215,10 @@ proof-
 qed
 
 lemma naive_primal_dual_total_correctness_general:
-  assumes"p_invar pmap" "feasible_max_dual LR G w (abstract_real_map (p_lookup pmap))"
-    "multiples_of \<alpha> (potential pmap) LR" "multiples_of \<alpha> w G" 
-  shows  "max_weight_matching G w (g_to_set (naive_primal_dual pmap))"
-    "\<exists> pmap. min_feasible_max_dual LR G w (potential pmap)"
+  assumes"p_invar \<pi>" "feasible_max_dual LR G w (abstract_real_map (p_lookup \<pi>))"
+    "multiples_of \<alpha> (potential \<pi>) LR" "multiples_of \<alpha> w G" 
+  shows  "max_weight_matching G w (g_to_set (naive_primal_dual \<pi>))"
+    "\<exists> \<pi>. min_feasible_max_dual LR G w (potential \<pi>)"
   using  assms
   by(auto intro!: naive_primal_dual_partial_correctness_general 
       naive_primal_dual_termination_general)
@@ -1242,7 +1233,7 @@ lemma naive_primal_dual_termination:
 lemma naive_primal_dual_total_correctness:
   assumes "multiples_of \<alpha> w G"
   shows   "max_weight_matching G w (g_to_set (naive_primal_dual init_potential))"
-    "\<exists> pmap. min_feasible_max_dual LR G w (potential pmap)"
+    "\<exists> \<pi>. min_feasible_max_dual LR G w (potential \<pi>)"
   using assms naive_primal_dual_partial_correctness naive_primal_dual_termination
   by auto
 
@@ -1251,7 +1242,8 @@ subsection \<open>Termination for a Specific Case\<close>
 context
   fixes \<alpha>::real
   assumes eps_pos: "\<alpha> \<ge> 0"
-  assumes weights_scaled_rationals:"\<And> u v. {u, v} \<in> G \<Longrightarrow> \<exists> (r::rat). weight u v = (real_of_rat r) * \<alpha>"
+  assumes weights_scaled_rationals:
+   "\<And> u v. {u, v} \<in> G \<Longrightarrow> \<exists> (r::rat). weight u v = (real_of_rat r) * \<alpha>"
 begin
 
 lemma multiples_of: 

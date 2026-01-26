@@ -100,9 +100,9 @@ global_interpretation pd_path_search_spec: primal_dual_path_search_spec
 defines search_path = pd_path_search_spec.search_path
   and search_path_loop_impl = pd_path_search_spec.search_path_loop_impl
   and new_potential = pd_path_search_spec.new_potential
-  and w\<^sub>\<pi>=pd_path_search_spec.w\<^sub>\<pi>
+  and w\<^sub>\<pi> = pd_path_search_spec.w\<^sub>\<pi>
   and path_search_initial_state = pd_path_search_spec.initial_state
-  and unmatched_lefts= pd_path_search_spec.unmatched_lefts
+  and unmatched_lefts = pd_path_search_spec.unmatched_lefts
   and init_best_even_neighbour = pd_path_search_spec.init_best_even_neighbour
   and update_best_even_neighbours = pd_path_search_spec.update_best_even_neighbours
   and update_best_even_neighbour = pd_path_search_spec.update_best_even_neighbour
@@ -112,9 +112,12 @@ defines search_path = pd_path_search_spec.search_path
 hide_const pd_path_search_spec.R Hungarian_Method_Instantiation.pd_path_search_spec.R
 
 (*manual fix of "partially applied constant on left hand side of equation"*)
-lemmas [code] = pd_path_search_spec.search_path_def[folded search_path_def  path_search_initial_state_def]
+lemmas [code] = 
+  pd_path_search_spec.search_path_def[folded  search_path_def  path_search_initial_state_def]
   pd_path_search_spec.initial_state_def[folded path_search_initial_state_def]
+
 hide_const nbs potential_update
+
 locale build_init_potential_spec =
   potential_map: Map potential_empty potential_upd potential_delete 
   potential_lookup potential_invar
@@ -449,11 +452,9 @@ assumes G: "bipartite G (vset_to_set left) (vset_to_set right)"
   "vset_inv left" "vset_inv right"
   "(vset_to_set left) \<union> (vset_to_set right) \<subseteq> Vs G"
 
-"\<And> v N. \<lbrakk>v \<in> vset_to_set left;right_neighbs v= Some N\<rbrakk> 
-                 \<Longrightarrow> vset_inv N"
-"\<And> v .  v \<in> vset_to_set left 
-                     \<Longrightarrow> \<exists> N .right_neighbs v= Some N \<and>
-                            vset_to_set N = {u | u. {v, u} \<in> G}"
+  "\<And> v N. \<lbrakk>v \<in> vset_to_set left;right_neighbs v= Some N\<rbrakk>   \<Longrightarrow> vset_inv N"
+  "\<And> v .  v \<in> vset_to_set left   \<Longrightarrow> \<exists> N .right_neighbs v= Some N \<and>
+                                           vset_to_set N = {u | u. {v, u} \<in> G}"
 begin
 
 lemmas parent = 
@@ -557,8 +558,7 @@ proof-
 qed
 
 lemma feasible_init:
-  "feasible_min_perfect_dual G \<ww>
-     (abstract_real_map (lookup init_potential_here))"
+  "feasible_min_perfect_dual G \<ww> (abstract_real_map (lookup init_potential_here))"
 proof(rule feasible_min_perfect_dualI, goal_cases)
   case (1 e u v)
   then obtain u' v' where u'v':  "e = {u', v'}" "u' \<in> L" "v' \<in> R" 
@@ -588,10 +588,10 @@ interpretation fe_spec:
   "get_path " "abstract_forest" forest_invar roots vset_empty
   "extend_forest_even_unclassified"
   "empty_forest (\<lambda> f T init. fold_rbt (\<lambda> x y. f y x) init T)"
-  apply(intro alternating_forest_ordinary_extension_spec.intro
+  by(intro alternating_forest_ordinary_extension_spec.intro
       satisfied_simple.alternating_forest_spec_axioms
       alternating_forest_ordinary_extension_spec_axioms.intro)
-  by (simp_all add:  fmnlp.extension_main_preservation fmnlp.satisfied_simple_extension_precond_same
+    (simp_all add:  fmnlp.extension_main_preservation fmnlp.satisfied_simple_extension_precond_same
       fmnlp.extension_abstract_is fmnlp.extension_evens fmnlp.extension_odds fmnlp.extension_roots 
       fmnlp.empty_forest_correctess  extend_forest_even_unclassified_def 
       abstract_forest_def empty_forest_def)
@@ -612,8 +612,7 @@ lemmas empty_matching_props =
   matching_augmentation_thms.empty_matching_props
   [folded matching_invar_def matching_abstract_def]
 
-abbreviation "potential_invar' \<equiv> 
-\<lambda> \<pi> . M.invar \<pi> \<and> dom (lookup \<pi>) \<subseteq> Vs G"
+abbreviation "potential_invar' \<equiv> \<lambda> \<pi> . M.invar \<pi> \<and> dom (lookup \<pi>) \<subseteq> Vs G"
 
 abbreviation "path_search_precond \<equiv>
     hungarian_loop_spec.path_search_precond
@@ -629,12 +628,10 @@ abbreviation "search_path_here \<equiv>
                      (\<lambda> f T init. fold_rbt (\<lambda> x y. f y x) init T)
                      filter_rbt)"
 
-abbreviation "symmetric_buddies \<equiv> 
-matching_augmentation_spec.symmetric_buddies"
+abbreviation "symmetric_buddies \<equiv> matching_augmentation_spec.symmetric_buddies"
 
 abbreviation "good_search_result \<equiv>  
-hungarian_top_loop.good_search_result lookup potential_invar'
-         edge_costs G"
+  hungarian_top_loop.good_search_result lookup potential_invar' edge_costs G"
 
 interpretation hungarian_top_loop:
   hungarian_loop
@@ -834,12 +831,10 @@ next
           simp add: w_is_edge_costs)
   qed
 
-  show "search_path_here M \<pi> = Lefts_Matched \<Longrightarrow>
-           L \<subseteq> Vs (matching_abstract M)"
+  show "search_path_here M \<pi> = Lefts_Matched \<Longrightarrow> L \<subseteq> Vs (matching_abstract M)"
     using search_path_correct(1) by(simp add: \<M>_is)
 
-  show "search_path_here M \<pi> = Next_Iteration p \<pi>'
-         \<Longrightarrow> good_search_result M \<pi>' p" for p
+  show "search_path_here M \<pi> = Next_Iteration p \<pi>' \<Longrightarrow> good_search_result M \<pi>' p" for p
   proof(goal_cases)
     case 1
     note search_path_in_this_case =
@@ -894,9 +889,9 @@ next
   qed
 qed
 
-lemmas hungarian_correctness = hungarian_top_loop.hungarian_correctness
-  [folded hungarian_def]
-   hungarian_top_loop.hungarian_final_invar [folded hungarian_def]
+lemmas hungarian_correctness = 
+   hungarian_top_loop.hungarian_correctness[folded hungarian_def]
+   hungarian_top_loop.hungarian_final_invar[folded hungarian_def]
 
 lemma hungarian_symmetric:
   assumes "hungarian left right edge_costs right_neighbs lookup RBT_Map.update = Some M"

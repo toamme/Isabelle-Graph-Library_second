@@ -59,6 +59,10 @@ and in_tight_subgraphD:
   "\<lbrakk>e \<in> tight_subgraph E w y; e = {u, v}\<rbrakk>  \<Longrightarrow> w {u, v} = (y::'v \<Rightarrow> real) u + y v"
   by(auto simp add: tight_subgraph_def doubleton_eq_iff insert_commute)
 
+lemma tight_subgraph_is_subgraph:
+  "tight_subgraph E w y \<subseteq> E"
+  by(auto simp add: tight_subgraph_def)
+
 definition "non_zero_vertices V y = {v | v. v \<in> V \<and> y v \<noteq> 0}"
 
 lemma in_non_zero_verticesI:
@@ -583,6 +587,7 @@ corollary max_weight_if_tight_matching_covers_bads[matching_lp_theorems]:
           "graph_invar G" "M \<subseteq> tight_subgraph G w y"
           "non_zero_vertices V y \<subseteq> Vs M"
     shows "max_weight_matching G w M" "min_feasible_max_dual V G w y"
+          "sum w M = sum y V"
   using assms dual_dot_y_vect_y_sum[of y, symmetric] 
         primal_dot_weight_vect_weight_sum[of M w, symmetric]
    by(auto intro!: general_complementary_slackness[OF incidence_matrix_carrier_mat]
@@ -725,10 +730,12 @@ corollary min_weight_perfect_if_tight_perfect_matching[matching_lp_theorems]:
           "graph_invar G"  "Vs G = V" "M \<subseteq> tight_subgraph G w y"
      and finite_V: "finite V"
    shows "min_weight_perfect_matching G w M" "max_feasible_min_perfect_dual G w y"
+         "sum w M = sum y V"
 proof-
   have M_in_G:"M \<subseteq> G "
     by (simp add: assms(2) perfect_matchingD(1))
   show "min_weight_perfect_matching G w M" "max_feasible_min_perfect_dual G w y"
+       "sum w M = sum y V"
     using M_in_G  assms(5)
     by(auto intro!:  min_perfect_matching_pd_optimality 
                     eq_primal_complementary_slackness[OF incidence_matrix_carrier_mat]
@@ -829,6 +836,7 @@ corollary max_weight_if_tight_matching_covers_bads:
           "graph_invar E" "M \<subseteq> tight_subgraph E w y"
           "non_zero_vertices V y \<subseteq> Vs M"
     shows "max_weight_matching E w M" "min_feasible_max_dual V E w y"
+          "sum w M = sum y V"
   using assms
   by(auto intro!: matching_LP_standard.max_weight_if_tight_matching_covers_bads[OF 
              matching_lp_standard_intro, simplified, OF _ _ assms]
@@ -854,6 +862,7 @@ corollary min_weight_perfect_if_tight:
   assumes "feasible_min_perfect_dual E w y" "perfect_matching E M"
           "graph_invar E"  "M \<subseteq> tight_subgraph E w y"
     shows "min_weight_perfect_matching E w M" "max_feasible_min_perfect_dual E w y"
+          "sum w M = sum y (Vs E)"
   using assms
   by(auto intro!: matching_LP_standard.min_weight_perfect_if_tight_perfect_matching[OF 
             matching_lp_standard_intro]

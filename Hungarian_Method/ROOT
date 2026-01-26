@@ -9,11 +9,13 @@ sessions
   Flow_Theory
   Primal_Dual_Bipartite_Matching
   Verified_SAT_Based_AI_Planning
+  Tutte_Theorem
 
 
 theories
 	Key_Value_Queue_Spec
 	Ordered_Map_Heap
+	Egervary
 	Naive_Primal_Dual
 	Primal_Dual_Path_Search
 	Hungarian_Method_Top_Loop

@@ -323,7 +323,11 @@ lemma Neighbourhood_in_G: "Neighbourhood G X \<subseteq> Vs G"
 
 lemma in_NeighbourhoodE: 
   "\<lbrakk>y \<in> Neighbourhood G X;
-    \<And> x. \<lbrakk>{x, y} \<in> G; x \<in> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+    \<And> x. \<lbrakk>{x, y} \<in> G; x \<in> X; y \<notin> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by(auto simp add: Neighbourhood_def)
+
+lemma in_NeighbourhoodI: 
+  "\<lbrakk>{x, y} \<in> G; x \<in> X; y \<notin> X\<rbrakk> \<Longrightarrow> y \<in> Neighbourhood G X"
   by(auto simp add: Neighbourhood_def)
 
 lemma self_not_in_Neighbourhood:
@@ -366,6 +370,21 @@ definition "deltas G X = {e | u e. e \<in> G \<and> u\<in> X \<and> u \<in> e}"
 
 lemma deltas_subset: "deltas G x \<subseteq> G"
   by(auto simp add: deltas_def)
+
+definition "Delta G X = {{u, v} | u v. {u, v} \<in> G \<and> u\<in> X \<and> v \<notin> X}"
+
+lemma in_DeltaI: 
+  "\<lbrakk>e = {u, v}; e \<in> G; u \<in> X; v \<notin> X\<rbrakk> \<Longrightarrow> e \<in> Delta G X"
+and in_DeltaE: 
+  "\<lbrakk>e \<in> Delta G X; \<And> u v. \<lbrakk>e = {u, v}; e \<in> G; u \<in> X; v \<notin> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+and in_DeltaD: 
+  "e \<in> Delta G X \<Longrightarrow> \<exists> u v. e = {u, v} \<and> u \<in> X \<and> v \<notin> X"
+  "e \<in> Delta G X \<Longrightarrow> e \<in> G"
+  by (auto simp add: Delta_def)
+
+lemma Delta_finite:
+  "finite G \<Longrightarrow> finite (Delta G X)"
+  by(auto intro!: finite_subset[of  _ G] simp add: Delta_def)
 
 subsection \<open>Removing Vertices\<close>
 

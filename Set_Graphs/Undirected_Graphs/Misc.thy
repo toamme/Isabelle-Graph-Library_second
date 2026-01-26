@@ -30,6 +30,27 @@ proof-
     by (auto intro: lt_sum)
 qed
 
+lemma finite_image_of_unordered_pairs:
+  "finite G \<Longrightarrow> finite {f x y | x y. {x, y}\<in> G}"
+proof(induction G rule: finite_induct)
+  case (insert e F)
+  show ?case 
+  proof(cases "\<exists> x y. e = {x, y}")
+    case True
+    then obtain x y where e: "e = {x, y}"
+      by auto
+    show ?thesis 
+      by(rule finite_subset[of _ "{f x y, f y x} \<union> {f x y |x y. {x, y} \<in> F} "])
+        (insert insert, auto simp add: e doubleton_eq_iff)
+  next
+    case False
+    show ?thesis
+      apply(rule finite_subset[of _ "{f x y |x y. {x, y} \<in> F} "])
+      using False insert
+      by auto
+  qed
+qed auto
+
 definition card' :: "'a set \<Rightarrow> enat" where
   "card' A = (if infinite A then \<infinity> else card A)"
 
