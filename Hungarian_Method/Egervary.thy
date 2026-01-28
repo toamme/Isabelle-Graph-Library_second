@@ -237,55 +237,63 @@ proof-
   qed
 qed
 
-subsection \<open>We also formally prove the unweighted version, König's Theorem.\<close>
+subsection \<open>König's Theorem\<close>
 
-definition "vertex_cover G X = (\<forall> e \<in> G. \<exists> x \<in> X. x \<in> e)"
+text \<open>We also formally prove the unweighted version, König's Theorem.\<close>
+
+definition "vertex_cover G X = ((X \<subseteq> Vs G) \<and> (\<forall> e \<in> G. \<exists> x \<in> X. x \<in> e))"
 
 lemma vertex_coverI: 
-  "\<lbrakk>\<And> e. e \<in> G \<Longrightarrow> \<exists> x \<in> X. x \<in> e\<rbrakk> \<Longrightarrow> vertex_cover G X"
+  "\<lbrakk>X \<subseteq> Vs G; \<And> e. e \<in> G \<Longrightarrow> \<exists> x \<in> X. x \<in> e\<rbrakk> \<Longrightarrow> vertex_cover G X"
 and vertex_coverE: 
-  "\<lbrakk>vertex_cover G X; \<lbrakk>\<And> e. e \<in> G \<Longrightarrow> \<exists> x \<in> X. x \<in> e\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  "\<lbrakk>vertex_cover G X; \<lbrakk>X \<subseteq> Vs G; \<And> e. e \<in> G \<Longrightarrow> \<exists> x \<in> X. x \<in> e\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
 and vertex_coverD: 
+  "vertex_cover G X \<Longrightarrow> X \<subseteq> Vs G"
   "\<lbrakk>vertex_cover G X; e \<in> G\<rbrakk> \<Longrightarrow>  \<exists> x \<in> X. x \<in> e"
   by(auto simp add: vertex_cover_def)
 
 definition "min_vertex_cover G X =
-   (vertex_cover G X \<and> (\<forall> X'. vertex_cover G X' \<longrightarrow> card' X' \<ge> card' X))"
+   (vertex_cover G X \<and> (\<forall> X'. vertex_cover G X' \<longrightarrow> card X' \<ge> card X))"
 
 lemma min_vertex_coverI:
-  "\<lbrakk>vertex_cover G X; \<And> X'. vertex_cover G X' \<Longrightarrow> card' X' \<ge> card' X\<rbrakk> \<Longrightarrow> min_vertex_cover G X"
+  "\<lbrakk>vertex_cover G X; \<And> X'. vertex_cover G X' \<Longrightarrow> card X' \<ge> card X\<rbrakk> \<Longrightarrow> min_vertex_cover G X"
 and min_vertex_coverE:
   "\<lbrakk>min_vertex_cover G X; 
-    \<lbrakk>vertex_cover G X; \<And> X'. vertex_cover G X' \<Longrightarrow> card' X' \<ge> card' X\<rbrakk> \<Longrightarrow>P\<rbrakk>\<Longrightarrow>P"
+    \<lbrakk>vertex_cover G X; \<And> X'. vertex_cover G X' \<Longrightarrow> card X' \<ge> card X\<rbrakk> \<Longrightarrow>P\<rbrakk>\<Longrightarrow>P"
 and min_vertex_coverD:
   "min_vertex_cover G X \<Longrightarrow> vertex_cover G X"
-  "\<lbrakk>min_vertex_cover G X; vertex_cover G X'\<rbrakk> \<Longrightarrow> card' X' \<ge> card' X"
+  "\<lbrakk>min_vertex_cover G X; vertex_cover G X'\<rbrakk> \<Longrightarrow> card X' \<ge> card X"
   by(auto simp add: min_vertex_cover_def)
 
-lemma min_vertex_cover_in_graph:
-  assumes "finite (Vs G)" "min_vertex_cover G X"
-    shows "X \<subseteq> Vs G"
-proof(rule ccontr, goal_cases)
-  case 1
-  note X_props = min_vertex_coverD[OF assms(2)]
-  note X_props' = vertex_coverD[OF X_props(1)]
-  have "vertex_cover G (Vs G \<inter> X)"
-  proof(rule vertex_coverI, goal_cases)
-    case (1 e)
-    then obtain x where "x \<in> X" "x \<in> e"
-      by(auto dest: X_props')
-    moreover hence "x \<in> Vs G"
-      using 1 by auto
-    ultimately show ?case
-      by auto
-  qed
-  moreover have "card' (Vs G \<inter> X) < card' X"
-    using 1 assms(1)
-    by(auto intro!:  card'_subset)
-  ultimately show False
-    using X_props(2) 
-    by force
-qed
+lemma vertex_cover_full: "{} \<notin> G \<Longrightarrow> vertex_cover G (Vs G)"
+proof(rule vertex_coverI, goal_cases)
+  case (2 e)
+  moreover then obtain x where "x \<in> e"
+    by fastforce
+  ultimately show ?case 
+    by auto
+qed simp
+
+lemma finite_number_of_covers: "finite (Vs G) \<Longrightarrow> finite {X | X. vertex_cover G X}"
+  by(auto intro!: finite_subset[of _ "Pow (Vs G)"] simp add: vertex_cover_def)
+
+definition "\<tau> G = Min {card X | X. vertex_cover G X}"
+
+lemmas tau_def = \<tau>_def
+
+lemma min_cover_is_\<tau>: "\<lbrakk>finite (Vs G); min_vertex_cover G X\<rbrakk> \<Longrightarrow> card X = \<tau> G"
+  unfolding tau_def
+  by(subst linorder_class.eq_Min_iff)
+    (auto simp add: image_Collect[symmetric] min_vertex_coverD(1,2)
+            intro!: finite_imageI finite_number_of_covers[simplified] exI[of _ "X"]
+              dest: min_vertex_coverD)
+
+lemma min_vertex_cover_exists:
+  assumes "finite (Vs G)" "{} \<notin> G"
+  obtains X where "min_vertex_cover G X"
+  apply(rule  minimiser_of_function_nempty_finite[of "Collect (vertex_cover G)" card])
+  using finite_number_of_covers[OF assms(1)]  assms(2)
+  by(auto intro!: vertex_cover_full simp add: min_vertex_cover_def)
 
 corollary max_matching_min_cover_weak_duality:
   assumes  "graph_invar G" "graph_matching G M" "vertex_cover G X" "finite X"
@@ -307,25 +315,33 @@ proof-
 qed
 
 corollary max_matching_min_cover_duality_criterion:
-  assumes  "graph_invar G" "graph_matching G M" "vertex_cover G X" "finite X"
+  assumes  "graph_invar G" "graph_matching G M" "vertex_cover G X" "finite (Vs G)"
            "card M = card X"
-         shows "max_card_matching G M" "min_vertex_cover G X"
+     shows "max_card_matching G M" "min_vertex_cover G X"
   using assms  max_matching_min_cover_weak_duality[OF assms(1)]
-   by(force intro!: max_card_matchingI' min_vertex_coverI
-             dest!: max_matching_min_cover_weak_duality
-          simp add: card'_def)+
+        finite_subset[of X "Vs G"] vertex_coverD(1) rev_finite_subset
+  by(fastforce intro!: max_card_matchingI' min_vertex_coverI
+                dest!: max_matching_min_cover_weak_duality)+
 
 theorem koenig:
   assumes "bipartite G L R" "graph_invar G"
-    "max_card_matching G M" "min_vertex_cover G X"
-  shows "card M = card X"
+  shows "\<nu> G = \<tau> G"
 proof-
+
+  obtain M where M: "max_card_matching G M"
+    using assms(2) finite_Vs_then_finite max_card_matching_exists by auto
+  obtain X where X: "min_vertex_cover G X" 
+    using assms(2)
+    by(auto intro: min_vertex_cover_exists[of G])
+
+  note assms = assms M X
+
   note M_props = max_card_matchingDs[OF assms(3)]
   note X_props = min_vertex_coverD[OF assms(4)]
   note X_props' = vertex_coverD[OF X_props(1)]
 
   have X_in_G: "X \<subseteq> Vs G"
-    by (simp add: assms(2,4) min_vertex_cover_in_graph)
+    by (simp add: X_props'(1))
 
   show ?thesis
   proof(cases "\<exists> M. cover_matching {e | e. e \<in> G \<and> (\<exists> x. e \<inter> X = {x})} M X")
@@ -385,7 +401,8 @@ proof-
     moreover hence "card M = card M'"
       using assms(3) max_card_matchings_same_size by auto
     ultimately show ?thesis 
-      by auto
+      using  assms(2,4) finite_Vs_then_finite max_matching_is_\<nu>[of G] min_cover_is_\<tau>[of G]
+      by force
   next
     case False
     moreover have "bipartite {e |e. e \<in> G \<and> (\<exists>x. e \<inter> X = {x})} L R"
@@ -401,16 +418,16 @@ proof-
       by force
     have "vertex_cover G (X - S \<union> Neighbourhood {e |e. e \<in> G \<and> (\<exists>x. e \<inter> X = {x})} S)"
     proof(rule vertex_coverI, goal_cases)
-      case (1 e)
+      case (2 e)
       then obtain x where x: "x \<in> X" "x \<in> e"
         using X_props' by blast
       show ?case 
       proof(cases "x \<in> S")
         case True
         obtain y where y: "e = {x, y}"
-          using "1" assms(2) x(2) by blast
+          using 2 assms(2) x(2) by blast
         have y_not_in_S: "y \<notin> S" 
-          using "1" S(1) True assms(1) bipartite_edgeD(1,2) y by fastforce
+          using 2 S(1) True assms(1) bipartite_edgeD(1,2) y by fastforce
         show ?thesis
         proof(cases "y \<in> X")
           case True
@@ -424,7 +441,7 @@ proof-
           hence "e \<inter> X = {x}"
             using y x by auto
           hence "y \<in> Neighbourhood {e |e. e \<in> G \<and> (\<exists>x. e \<inter> X = {x})} S"
-            using 1 True S(1) y  y_not_in_S
+            using 2 True S(1) y  y_not_in_S
             by(auto intro!: in_NeighbourhoodI[of x y _ S] exI[of _ x])
           then show ?thesis 
             using y by auto
@@ -434,36 +451,33 @@ proof-
         then show ?thesis 
           using x by auto
       qed
+    next
+      case 1
+      thus ?case
+        using X_in_G
+        by (auto elim!: in_NeighbourhoodE)
     qed
-    moreover have 
-      "card' (X - S \<union> Neighbourhood {e |e. e \<in> G \<and> (\<exists>x. e \<inter> X = {x})} S) < card' X"
-    proof-
-      have  "card (X - S \<union> Neighbourhood {e |e. e \<in> G \<and> (\<exists>x. e \<inter> X = {x})} S) < card X"
-      proof(subst card_Un_disjoint, goal_cases)
-        case 1
-        then show ?case 
-          using  X_in_G assms(2)
-          by (simp add: finite_subset)
-      next
-        case 2
-        then show ?case 
-          using Neighbourhood_in_G graph_inv_G' finite_subset
-          by fastforce
-      next
-        case 3
-        then show ?case 
-          using S(1)
-          by (auto elim!: in_NeighbourhoodE)
-      next
-        case 4
-        then show ?case 
-          using S card.infinite[] X_in_G infinite_super assms(2) card_mono [of X "S"]
-          by(subst card_Diff_subset)  fastforce+
-      qed
-      thus ?thesis
-        using Neighbourhood_in_G[of "{e |e. e \<in> G \<and> (\<exists>x. e \<inter> X = {x})}" X]
-          X_in_G assms(2)  graph_inv_G' finite_subset[OF Neighbourhood_in_G]
-        by (auto simp add: card'_def)
+    moreover have  "card (X - S \<union> Neighbourhood {e |e. e \<in> G \<and> (\<exists>x. e \<inter> X = {x})} S) < card X"
+    proof(subst card_Un_disjoint, goal_cases)
+      case 1
+      then show ?case 
+        using  X_in_G assms(2)
+        by (simp add: finite_subset)
+    next
+      case 2
+      then show ?case 
+        using Neighbourhood_in_G graph_inv_G' finite_subset
+        by fastforce
+    next
+      case 3
+      then show ?case 
+        using S(1)
+        by (auto elim!: in_NeighbourhoodE)
+    next
+      case 4
+      then show ?case 
+        using S card.infinite[] X_in_G infinite_super assms(2) card_mono [of X "S"]
+        by(subst card_Diff_subset) fastforce+
     qed
     ultimately have False 
       using X_props(2) by force

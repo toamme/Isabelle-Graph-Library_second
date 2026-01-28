@@ -336,7 +336,7 @@ lemma self_not_in_Neighbourhood:
 
 lemma Neighbourhood_neighbourhood_union_inter:
   "Neighbourhood G V = \<Union> (neighbourhood G ` V) - V"
-  by(auto simp add: Neighbourhood_def neighbourhood_def  insert_commute)
+  by(auto simp add: Neighbourhood_def neighbourhood_def insert_commute)
 
 definition neighbours_of_Vs where
   "neighbours_of_Vs G X  = {v. \<exists> u \<in> X. \<exists> e \<in> G. v \<noteq> u \<and> u \<in> e \<and> v\<in> e}"
@@ -371,7 +371,7 @@ definition "deltas G X = {e | u e. e \<in> G \<and> u\<in> X \<and> u \<in> e}"
 lemma deltas_subset: "deltas G x \<subseteq> G"
   by(auto simp add: deltas_def)
 
-definition "Delta G X = {{u, v} | u v. {u, v} \<in> G \<and> u\<in> X \<and> v \<notin> X}"
+definition "Delta G X = {{u, v} | u v. {u, v} \<in> G \<and> u \<in> X \<and> v \<notin> X}"
 
 lemma in_DeltaI: 
   "\<lbrakk>e = {u, v}; e \<in> G; u \<in> X; v \<notin> X\<rbrakk> \<Longrightarrow> e \<in> Delta G X"

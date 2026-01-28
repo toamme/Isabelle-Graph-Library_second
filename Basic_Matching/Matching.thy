@@ -1770,6 +1770,25 @@ lemma max_card_matching_exists:
   using finite_number_of_matchings[OF assms(1)] 
   by(auto intro!: exI[of _ "{}"] simp add: max_card_matching_def)
 
+definition "\<nu> G = Max {card M | M. graph_matching G M}"
+
+lemmas ny_def = \<nu>_def
+
+lemma max_matching_is_\<nu>: "\<lbrakk>finite G;max_card_matching G M\<rbrakk> \<Longrightarrow> card M = \<nu> G"
+  unfolding ny_def
+  using matching_empty
+  by(subst linorder_class.eq_Max_iff)
+    (auto simp add: image_Collect[symmetric] max_card_matchingDs(1,2)
+            intro!: finite_imageI finite_number_of_matchings exI[of _ "{}"]
+              dest: max_card_matchingD)
+
+lemma obtain_max_card_matching_\<nu>:
+  assumes "finite G"
+  obtains M where "graph_matching G M" "card M = \<nu> G" "max_card_matching G M"
+  using max_card_matchingDs(1,2)[of G] max_card_matching_exists[OF assms] 
+        max_matching_is_\<nu>[OF assms]
+  by force
+
 lemma perfect_matching_card:
   assumes "perfect_matching G M" "graph_abs G"
   shows "2* card M = card (Vs G)" 
@@ -1799,45 +1818,45 @@ definition "max_weight_matching E w M =
   (graph_matching E M \<and> (\<forall> M'. graph_matching E M' \<longrightarrow> (sum w M'::real) \<le> sum w M))"
 
 lemma max_weight_matchingI:
-"graph_matching E M \<Longrightarrow> (\<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<le> sum w M)
-\<Longrightarrow> max_weight_matching E w M"
+  "\<lbrakk>graph_matching E M; \<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<le> sum w M\<rbrakk>
+   \<Longrightarrow> max_weight_matching E w M"
 and max_weight_matchingE:
-"max_weight_matching E w M \<Longrightarrow> 
-(graph_matching E M \<Longrightarrow> (\<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<le> sum w M) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "\<lbrakk>max_weight_matching E w M; 
+     \<lbrakk>graph_matching E M; \<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<le> sum w M\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
 and max_weight_matchingD:
-"max_weight_matching E w M \<Longrightarrow> graph_matching E M"
-"max_weight_matching E w M \<Longrightarrow> graph_matching E M' \<Longrightarrow> sum w M' \<le> sum w M"
+  "max_weight_matching E w M \<Longrightarrow> graph_matching E M"
+  "\<lbrakk>max_weight_matching E w M; graph_matching E M'\<rbrakk> \<Longrightarrow> sum w M' \<le> sum w M"
   by(auto simp add: max_weight_matching_def)
 
 definition "min_weight_perfect_matching E w M =
   (perfect_matching E M \<and> (\<forall> M'. perfect_matching E M' \<longrightarrow> (sum w M'::real) \<ge> sum w M))"
 
 lemma min_weight_perfect_matchingI:
-"perfect_matching E M \<Longrightarrow> (\<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M)
-\<Longrightarrow> min_weight_perfect_matching E w M"
+  "\<lbrakk>perfect_matching E M; \<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M\<rbrakk>
+   \<Longrightarrow> min_weight_perfect_matching E w M"
 and min_weight_perfect_matchingE:
-"min_weight_perfect_matching E w M \<Longrightarrow> 
-(perfect_matching E M \<Longrightarrow> (\<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "\<lbrakk>min_weight_perfect_matching E w M;
+    \<lbrakk>perfect_matching E M; \<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
 and min_weight_perfect_matchingD:
-"min_weight_perfect_matching E w M \<Longrightarrow> perfect_matching E M"
-"min_weight_perfect_matching E w M \<Longrightarrow> perfect_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M"
+  "min_weight_perfect_matching E w M \<Longrightarrow> perfect_matching E M"
+  "\<lbrakk>min_weight_perfect_matching E w M; perfect_matching E M'\<rbrakk> \<Longrightarrow> sum w M' \<ge> sum w M"
   by(auto simp add: min_weight_perfect_matching_def)
 
 definition "min_weight_matching E w M =
   (graph_matching E M \<and> (\<forall> M'. graph_matching E M' \<longrightarrow> ((sum w M')::real) \<ge> sum w M))"
 
 lemma min_weight_matchingI:
-  "graph_matching E M \<Longrightarrow> (\<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M)
-\<Longrightarrow> min_weight_matching E w M"
-  and min_weight_matchingE:
-  "min_weight_matching E w M \<Longrightarrow> 
-(graph_matching E M \<Longrightarrow> (\<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M) \<Longrightarrow> P)
-\<Longrightarrow> P"
-  and min_weight_matchingD:
+  "\<lbrakk>graph_matching E M; \<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M\<rbrakk>
+   \<Longrightarrow> min_weight_matching E w M"
+and min_weight_matchingE:
+  "\<lbrakk>min_weight_matching E w M;
+    \<lbrakk>graph_matching E M; \<And> M'. graph_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
+and min_weight_matchingD:
   "min_weight_matching E w M \<Longrightarrow> graph_matching E M"
-  "min_weight_matching E w M \<Longrightarrow> graph_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M"
+  "\<lbrakk>min_weight_matching E w M; graph_matching E M'\<rbrakk> \<Longrightarrow> sum w M' \<ge> sum w M"
   by(auto simp add: min_weight_matching_def)
 
 lemma min_weight_matching_only_negs:
@@ -1859,15 +1878,15 @@ definition "max_weight_perfect_matching E w M =
   (perfect_matching E M \<and> (\<forall> M'. perfect_matching E M' \<longrightarrow> (sum w M'::real) \<le> sum w M))"
 
 lemma max_weight_perfect_matchingI:
-  "perfect_matching E M \<Longrightarrow> (\<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<le> sum w M)
-\<Longrightarrow> max_weight_perfect_matching E w M"
+  "\<lbrakk>perfect_matching E M; \<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<le> sum w M\<rbrakk>
+  \<Longrightarrow> max_weight_perfect_matching E w M"
   and max_weight_perfect_matchingE:
-  "max_weight_perfect_matching E w M \<Longrightarrow> 
-(perfect_matching E M \<Longrightarrow> (\<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<le> sum w M) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "\<lbrakk>max_weight_perfect_matching E w M;
+     \<lbrakk>perfect_matching E M; \<And> M'. perfect_matching E M' \<Longrightarrow> sum w M' \<le> sum w M\<rbrakk> \<Longrightarrow> P\<rbrakk>
+  \<Longrightarrow> P"
   and max_weight_perfect_matchingD:
   "max_weight_perfect_matching E w M \<Longrightarrow> perfect_matching E M"
-  "max_weight_perfect_matching E w M \<Longrightarrow> perfect_matching E M' \<Longrightarrow> sum w M' \<le> sum w M"
+  "\<lbrakk>max_weight_perfect_matching E w M; perfect_matching E M'\<rbrakk> \<Longrightarrow> sum w M' \<le> sum w M"
   by(auto simp add: max_weight_perfect_matching_def)
 
 lemma max_weight_matching_only_pos:
@@ -1889,30 +1908,30 @@ definition "max_weight_max_card_matching E w M =
   (max_card_matching E M \<and> (\<forall> M'. max_card_matching E M' \<longrightarrow> (sum w M'::real) \<le> sum w M))"
 
 lemma max_weight_max_card_matchingI:
-  "max_card_matching E M \<Longrightarrow> (\<And> M'. max_card_matching E M' \<Longrightarrow> sum w M' \<le> sum w M)
-\<Longrightarrow> max_weight_max_card_matching E w M"
+  "\<lbrakk>max_card_matching E M; \<And> M'. max_card_matching E M' \<Longrightarrow> sum w M' \<le> sum w M\<rbrakk>
+   \<Longrightarrow> max_weight_max_card_matching E w M"
   and max_weight_max_card_matchingE:
-  "max_weight_max_card_matching E w M \<Longrightarrow> 
-(max_card_matching E M \<Longrightarrow> (\<And> M'. max_card_matching E M' \<Longrightarrow> sum w M' \<le> sum w M) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "\<lbrakk>max_weight_max_card_matching E w M;
+    \<lbrakk>max_card_matching E M; \<And> M'. max_card_matching E M' \<Longrightarrow> sum w M' \<le> sum w M\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
   and max_weight_max_card_matchingD:
   "max_weight_max_card_matching E w M \<Longrightarrow> max_card_matching E M"
-  "max_weight_max_card_matching E w M \<Longrightarrow> max_card_matching E M' \<Longrightarrow> sum w M' \<le> sum w M"
+  "\<lbrakk>max_weight_max_card_matching E w M; max_card_matching E M'\<rbrakk> \<Longrightarrow> sum w M' \<le> sum w M"
   by(auto simp add: max_weight_max_card_matching_def)
 
 definition "min_weight_max_card_matching E w M =
   (max_card_matching E M \<and> (\<forall> M'. max_card_matching E M' \<longrightarrow> (sum w M'::real) \<ge> sum w M))"
 
 lemma min_weight_max_card_matchingI:
-  "max_card_matching E M \<Longrightarrow> (\<And> M'. max_card_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M)
-\<Longrightarrow> min_weight_max_card_matching E w M"
+  "\<lbrakk>max_card_matching E M; \<And> M'. max_card_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M\<rbrakk>
+   \<Longrightarrow> min_weight_max_card_matching E w M"
   and min_weight_max_card_matchingE:
-  "min_weight_max_card_matching E w M \<Longrightarrow> 
-(max_card_matching E M \<Longrightarrow> (\<And> M'. max_card_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M) \<Longrightarrow> P)
-\<Longrightarrow> P"
+  "\<lbrakk>min_weight_max_card_matching E w M;
+    \<lbrakk>max_card_matching E M; \<And> M'. max_card_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
   and min_weight_max_card_matchingD:
   "min_weight_max_card_matching E w M \<Longrightarrow> max_card_matching E M"
-  "min_weight_max_card_matching E w M \<Longrightarrow> max_card_matching E M' \<Longrightarrow> sum w M' \<ge> sum w M"
+  "\<lbrakk>min_weight_max_card_matching E w M; max_card_matching E M'\<rbrakk> \<Longrightarrow> sum w M' \<ge> sum w M"
   by(auto simp add: min_weight_max_card_matching_def)
 
 lemma weighted_matchings_over_coinciding_weights:
@@ -2078,7 +2097,7 @@ lemma cover_matching_is_graph_matching:
   by(auto elim!: cover_matchingE)
 
 lemma cover_matching_subset:
-  "\<lbrakk>cover_matching G M X; Y \<subseteq> X\<rbrakk> \<Longrightarrow>cover_matching G M Y"
+  "\<lbrakk>cover_matching G M X; Y \<subseteq> X\<rbrakk> \<Longrightarrow> cover_matching G M Y"
   by(auto elim!: cover_matchingE intro!: cover_matchingI)
 
 lemma obtain_covering_edge:
