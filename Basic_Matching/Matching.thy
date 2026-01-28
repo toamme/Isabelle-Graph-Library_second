@@ -1380,6 +1380,10 @@ lemmas max_card_matchingDs = conjunct1[OF max_card_matchingD]
                              conjunct1[OF conjunct2[OF max_card_matchingD]]
                              mp[OF spec[OF conjunct2[OF conjunct2[OF max_card_matchingD]]]]
 
+lemma max_matching_if_same_card:
+  "\<lbrakk>max_card_matching G M; graph_matching G M'; card M = card M'\<rbrakk> \<Longrightarrow> max_card_matching G M'"
+  by(auto intro!: max_card_matchingI elim!: max_card_matchingE)
+
 lemma max_card_matching_subgraphD:
   assumes "max_card_matching G M"
   shows "\<And>e. e \<in> M \<Longrightarrow> e \<in> G"
@@ -2037,6 +2041,10 @@ lemma cover_matchingI:
   "\<lbrakk>matching M; M \<subseteq> G; A \<subseteq> Vs M\<rbrakk> \<Longrightarrow> cover_matching G M A"
 and cover_matchingE:
   "\<lbrakk>cover_matching G M A; \<lbrakk>matching M; M \<subseteq> G; A \<subseteq> Vs M\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+and cover_matchingD:
+  "cover_matching G M A \<Longrightarrow> matching M"
+  "cover_matching G M A \<Longrightarrow> M \<subseteq> G"
+  "cover_matching G M A \<Longrightarrow> A \<subseteq> Vs M"
   by(auto simp add: cover_matching_def)
 
 lemma cover_matching_bigger_graph:

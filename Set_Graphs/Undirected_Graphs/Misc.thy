@@ -87,6 +87,9 @@ lemma card'_insert[simp]: "card' (insert a A) = (if a \<in> A then id else eSuc)
 lemma card'_empty_2[simp]: "card' {} = enat 0"
   by (simp add: card'_def)
 
+lemma card'_subset: "\<lbrakk>A \<subset> B; finite A\<rbrakk> \<Longrightarrow> card' A < card' B"
+  by(auto intro!: psubset_card_mono simp add: card'_def)
+
 lemma exists_conj_elim_2_1: "\<lbrakk>\<And>x. \<lbrakk>P x; Q x\<rbrakk> \<Longrightarrow> V x; \<lbrakk>\<And>x. P x \<and> Q x \<Longrightarrow> V x\<rbrakk> \<Longrightarrow> S\<rbrakk> \<Longrightarrow> S"
   by auto
 
