@@ -8,6 +8,8 @@ theory Instantiation
           Mincost_Flow_Algorithms.Orlins
 begin
 
+no_notation Undirected_Set_Graphs.neighbourhood ("\<gamma> _ _")
+
 subsection \<open>Definitions\<close>
 
 hide_const RBT_Set.empty Set.empty  not_blocked_update

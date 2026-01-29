@@ -512,7 +512,7 @@ lemma edge_in_component_edges:
   assumes "e \<in> G"
   assumes "e \<subseteq> C" 
   shows "e \<in> component_edges G C"
-  using assms component_edges_def by fastforce 
+  using assms component_edges_def by blast
 
 lemma graph_component_edges_partition:
   assumes "graph_invar G"
@@ -1518,7 +1518,7 @@ proof(induction "G" arbitrary: C)
   then have IH: "C \<in> connected_components G' \<Longrightarrow> \<exists>p. path G' p \<and> C = set p \<and> distinct p"    
     for C
     using insert.IH insert.prems(1)
-    by fastforce
+    by force
 
   have deg_3: False
     if "p1 \<noteq> []" "p2 \<noteq> []" "path G (p1 @ u' # p2)" "{u, v} \<in> G" "v' \<notin> set (p1 @ u' # p2)"

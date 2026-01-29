@@ -136,16 +136,16 @@ proof-
     moreover obtain v1 v2 where "sel_pair ?es = (v1,v2)"
       by (cases "sel_pair ?es") auto
     ultimately have "(Undirected_Set_Graphs.neighbourhood M v2) \<noteq> {}"
-      using assms \<open>?es \<noteq> {}\<close> matching_graph.vs_member'
+      using assms \<open>?es \<noteq> {}\<close> matching_graph.vs_member' matching_graph.dblton_E
       by (auto elim!: if1_cond_props''
-               simp: sel_if1_def edge_iff_edge_1 if1_def Undirected_Set_Graphs.neighbourhood_def 
+               simp: sel_if1_def edge_iff_edge_1 if1_def Undirected_Set_Graphs.dblton_neighbourhood_def 
                split: prod.split)
     moreover have "finite (Undirected_Set_Graphs.neighbourhood M v2)"
       by (meson matching_graph.graph neighbourhood_subset_Vs rev_finite_subset)
     ultimately have "sel (Undirected_Set_Graphs.neighbourhood M v2) \<in> (Undirected_Set_Graphs.neighbourhood M v2)"
       by (auto simp add: sel)
     hence "{v2, sel (Undirected_Set_Graphs.neighbourhood M v2)} \<in> M"
-      by auto
+      using matching_graph.dblton_E by auto
 
     moreover have "\<exists>r. flabel v1 = Some (r, Even)"
       using \<open>sel_pair ?es \<in> ?es\<close> \<open>sel_pair ?es = (v1, v2)\<close>

@@ -8,6 +8,9 @@ theory Faces
     Subsystems
     Matching_LP
 begin 
+
+no_notation neighbourhood ("\<gamma> _ _")
+
 (*
 
 definition undef_vec :: "nat \<Rightarrow> 'a" where

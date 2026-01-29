@@ -304,17 +304,21 @@ lemma degree_3:
 
 subsection \<open>Neighbours\<close>
 
-definition "neighbourhood G v = {u. {u,v} \<in> G}"
+definition "neighbourhood G v = {u. \<exists> e. e \<in> G \<and> u \<in> e \<and> v \<in> e \<and> u \<noteq> v}"
 
-lemma in_neighD[dest]: "v \<in> neighbourhood G u \<Longrightarrow> {u, v} \<in> G"
-"v \<in> neighbourhood G u \<Longrightarrow> {v, u} \<in> G"
-  by (auto simp: neighbourhood_def insert_commute)
+notation neighbourhood ("\<gamma> _ _")
 
-definition "Neighbourhood G V = {v | v u. {u, v} \<in> G \<and> u \<in> V \<and> v \<notin> V}"
+lemma in_neighD[dest]: 
+ "v \<in> neighbourhood G u \<Longrightarrow> \<exists> e. e \<in> G \<and> u \<in> e \<and> v \<in> e \<and> u \<noteq> v"
+  by (auto simp: neighbourhood_def)
+
+definition "Neighbourhood G V = {v | v u e. e \<in> G \<and> u \<in> V \<and> v \<notin> V \<and> u \<in> e \<and> v \<in> e}"
+
+notation Neighbourhood ("\<Gamma> _ _")
 
 lemma not_in_NeighbourhoodE: 
  "v \<notin> Neighbourhood G V \<Longrightarrow>
- ((\<And> u. \<lbrakk>{u, v} \<in> G; u \<in> V; v \<notin> V\<rbrakk> \<Longrightarrow> False) \<Longrightarrow> P)
+ ((\<And> u e. \<lbrakk>e \<in> G; u \<in> V; v \<notin> V; u \<in> e; v \<in> e\<rbrakk> \<Longrightarrow> False) \<Longrightarrow> P)
   \<Longrightarrow> P"
   by(auto simp add: Neighbourhood_def)
 
@@ -322,12 +326,12 @@ lemma Neighbourhood_in_G: "Neighbourhood G X \<subseteq> Vs G"
   by(auto simp add: Neighbourhood_def)
 
 lemma in_NeighbourhoodE: 
-  "\<lbrakk>y \<in> Neighbourhood G X;
-    \<And> x. \<lbrakk>{x, y} \<in> G; x \<in> X; y \<notin> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  "\<lbrakk>v \<in> Neighbourhood G V;
+    \<And> u e. \<lbrakk>e \<in> G; u \<in> V; v \<notin> V; u \<in> e; v \<in> e; u \<noteq> v\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by(auto simp add: Neighbourhood_def)
 
 lemma in_NeighbourhoodI: 
-  "\<lbrakk>{x, y} \<in> G; x \<in> X; y \<notin> X\<rbrakk> \<Longrightarrow> y \<in> Neighbourhood G X"
+  "\<lbrakk>e \<in> G; u \<in> V; v \<notin> V; u \<in> e; v \<in> e\<rbrakk> \<Longrightarrow> v \<in> Neighbourhood G V"
   by(auto simp add: Neighbourhood_def)
 
 lemma self_not_in_Neighbourhood:
@@ -340,6 +344,8 @@ lemma Neighbourhood_neighbourhood_union_inter:
 
 definition neighbours_of_Vs where
   "neighbours_of_Vs G X  = {v. \<exists> u \<in> X. \<exists> e \<in> G. v \<noteq> u \<and> u \<in> e \<and> v\<in> e}"
+
+notation neighbours_of_Vs ("\<gamma>s _ _")
 
 lemma neighbours_of_Vs_is_union:
   shows "neighbours_of_Vs G X = \<Union> {r. \<exists> x\<in>X. r = (neighbours_of_Vs G {x})}"
@@ -368,17 +374,21 @@ lemma neighbours_of_Vs_un:
 
 definition "deltas G X = {e | u e. e \<in> G \<and> u\<in> X \<and> u \<in> e}"
 
+notation deltas ("\<delta>s _ _")
+
 lemma deltas_subset: "deltas G x \<subseteq> G"
   by(auto simp add: deltas_def)
 
-definition "Delta G X = {{u, v} | u v. {u, v} \<in> G \<and> u \<in> X \<and> v \<notin> X}"
+definition "Delta G X = {e | u v e. e \<in> G \<and> u \<in> X \<and> v \<notin> X \<and> u \<in> e \<and> v \<in> e}"
+
+notation Delta ("\<Delta> _ _")
 
 lemma in_DeltaI: 
-  "\<lbrakk>e = {u, v}; e \<in> G; u \<in> X; v \<notin> X\<rbrakk> \<Longrightarrow> e \<in> Delta G X"
+  "\<lbrakk>e \<in> G; u \<in> X; v \<notin> X; u \<in> e; v \<in> e\<rbrakk> \<Longrightarrow> e \<in> Delta G X"
 and in_DeltaE: 
-  "\<lbrakk>e \<in> Delta G X; \<And> u v. \<lbrakk>e = {u, v}; e \<in> G; u \<in> X; v \<notin> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  "\<lbrakk>e \<in> Delta G X; \<And> u v. \<lbrakk>e \<in> G; u \<in> X; v \<notin> X; u \<in> e; v \<in> e\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
 and in_DeltaD: 
-  "e \<in> Delta G X \<Longrightarrow> \<exists> u v. e = {u, v} \<and> u \<in> X \<and> v \<notin> X"
+  "e \<in> Delta G X \<Longrightarrow> \<exists> u v. u \<in> X \<and> v \<notin> X \<and> u \<in> e \<and> v \<in> e"
   "e \<in> Delta G X \<Longrightarrow> e \<in> G"
   by (auto simp add: Delta_def)
 
@@ -504,6 +514,10 @@ lemma dblton_graphI:
  assumes "\<And>e. e \<in> G \<Longrightarrow> \<exists>u v. e = {u, v} \<and> u \<noteq> v"
   shows "dblton_graph G"
   using assms
+  by (auto simp: dblton_graph_def)
+
+lemma dblton_graphD:
+ "\<lbrakk>dblton_graph G; e \<in> G\<rbrakk> \<Longrightarrow> \<exists>u v. e = {u, v} \<and> u \<noteq> v"
   by (auto simp: dblton_graph_def)
 
 lemma dblton_graph_finite_Vs:
@@ -746,5 +760,72 @@ lemma bigraph_handshaking_lemma:
   using assms
   by(subst general_handshaking_lemma)
     (auto simp add: doublton_graph_edge_card_sums)
+
+lemma dblton_Neighbourhood_def:
+   "dblton_graph G \<Longrightarrow> Neighbourhood G V = {v | v u. {u, v} \<in> G \<and> u \<in> V \<and> v \<notin> V}"
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 v)
+  then obtain u e where "e \<in> G" "u \<in> V" "v \<notin> V" "u \<in> e" "v \<in> e" "u \<noteq> v"
+    by(auto elim!: in_NeighbourhoodE)
+  moreover then obtain u' v' where "e = {u', v'}" "u' \<noteq> v'"
+    using "1"(1) by auto
+  ultimately show ?case 
+    by (auto simp add: insert_commute) 
+qed (auto intro!: in_NeighbourhoodI)
+
+lemma dblton_not_in_NeighbourhoodE: 
+ "\<lbrakk>dblton_graph G; v \<notin> Neighbourhood G V;
+   (\<And> u. \<lbrakk>{u, v} \<in> G; u \<in> V; v \<notin> V\<rbrakk> \<Longrightarrow> False) \<Longrightarrow> P\<rbrakk>
+  \<Longrightarrow> P"
+  by(auto simp add: dblton_Neighbourhood_def)
+
+lemma dblton_in_NeighbourhoodE: 
+  "\<lbrakk>dblton_graph G; y \<in> Neighbourhood G X;
+    \<And> x. \<lbrakk>{x, y} \<in> G; x \<in> X; y \<notin> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by(auto simp add: dblton_Neighbourhood_def)
+
+lemma dblton_in_NeighbourhoodI: 
+  "\<lbrakk>{x, y} \<in> G; x \<in> X; y \<notin> X\<rbrakk> \<Longrightarrow> y \<in> Neighbourhood G X"
+  by(auto simp add: Neighbourhood_def)
+
+lemma dblton_neighbourhood_def: 
+ "dblton_graph G \<Longrightarrow> neighbourhood G v = {u. {u,v} \<in> G}"
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 u)
+  then obtain e where  "e \<in> G" "u \<in> e" "v \<in> e" "u \<noteq> v"
+  by(auto simp add: neighbourhood_def)
+  moreover then obtain u' v' where "e = {u', v'}" "u' \<noteq> v'"
+    using "1"(1) by auto
+  ultimately show ?case 
+    by (auto simp add: insert_commute) 
+qed (auto simp add: neighbourhood_def)
+
+lemma dblton_in_neighD[dest]: 
+  assumes "dblton_graph G" "v \<in> neighbourhood G u"
+  shows "{u, v} \<in> G"  "{v, u} \<in> G"
+  using assms
+  by (auto simp: dblton_neighbourhood_def insert_commute)
+
+lemma dblton_Delta_def:
+  "dblton_graph G \<Longrightarrow> Delta G X = {{u, v} | u v. {u, v} \<in> G \<and> u \<in> X \<and> v \<notin> X}"
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 e)
+  then obtain u v where "e \<in> G" "u \<in> X" "v \<notin> X" "u \<in> e" "v \<in> e" "u \<noteq> v"
+    by(auto simp add: Delta_def)
+  moreover then obtain u' v' where "e = {u', v'}" "u' \<noteq> v'"
+    using "1"(1) by auto
+  ultimately show ?case 
+    by (auto intro!: exI[of "\<lambda> u. \<exists> v. {u', v'} = {u, v} \<and> _ u v", of u] 
+           simp add: insert_commute)
+qed (auto simp add: Delta_def)
+
+lemma dblton_in_DeltaI: 
+  "\<lbrakk>dblton_graph G; e = {u, v}; e \<in> G; u \<in> X; v \<notin> X\<rbrakk> \<Longrightarrow> e \<in> Delta G X"
+and dblton_in_DeltaE: 
+  "\<lbrakk>dblton_graph G; e \<in> Delta G X; \<And> u v. \<lbrakk>e = {u, v}; e \<in> G; u \<in> X; v \<notin> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+and dblton_in_DeltaD: 
+  "\<lbrakk>dblton_graph G; e \<in> Delta G X\<rbrakk> \<Longrightarrow> \<exists> u v. e = {u, v} \<and> u \<in> X \<and> v \<notin> X"
+  "\<lbrakk>dblton_graph G; e \<in> Delta G X\<rbrakk> \<Longrightarrow> e \<in> G"
+  by (auto simp add: dblton_Delta_def)
 
 end

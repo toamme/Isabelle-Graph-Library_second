@@ -812,7 +812,8 @@ proof -
           `\<forall>a \<in> ?E. \<exists>M. perfect_matching a M`  assms(1)
          components_edges_image_Vs[of A] finite_UN[of "components_edges A" Vs] 
     by(subst A_is_component_edges_Union_A)
-      (fastforce intro!:  perfect_matching_union[of ?E] simp add: graph_component_partition)
+      (auto intro!: perfect_matching_union[of ?E] 
+        elim!: dblton_graphE simp add: graph_component_partition)
 qed
 
 lemma graph_diff_empty:

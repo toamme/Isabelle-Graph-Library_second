@@ -98,6 +98,10 @@ lemma finite_bipartite_graph_invar:
   "\<lbrakk>finite G; bipartite G X Y\<rbrakk> \<Longrightarrow> graph_invar G"
   by (auto simp: dblton_graph_def elim!: bipartite_edgeE simp: Vs_def)
 
+lemma bipartite_dblton_graph:
+  "bipartite G X Y \<Longrightarrow> dblton_graph G"
+  by (auto simp: dblton_graph_def elim!: bipartite_edgeE simp: Vs_def)
+
 lemma bipartite_insertI:
   assumes "bipartite G X Y"
   assumes "u \<in> X" "v \<in> Y"
@@ -231,6 +235,10 @@ and partitioned_bipartiteE:
   \<Longrightarrow> P"
   by(auto simp add: partitioned_bipartite_def)
 
+lemma partitioned_bipartite_dblton_graph:
+  "partitioned_bipartite G X \<Longrightarrow> dblton_graph G"
+  by(fastforce simp add: dblton_graph_def partitioned_bipartite_def)
+  
 definition is_bipartite where 
   "is_bipartite E = (\<exists> X \<subseteq> Vs E. \<forall> e \<in> E. \<exists> u v. 
                                    e = {u, v} \<and> (u \<in> X \<and> v \<in> Vs E - X))"
@@ -358,16 +366,19 @@ lemma Neighbourhood_bipartite:
 proof(rule, all \<open>rule\<close>, goal_cases)
   case (1 u)
   then obtain v where uv:"{v, u} \<in> G" "v \<in> V"
-    by(auto simp add: Neighbourhood_def)
+    using bipartite_dblton_graph[OF assms(1)]
+    by(auto simp add: dblton_Neighbourhood_def)
   hence "u \<in> neighbourhood G v"
-    by(auto simp add: neighbourhood_def edge_commute) 
+    using bipartite_dblton_graph[OF assms(1)]
+    by(auto simp add: dblton_neighbourhood_def edge_commute) 
   then show ?case 
     using uv(2) by auto
 next
   case (2 u)
   then obtain v where v: "u \<in> neighbourhood G v" "v \<in> V" by auto
   hence uv:"{u, v} \<in> G"
-    by(auto simp add: neighbourhood_def)
+    using bipartite_dblton_graph[OF assms(1)]
+    by(auto simp add: dblton_neighbourhood_def)
   hence "u \<notin> V"
     using v(2) assms by(fastforce simp add: bipartite_def)
   then show ?case 
@@ -399,8 +410,8 @@ lemma Neighbourhood_bipartite_right:
 lemma bipartite_neighbours_of_Vs_Neighbourhood:
   assumes "partitioned_bipartite G A" "X \<subseteq> A"
   shows "neighbours_of_Vs G X = Neighbourhood G X"
-  using assms
-  by(auto simp add: neighbours_of_Vs_def Neighbourhood_def partitioned_bipartite_def
+  using assms partitioned_bipartite_dblton_graph[OF assms(1)]
+  by(auto simp add: neighbours_of_Vs_def dblton_Neighbourhood_def partitioned_bipartite_def
             intro!: bexI[of "\<lambda> u. x \<noteq> u \<and> (\<exists>e\<in>G. u \<in> e \<and> x \<in> e)"_ X for x]
                     exI[of "\<lambda>u. {u, x} \<in> G \<and> u \<in> X \<and> x \<notin> X" for x])
 

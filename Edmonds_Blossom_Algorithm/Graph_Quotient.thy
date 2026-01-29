@@ -1086,7 +1086,8 @@ proof-
     subgoal using dblton_E by (auto elim: dblton_graphE)
     done
   then obtain w where "w \<in> neighbourhood E (hd p2)" "w \<notin> s"
-    by (auto simp: neighbourhood_def insert_commute)
+    using graph
+    by (auto simp: dblton_neighbourhood_def insert_commute)
   moreover hence "w \<in> set C"
     using edges_are_Vs quot insert_absorb
     by auto 
@@ -1099,7 +1100,8 @@ proof-
     apply (subst choose_con_vert_def)
     by auto
   thus ?thesis
-    by(fastforce simp: neighbourhood_def)
+    using graph
+    by blast
 qed
 
 lemma choose_vert_works_2:
@@ -1119,7 +1121,7 @@ proof-
     subgoal using graph by blast
     done
   then obtain w where "w \<in> neighbourhood E (last p1)" "w \<notin> s"
-    by (auto simp: neighbourhood_def insert_commute)
+    by (auto simp: insert_commute  dblton_neighbourhood_def[OF dblton_E])
   moreover hence "w \<in> set C"
     using edges_are_Vs quot insert_absorb
     by auto 
@@ -1132,7 +1134,7 @@ proof-
     apply (subst choose_con_vert_def)
     by auto
   thus ?thesis
-    by(fastforce simp: neighbourhood_def)
+    by (simp add: dblton_neighbourhood_def[OF dblton_E]  insert_commute)
 qed
 
 subsubsection \<open>Finding an Edge in the Concrete Graph\<close>
@@ -4416,7 +4418,7 @@ lemma doubleton_quot:
 proof(rule dblton_graphI, goal_cases)
   have "dblton_graph M"
     using \<open>M \<subseteq> E\<close> dblton_E
-    by (fastforce intro!: dblton_graphI elim!: dblton_graphE)
+    by (auto intro: dblton_graphI elim: dblton_graphE)
   case (1 quote)
   have card_quote: "card quote \<le> 2"
   proof(rule ccontr)

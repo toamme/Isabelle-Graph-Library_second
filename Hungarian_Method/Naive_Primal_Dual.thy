@@ -342,6 +342,9 @@ lemma graph_invar_G: "graph_invar G"
   using basic_graph_props(4) finiteG
   by(auto intro!: finite_bipartite_graph_invar)
 
+lemma dblton_G: "dblton_graph G"
+  by (simp add: graph_invar_G)
+
 lemma in_G_sym_slack: 
   "{u, v} \<in> G \<Longrightarrow> edge_slack p u v = edge_slack p v u"
   by(auto simp add: edge_slack_def intro!:  sym_weights)
@@ -893,7 +896,7 @@ proof-
     case 1
     then obtain u' v' where u'v': "u' \<in> vset_set S" "v' \<notin> vset_set S" "{u, v} = {u', v'}"
                             "{u', v'} \<in> G - tight_subgraph G w (potential \<pi>)"
-      by(auto simp add: Delta_def)
+      by(auto simp add: Delta_def insert_commute)
     moreover hence "\<epsilon> \<le> potential \<pi> u' + potential \<pi> v' - w {u', v'}"
       using finite_slacks finite_ys S_NS_props(5)
       by(force simp add: alpha_is Delta_def tight_subgraph_def vset.set_isin
@@ -907,13 +910,13 @@ proof-
   moreover have pc_4:"v \<in> vset_set S \<Longrightarrow> \<epsilon> \<le> potential \<pi> v" for v
     by (simp add: S_NS_props(5) alpha_less(2) vset.set_isin)
   ultimately show "feasible_max_dual LR G w (potential (naive_primal_dual_call \<pi>))"
-    using alpha_gtr_0
-    by(auto intro!: PD_adjustment_max_weight(1)[OF assms(3),of "vset_set S" "vset_set NS" \<epsilon>]
+    using alpha_gtr_0 
+    by(auto intro!: PD_adjustment_max_weight(1)[OF dblton_G assms(3),of "vset_set S" "vset_set NS" \<epsilon>]
           simp add: pmap''_is_call pmap''_effect)
    have  sum_change:" sum (potential \<pi>'') LR =
            sum (potential \<pi>) LR -(card (vset_set S) - card (vset_set NS)) * \<epsilon>"
      using pc_1 pc_2 pc_3 pc_4 alpha_gtr_0 S_NS_props(1)  S_NS_props(4)
-     by(subst PD_adjustment_max_weight(2)[OF assms(3),of "vset_set S" "vset_set NS" \<epsilon>])
+     by(subst PD_adjustment_max_weight(2)[OF dblton_G assms(3),of "vset_set S" "vset_set NS" \<epsilon>])
        (auto simp add: pmap''_is_call pmap''_effect find_bad_props(2) algebra_simps)
    have LR_split: "LR = vset_set S \<union> vset_set NS \<union> (LR - (vset_set S \<union> vset_set NS))"
      using S_NS_props(3,2) S_NS_in_LR(1,2)

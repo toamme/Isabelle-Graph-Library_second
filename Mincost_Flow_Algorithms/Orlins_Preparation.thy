@@ -7,6 +7,8 @@ theory Orlins_Preparation
           Undirected_Set_Graphs.Directed_Undirected
 begin
 
+no_notation neighbourhood ("\<gamma> _ _")
+
 context 
   flow_network
 begin

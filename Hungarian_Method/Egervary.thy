@@ -8,7 +8,7 @@ text \<open>This is a formalisation of Egerváry's Theorem which inspired Kuhn f
       We follow the proof by Schrijver (Theorem 17.1 in his book).\<close>
 
 lemma PD_adjustment_max_weight:
-  assumes  "feasible_max_dual V G w \<pi>" "\<not> (\<exists> e \<in> G. e \<subseteq> S)"
+  assumes  "dblton_graph G" "feasible_max_dual V G w \<pi>" "\<not> (\<exists> e \<in> G. e \<subseteq> S)"
    and NS_def: "NS = Neighbourhood (tight_subgraph G w \<pi>) S"
    and eps_props: 
           "\<And> u v. {u, v} \<in> Delta (G - (tight_subgraph G w \<pi>)) S \<Longrightarrow> \<epsilon> \<le> \<pi> u + \<pi> v - w {u, v}"
@@ -21,13 +21,13 @@ lemma PD_adjustment_max_weight:
          "S \<subseteq> V \<Longrightarrow> sum \<pi>' V = sum \<pi> V + \<epsilon> * (real (card NS) - real (card S))"
 proof-
 
-  note pi_props = feasible_max_dualD[OF assms(1)]
+  note pi_props = feasible_max_dualD[OF assms(2)]
 
   show "feasible_max_dual V G w \<pi>'"
   proof(rule feasible_max_dualI, goal_cases)
     case (1 v)
     show ?case 
-      using assms(5,6)  pi_props(1)[OF 1]
+      using assms(6,7)  pi_props(1)[OF 1]
       by(auto simp add: \<pi>'_def)
   next
     case (2 e u v)
@@ -56,8 +56,8 @@ proof-
         proof(rule ccontr, goal_cases)
           case 1
           hence "v \<in> Neighbourhood (tight_subgraph G w \<pi>) S"
-            using case_1
-            by(auto intro!: in_NeighbourhoodI[of u] simp add: 2(2) True)
+            using case_1 assms(1)
+            by(auto intro!: dblton_in_NeighbourhoodI[of u] simp add: 2(2) True)
           thus False
             using  one(2)
             by(auto simp add: "2"(2) NS_def)
@@ -69,7 +69,8 @@ proof-
           using  True case_1 
           by(auto simp add: "2"(2))
         ultimately show ?thesis 
-          by(auto intro!: in_DeltaI[OF 2(2) _ True] 2(1))
+          using assms(1)
+          by(auto intro!: dblton_in_DeltaI[OF _ 2(2) _ True] 2(1))
       next
         case False
         moreover hence v_in_S:"v \<in> S"
@@ -80,14 +81,14 @@ proof-
           case 1
           hence "u \<in> Neighbourhood (tight_subgraph G w \<pi>) S"
             using case_1
-            by(auto intro!: in_NeighbourhoodI[of v] simp add: 2(2) v_in_S insert_commute)
+            by(auto intro!: in_NeighbourhoodI[of _ _ v] simp add: 2(2) v_in_S insert_commute)
           thus False
             using  one(2)
             by(auto simp add: "2"(2) NS_def)
         qed
         ultimately show ?thesis 
           using 2(2,1)
-          by(auto intro!: in_DeltaI[OF _ _ v_in_S] simp add: insert_commute)
+          by(auto intro!: in_DeltaI[OF _ v_in_S] simp add: insert_commute)
       qed
       then show ?thesis 
         using one case_1 eps_props(1)[of u v]
@@ -163,6 +164,8 @@ proof-
       by(auto simp add: schrijver_corollary_16_8a_standard_bipartite) 
     have finite_S:"finite S" and S_non_empty: "S \<noteq> {}"
       using S(2) card.infinite by force+
+    have dblton_non_tight:"dblton_graph (G - tight_subgraph G w \<pi>)" 
+      using  assms(2) dblton_graph_subset[of "\<Delta> G S"] in_DeltaD(2) by blast
     define \<epsilon>  where 
       "\<epsilon> = Min ({ \<pi> u + \<pi> v - w {u, v} | u v. {u, v} \<in> Delta (G - tight_subgraph G w \<pi>) S}
              \<union> {\<pi> v | v. v \<in> S}) "
@@ -183,16 +186,17 @@ proof-
       "{u, v} \<in> Delta (G - tight_subgraph G w \<pi>) S \<Longrightarrow> \<epsilon> \<le> \<pi> u + \<pi> v - w {u, v}"
       "v \<in> S \<Longrightarrow> \<epsilon> \<le> \<pi> v"
       "0 \<le> \<epsilon>" for u v
-      using assms(2) finite_S S_non_empty S(1)
+      using assms(2) finite_S S_non_empty S(1) dblton_non_tight
       by(auto intro!: linorder_class.Min.coboundedI finite_image_of_unordered_pairs Delta_finite
                       linorder_class.Min.boundedI pi_props'(1,2)
-                elim: in_DeltaE
-            simp add: \<epsilon>_def finite_Vs_then_finite doubleton_eq_iff)
+            simp add: \<epsilon>_def finite_Vs_then_finite doubleton_eq_iff
+                dest: in_DeltaD(2))
     ultimately have adjustment: "feasible_max_dual (L \<union> R) G w \<pi>'"
        "sum \<pi>' (L \<union> R) = sum \<pi> (L \<union> R) 
            + \<epsilon> * (real (card (Neighbourhood (tight_subgraph G w \<pi>) S)) - real (card S))"
       using S(1)
-       by(all \<open>intro PD_adjustment_max_weight[OF pi_props(1), of S, OF _ refl, of \<epsilon> \<pi>']\<close>)
+      by(all \<open>intro PD_adjustment_max_weight[OF graph_invar_dblton[OF assms(2)]
+                pi_props(1), of S, OF _ refl, of \<epsilon> \<pi>']\<close>)
          (auto simp add: \<pi>'_def)
      moreover have "0 < \<epsilon>"
        unfolding \<epsilon>_def
@@ -215,9 +219,9 @@ proof-
          then obtain u v where uv:"wpi = \<pi> u + \<pi> v - w {u, v}"
                   "{u, v} \<in> Delta (G - tight_subgraph G w \<pi>) S"
            by auto
-         then show ?thesis 
-           using pi_props'(2)[OF _ refl, of u v]
-           by (auto elim!: in_DeltaE simp add: doubleton_eq_iff tight_subgraph_def)+      
+         thus ?thesis 
+           using pi_props'(2)[OF _ refl, of u v] 
+           by(force elim: in_DeltaE simp add: doubleton_eq_iff tight_subgraph_def)
        next
          case 2
          then obtain v where "wpi = \<pi> v" "v \<in> S"
@@ -432,8 +436,8 @@ proof-
         proof(cases "y \<in> X")
           case True
           moreover hence "y \<notin> Neighbourhood {e |e. e \<in> G \<and> (\<exists>x. e \<inter> X = {x})} S"
-            using y S(1)
-            by(auto elim!: in_NeighbourhoodE)
+            using y S(1) assms(2)
+            by(force elim: in_NeighbourhoodE)
           ultimately show ?thesis 
             using y_not_in_S y by auto
         next
@@ -442,7 +446,7 @@ proof-
             using y x by auto
           hence "y \<in> Neighbourhood {e |e. e \<in> G \<and> (\<exists>x. e \<inter> X = {x})} S"
             using 2 True S(1) y  y_not_in_S
-            by(auto intro!: in_NeighbourhoodI[of x y _ S] exI[of _ x])
+            by(auto intro!: in_NeighbourhoodI[of "{x, y}" _ x S y] exI[of _ x])
           then show ?thesis 
             using y by auto
         qed
@@ -471,8 +475,8 @@ proof-
     next
       case 3
       then show ?case 
-        using S(1)
-        by (auto elim!: in_NeighbourhoodE)
+        using S(1) assms(2)
+        by (force elim!: in_NeighbourhoodE)
     next
       case 4
       then show ?case 

@@ -9,8 +9,7 @@ lemma neighbourhood_nempty:
   by (metis empty_iff insert_iff insert_commute)
 
 lemma neighbourhood_subset_Vs: "neighbourhood G v \<subseteq> Vs G"
-  using edges_are_Vs
-  by blast
+  using in_neighD by auto
 
 locale choose = 
   fixes sel
@@ -41,8 +40,8 @@ proof-
     using assms sel
     by auto
   ultimately show ?thesis
-    using sel[of "Vs G"] sel[of "neighbourhood G (sel (Vs G))"]
-    by (auto simp: sel_edge_def Let_def insert_commute)
+    using sel[of "Vs G"] sel[of "neighbourhood G (sel (Vs G))"] assms(1)
+    by (auto simp: sel_edge_def Let_def insert_commute) 
 qed
 
 definition
