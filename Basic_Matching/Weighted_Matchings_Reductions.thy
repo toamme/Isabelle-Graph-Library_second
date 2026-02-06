@@ -173,6 +173,40 @@ proof-
       (auto simp add: bp_perfected_L_def bp_perfected_R_def inj_on_def intro!: card_image)
 qed
 
+lemma finite_G_finite_completion:
+  "\<lbrakk>finite G; finite L; finite R\<rbrakk> \<Longrightarrow> finite (bp_perfected_G L R)"
+proof(unfold bp_perfected_G_def, rule finite_UnI, rule finite_UnI, goal_cases)
+  case 1
+  thus ?case
+    by (auto simp add: image_iff 
+        intro!: finite_surj[of "L \<times> R" _  "\<lambda> x. {old_vertex (fst x), old_vertex (snd x)}"] 
+        bexI)
+next
+  case 2
+  thus ?case
+    by (auto simp add: image_iff 
+        intro!: finite_surj[of "R \<times> {0..< card R - card L}" _  
+          "\<lambda> x. {old_vertex (fst x), new_vertex (snd x)}"] bexI)
+next
+  case 3
+  thus ?case
+    by (auto  intro!:  finite_surj[of "L \<times> {0..< card L - card R}" _  
+          "\<lambda> x. {old_vertex (fst x), new_vertex (snd x)}"] bexI
+        simp add: image_iff)
+qed
+
+lemma finite_L_finite_completion:
+  "\<lbrakk>finite L\<rbrakk> \<Longrightarrow> finite (bp_perfected_L L R)"
+  by(auto simp add: bp_perfected_L_def)
+
+lemma finite_R_finite_completion:
+  "\<lbrakk>finite R\<rbrakk> \<Longrightarrow> finite (bp_perfected_R L R)"
+  by(auto simp add: bp_perfected_R_def)
+
+lemma bp_perfected_L_R_disjnt:
+  "R \<inter>  L = {} \<Longrightarrow> (bp_perfected_L L R) \<inter> (bp_perfected_R L R) = {}"
+  by(auto simp add: bp_perfected_L_def bp_perfected_R_def)
+
 lemma matching_on_old_vertices:
   "matching M \<longleftrightarrow> matching ((image old_vertex )` M)"
   by(auto intro!: matchingI elim!: matchingE) blast+
@@ -318,39 +352,93 @@ definition "bp_min_max_card_costs_to_min_perfect_costs G (w::'a set \<Rightarrow
                   else if (the_vertex ` e) \<notin> G then 2*penalty G w
                   else w (the_vertex ` e))"
 
-lemma finite_G_finite_completion:
-  "\<lbrakk>finite G; finite L; finite R\<rbrakk> \<Longrightarrow> finite (bp_perfected_G L R)"
-proof(unfold bp_perfected_G_def, rule finite_UnI, rule finite_UnI, goal_cases)
+definition "max_cover_matching G X M = 
+       (graph_matching G M \<and> (\<forall> M'. graph_matching G M' \<longrightarrow> card (Vs M \<inter> X) \<ge> card (Vs M' \<inter> X)))"
+
+definition "max_cover_helpful G X = {e | e. e \<in> G \<and> e \<inter> X \<noteq> {}}"
+definition "max_cover_irrel G X = {e | e. e \<in> G \<and> e \<inter> X = {}}"
+
+lemma partition_max_cover_helpful:
+  "max_cover_helpful G X \<union> max_cover_irrel G X = G"
+  "max_cover_helpful G X \<inter> max_cover_irrel G X = {}"
+  by(auto simp add: max_cover_helpful_def max_cover_irrel_def)
+
+lemma max_cover_matchingE:
+  "\<lbrakk>max_cover_matching G X M;
+    \<lbrakk>graph_matching G M; \<And> M'. graph_matching G M' \<Longrightarrow> card (Vs M \<inter> X) \<ge> card (Vs M' \<inter> X)\<rbrakk> \<Longrightarrow>P\<rbrakk>
+   \<Longrightarrow> P"
+and max_cover_matchingI:
+  "\<lbrakk>graph_matching G M; \<And> M'. graph_matching G M' \<Longrightarrow> card (Vs M \<inter> X) \<ge> card (Vs M' \<inter> X)\<rbrakk>
+    \<Longrightarrow> max_cover_matching G X M"
+and max_cover_matchingD:
+  "max_cover_matching G X M \<Longrightarrow> graph_matching G M"
+ "\<lbrakk>max_cover_matching G X M; graph_matching G M'\<rbrakk> \<Longrightarrow> card (Vs M \<inter> X) \<ge> card (Vs M' \<inter> X)"
+  by(auto simp add: max_cover_matching_def)
+
+definition "min_weight_max_cover_matching G w X M = 
+            (max_cover_matching G X M \<and> (\<forall> M'. max_cover_matching G X M' \<longrightarrow> sum w M \<le> sum w M'))"
+
+lemma min_weight_max_cover_matchingE:
+  "\<lbrakk>min_weight_max_cover_matching G w X M;
+    \<lbrakk>max_cover_matching G X M; \<And> M'. max_cover_matching G X M' \<Longrightarrow> sum w M \<le> sum w M'\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
+and min_weight_max_cover_matchingI:
+  "\<lbrakk>max_cover_matching G X M; \<And> M'. max_cover_matching G X M' \<Longrightarrow> sum w M \<le> sum w M'\<rbrakk>
+    \<Longrightarrow> min_weight_max_cover_matching G w X M"
+and min_weight_max_cover_matchingD:
+  "min_weight_max_cover_matching G w X M \<Longrightarrow>max_cover_matching G X M"
+  "\<lbrakk>min_weight_max_cover_matching G w X M; max_cover_matching G X M'\<rbrakk> \<Longrightarrow> sum w M \<le> sum w M'"
+  by(auto simp add: min_weight_max_cover_matching_def)
+
+definition "bp_min_max_cover_costs_to_min_perfect_costs G (w::'a set \<Rightarrow> real) X=
+            (\<lambda> e. if  \<exists> x \<in> X. old_vertex x \<in> e then 
+                  bp_min_max_card_costs_to_min_perfect_costs G w e
+                  else
+                    bp_min_costs_to_min_perfect_costs G w e)"
+
+lemma bp_min_max_cover_costs_to_min_perfect_costs_props:
+  "bp_min_max_cover_costs_to_min_perfect_costs G w {} = 
+   bp_min_costs_to_min_perfect_costs G w"
+  "e \<in> bp_perfected_G L R \<Longrightarrow> 
+     bp_min_max_cover_costs_to_min_perfect_costs G w (L \<union> R) e = 
+     bp_min_max_card_costs_to_min_perfect_costs G w e"
+  by(auto intro!: ext 
+        simp add: bp_min_max_cover_costs_to_min_perfect_costs_def
+                  bp_min_costs_to_min_perfect_costs_def
+                  bp_perfected_G_def bp_perfected_L_def bp_perfected_R_def)
+
+lemma max_cover_empty_graph_matching_iff:
+  "max_cover_matching G {} M \<longleftrightarrow> graph_matching G M"
+  by(auto elim!: max_cover_matchingE intro!: max_cover_matchingI)
+
+lemma max_cover_max_card_matching_iff:
+  "\<lbrakk>Vs G \<subseteq> X; graph_abs G\<rbrakk> \<Longrightarrow> max_cover_matching G X M \<longleftrightarrow> max_card_matching G M"
+proof(rule, goal_cases)
   case 1
-  thus ?case
-    by (auto simp add: image_iff 
-        intro!: finite_surj[of "L \<times> R" _  "\<lambda> x. {old_vertex (fst x), old_vertex (snd x)}"] 
-        bexI)
+    have "M \<subseteq> G \<Longrightarrow> Vs M \<inter> X = Vs M" for M
+    using 1(1) Vs_subset[of M G] by auto
+  thus ?case 
+    using 1(3)
+    by(auto elim: max_cover_matchingE
+          intro!: max_card_matchingI
+        simp add: graph_abs.matching_card_vs[symmetric, OF graph_abs_mono, OF 1(2)])
 next
   case 2
-  thus ?case
-    by (auto simp add: image_iff 
-        intro!: finite_surj[of "R \<times> {0..< card R - card L}" _  
-          "\<lambda> x. {old_vertex (fst x), new_vertex (snd x)}"] bexI)
-next
-  case 3
-  thus ?case
-    by (auto  intro!:  finite_surj[of "L \<times> {0..< card L - card R}" _  
-          "\<lambda> x. {old_vertex (fst x), new_vertex (snd x)}"] bexI
-        simp add: image_iff)
+    have "M \<subseteq> G \<Longrightarrow> Vs M \<inter> X = Vs M" for M
+    using 2(1) Vs_subset[of M G] by auto
+  thus ?case 
+    using 2(3)
+    by(auto intro!: max_cover_matchingI
+              dest: max_card_matchingD
+          simp add: graph_abs.matching_card_vs[symmetric, OF graph_abs_mono, OF 2(2)])
 qed
 
-lemma finite_L_finite_completion:
-  "\<lbrakk>finite L\<rbrakk> \<Longrightarrow> finite (bp_perfected_L L R)"
-  by(auto simp add: bp_perfected_L_def)
-
-lemma finite_R_finite_completion:
-  "\<lbrakk>finite R\<rbrakk> \<Longrightarrow> finite (bp_perfected_R L R)"
-  by(auto simp add: bp_perfected_R_def)
-
-lemma bp_perfected_L_R_disjnt:
-  "R \<inter>  L = {} \<Longrightarrow> (bp_perfected_L L R) \<inter> (bp_perfected_R L R) = {}"
-  by(auto simp add: bp_perfected_L_def bp_perfected_R_def)
+lemma max_cover_max_card_matching_rel:
+  "\<lbrakk>Vs G \<subseteq> X; graph_abs G\<rbrakk> 
+    \<Longrightarrow> min_weight_max_cover_matching G w X M \<longleftrightarrow> min_weight_max_card_matching G w M"
+  by(auto intro!: min_weight_max_cover_matchingI min_weight_max_card_matchingI
+           elim!: min_weight_max_cover_matchingE min_weight_max_card_matchingE
+        simp add: max_cover_max_card_matching_iff)
 
 context
   fixes G::"'a set set" and L R and w::"'a set \<Rightarrow> real"
@@ -600,6 +688,293 @@ lemma sum_on_new_is_sum_on_project_old':
                        (real (card E) - real (card (project_to_old E \<inter> G))) * 2*penalty G w"
 proof-
   define pnty where "pnty = 2*penalty G w"
+  have "sum w'' E = sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e)} 
+                + sum w'' {e | e i. e \<in> E \<and> new_vertex i \<in> e}"
+    using assms(1) 
+    by (subst comm_monoid_add_class.sum.union_disjoint[symmetric]) 
+      (auto intro!: arg_cong[of  _ _ "sum w''"])
+  moreover have "... = sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e)} +
+                  card {e | e i. e \<in> E \<and> new_vertex i \<in> e} * pnty"
+    by (auto simp add: bp_min_max_card_costs_to_min_perfect_costs_def pnty_def)
+  moreover have "... = sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<in> G} +
+                   sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<notin> G} +
+                  card {e | e i. e \<in> E \<and> new_vertex i \<in> e} * pnty"
+    using assms(1)
+    by (subst comm_monoid_add_class.sum.union_disjoint[symmetric]) 
+      (auto intro!: arg_cong[of  _ _ "sum w''"])
+  moreover have "sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<in> G}
+                  = sum w (project_to_old E \<inter> G)"
+  proof-
+    have pto_is:"project_to_old E  \<inter> G = 
+          (image the_vertex) ` {e |e. e \<in> E \<and> (\<nexists>i. new_vertex i \<in> e) \<and> the_vertex ` e \<in> G}"
+      by (auto simp add: project_to_old_def bp_min_costs_to_min_perfect_costs_def)
+    have inj: "inj_on ((`) the_vertex) {e |e. e \<in> E \<and> (\<nexists>i. new_vertex i \<in> e) \<and> the_vertex ` e \<in> G}"
+      by(auto simp add: inj_on_def  the_vertex_image_inj)
+    show ?thesis
+      apply(subst pto_is)
+      apply(subst comm_monoid_add_class.sum.reindex[OF inj])
+      by (auto intro: comm_monoid_add_class.sum.cong 
+          simp add: bp_min_max_card_costs_to_min_perfect_costs_def)
+  qed
+  moreover have "sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<notin> G} +
+                  card {e | e i. e \<in> E \<and> new_vertex i \<in> e} * pnty = 
+                (real (card E) - real (card (project_to_old E \<inter> G))) * pnty"
+  proof-
+    have "sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<notin> G} =
+          card {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<notin> G} * pnty"
+      by(auto intro!: same_sum_card_prod
+          simp add: penalty_def bp_min_max_card_costs_to_min_perfect_costs_def pnty_def)
+    moreover have "card {e | e i. e \<in> E \<and> new_vertex i \<in> e} +
+            card {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e) \<and> the_vertex ` e \<notin> G}
+           = real (card E) - card (project_to_old E \<inter> G)"
+    proof(subst card_Un_disjoint[symmetric], goal_cases)
+      case 4
+      show ?case 
+      proof(subst card_image[symmetric, of "image old_vertex" "_ \<inter> _"], goal_cases)
+        case 1
+        show ?case
+          using inj_on_def by blast
+      next
+        case 2
+        have "card E \<ge> card ((`) old_vertex ` (project_to_old E \<inter> G))"
+          by(auto intro!: card_mono[OF assms(1)] simp add: project_to_old_def
+              no_new_vertex_old_vertex_new_vertex_image_inverse)
+        hence subst_help: "real (card E) - real (card ((`) old_vertex ` (project_to_old E \<inter> G)))
+              = card E -card ((`) old_vertex ` (project_to_old E \<inter> G))"
+          by simp
+        show ?case     
+        proof(subst subst_help, subst card_Diff_subset[symmetric], goal_cases)
+          case 1
+          show ?case
+            using finite_G by blast
+        next
+          case 2
+          show ?case
+            by(auto simp add: project_to_old_def
+                no_new_vertex_old_vertex_new_vertex_image_inverse)
+        next
+          case 3
+          show ?case
+            by (auto intro!: arg_cong[of _ _ card] old_vertex_of_the_vertex_contained
+                simp add: project_to_old_def 
+                no_new_vertex_old_vertex_new_vertex_image_inverse
+                dest!: not_in_imageD)
+        qed
+      qed
+    qed(insert assms, auto)
+    ultimately show ?thesis 
+      by(auto simp add: algebra_simps distrib_left[symmetric] simp del: distrib_left)
+  qed
+  ultimately show ?thesis
+    by (auto simp add: pnty_def)
+qed
+
+lemma max_card_matching_in_perfect_matching:
+  assumes "perfect_matching G' M'" "(image old_vertex) ` M \<subseteq> M'" "max_card_matching G M"
+  shows "project_to_old M' \<inter> G = M"
+proof-
+  have M'_matching:"graph_matching G' M'" "matching M'"
+    using assms(1) perfect_matchingD(1,2) by blast+
+  have finite_M: "finite M" 
+    using assms(3) finite_G 
+    by(auto dest!: max_card_matchingD intro: rev_finite_subset) 
+  show ?thesis
+  proof(rule, rule ccontr, goal_cases)
+    case 1
+    then obtain e where e: "e \<in> project_to_old M'" "e \<notin> M" "e \<in> G" by auto
+    hence "e \<in> {{u, v} | u v. u \<in> L \<and> v \<in> R}"
+      using M'_matching(1)  
+      apply (intro e_in_project_to_old_L_times_R)
+      apply(rule subsetD[OF project_to_old_mono])
+      by auto
+    hence e_props:"e \<in> G" "old_vertex ` e \<in> M'" 
+      using e
+      by(auto simp add: project_to_old_def bp_min_costs_to_min_perfect_costs_def
+          if_split[of "\<lambda> x. x < 0"] no_new_vertex_old_vertex_new_vertex_image_inverse)
+    moreover have "matching (insert e M)"
+      apply(subst matching_on_old_vertices)
+      apply(rule matching_subgraph[OF M'_matching(2)])
+      using assms(2) e_props(2) by blast
+    moreover have "insert e M \<subseteq> G"
+      by (simp add: assms(3) e_props(1) max_card_matchingD)
+    ultimately have "graph_matching G (insert e M)" 
+      by simp
+    moreover have "card (insert e M) > card M"
+      by (simp add: e(2) finite_M)
+    ultimately show False 
+      using linorder_not_le  max_card_matchingD[OF assms(3)]
+      by blast
+  next 
+    case 2
+    have "\<lbrakk>(`) old_vertex ` M \<subseteq> M'; M \<subseteq> G; x \<in> M\<rbrakk>
+           \<Longrightarrow> \<exists>e. x = the_vertex ` e \<and> e \<in> M' \<and> (\<forall>i. new_vertex i \<notin> e)" for x
+      by(rule  exI[of _ "(image old_vertex) _"], rule, 
+            rule no_new_vertex_new_vertex_old_vertex_image_inverse[symmetric])
+         auto
+    thus ?case
+      using assms(1,2) conjunct1[OF max_card_matchingD[OF assms(3)]]
+      by(auto simp add: project_to_old_def)
+  qed
+qed
+
+lemma min_weight_perfect_gives_min_weight_max_card_matching:
+  assumes "min_weight_perfect_matching G' w'' M"
+  shows  "min_weight_max_card_matching G w (project_to_old M \<inter> G)"
+proof-
+  note M_props = perfect_matchingD[OF min_weight_perfect_matchingD(1)[OF assms]]
+    min_weight_perfect_matchingD[OF assms]
+  have finite_M: "finite M"
+    using M_props(1) finite_G' rev_finite_subset by blast
+  have graph_matching_M:"graph_matching G (project_to_old M \<inter> G)" 
+    using M_props(2) 
+    by(auto intro: matching_subgraph[OF matching_on_project_to_old, of _ "_ \<inter> G"])
+  have costs_of_M: "sum w'' M = sum w (project_to_old M \<inter> G)
+           + (real (card M) - real (card (project_to_old M \<inter> G))) * 2*penalty G w"
+    using sum_on_new_is_sum_on_project_old'[OF finite_M]  by simp
+  have False
+    if  "\<not> min_weight_max_card_matching G w (project_to_old M \<inter> G)"
+  proof-
+    have how_not_opt:
+      "\<not> max_card_matching G (project_to_old M \<inter> G) \<or> 
+           (max_card_matching G (project_to_old M \<inter> G) \<and>
+            (\<exists> M'. max_card_matching G M' \<and> sum w M' < sum w (project_to_old M \<inter> G)))"
+      using that 
+      by(auto simp add: min_weight_max_card_matching_def)
+    obtain M' where M': "min_weight_max_card_matching G w M'" 
+      using finite_G min_weight_max_card_matching_exists by blast
+    note M'_props = min_weight_max_card_matchingD[OF M']
+    hence M_projected_non_opt_cases: "card M' > card (project_to_old M \<inter> G)
+             \<or> (card M' = card  (project_to_old M \<inter> G) \<and> sum w M' < sum w (project_to_old M \<inter> G))"
+    proof(cases rule: context_disjE[OF how_not_opt], goal_cases)
+      case 1
+      thus ?case 
+        using graph_matching_M 
+        by(auto dest!: min_weight_max_card_matchingD(1)
+            simp add: max_card_matching_def order_less_le)
+    next
+      case 2
+      then obtain M'' where "max_card_matching G M''" "sum w M'' < sum w (project_to_old M \<inter> G)"
+        by auto
+      moreover hence "sum w M'' \<ge> sum w M'"
+        using M' min_weight_max_card_matching_def by blast
+      moreover have "card M' =  card  (project_to_old M \<inter> G)" 
+        using 2 M'_props(1)
+        by(auto  intro: max_card_matchings_same_size)
+      ultimately show ?case
+        by simp
+    qed
+    have graph_matching_M': "graph_matching G M'"
+      using M' max_card_matchingD min_weight_max_card_matchingD(1) by blast
+    note that = graph_matching_M' M_projected_non_opt_cases
+    have "\<exists>M''. perfect_matching G' M'' \<and> ((image old_vertex) ` M') \<subseteq> M''"
+      using that(1) graph_matching_on_old_vertices old_vertex_of_G_in_G'
+      by(auto intro!: extend_to_perfect_matching_in_balanced_complete_bipartite[
+            OF balanced_complete_bipartite_perfected(1)[OF bipartite_G]]
+          rev_image_eqI
+          simp add: finite_L finite_R finite_G')
+    then obtain M'' where M'': 
+      "perfect_matching G' M''" "((image old_vertex) ` M') \<subseteq> M''" by auto
+    have M''_props: "matching M''" "graph_matching G' M''" "finite M''"  
+      using M''(1) finite_G' by(auto simp add: perfect_matching_def finite_subset)
+    have M''_sum_is: "sum w'' M'' = sum w (project_to_old M'' \<inter> G) +
+       (real (card M'') - real (card (project_to_old M'' \<inter> G))) * 2 * penalty G w"
+      using sum_on_new_is_sum_on_project_old'[OF M''_props(3)] by simp
+    have M''_costs_M: "sum w'' M'' \<ge> sum w'' M"
+      using M''(1) M_props(5) by blast
+    have M_M''_card:"card M'' = card M" 
+      using  M''(1) M_props(4) graph_abs_G' 
+      by(auto intro!: perfect_matchings_same_card)
+    have project_M''_is: "project_to_old M'' \<inter> G = M'" 
+      using  M''(1,2) M'_props(1)
+      by(intro max_card_matching_in_perfect_matching) 
+    have "sum w'' M > sum w'' M''"
+    proof(cases rule: disjE[OF M_projected_non_opt_cases], goal_cases)
+      case 1
+      have "\<bar>sum w M' - sum w (project_to_old M \<inter> G)\<bar> < 2* penalty G w  "
+        using graph_matching_M'  graph_matching_M
+        by(auto intro!: weight_diff_of_matchings_less_than_2_penalties simp add: graph_invarG)
+      moreover have "penalty G w * (real (card M') * 2) -
+           penalty G w * (2 * real (card (project_to_old M \<inter> G))) \<ge> 2 * penalty G w"
+        apply(subst right_diff_distrib[symmetric])
+        apply(subst ab_semigroup_mult_class.mult.commute[of 2 "penalty G w"])
+        apply(subst linordered_ring_strict_class.mult_le_cancel_left_pos)
+        using 1 
+        by (auto simp add: finite_G penalty_gtr_0 algebra_simps)
+      ultimately show ?case
+        by(auto simp add: costs_of_M M''_sum_is M_M''_card project_M''_is algebra_simps)
+    next
+      case 2
+      thus ?case
+        by(auto simp add: 2(1) costs_of_M M''_sum_is M_M''_card project_M''_is algebra_simps)
+    qed
+    thus False
+      using M''_costs_M by argo
+  qed
+  thus ?thesis
+    by auto
+qed
+
+abbreviation "w''' X \<equiv> bp_min_max_cover_costs_to_min_perfect_costs G w X"
+
+lemma sum_on_new_is_sum_on_project_old'':
+  assumes "finite E"
+  shows "sum (w''' X) E = 
+         sum w (project_to_old E \<inter> max_cover_helpful G X) +
+         sum w (project_to_old E \<inter> max_cover_irrel G X \<inter> {e| e. e \<in> G \<and> w e < 0}) +
+          (real (card {e | e x. e \<in> E \<and> x \<in> X \<and> old_vertex x \<in> e})
+               - real (card (project_to_old E \<inter> max_cover_helpful G X)))
+          * 2*penalty G w"
+proof-
+  define pnty where "pnty = 2*penalty G w"
+  have rw1: "sum (w''' X) E = 
+         sum w'' {e | e x. old_vertex x \<in> e \<and> e \<in> E \<and> x \<in> X} +
+         sum w' {e | e .  e \<in> E \<and> (\<nexists> x. old_vertex x \<in> e \<and> x \<in> X)}"
+   by(auto intro!: arg_cong2[where f = "(+)"] arg_cong[of _ _ "sum w''"] arg_cong[of _ _ "sum w'"]
+         simp add: bp_min_max_cover_costs_to_min_perfect_costs_def
+                   comm_monoid_add_class.sum.If_cases[OF assms(1)])
+  show ?thesis
+    unfolding rw1
+    apply(subst ab_semigroup_add_class.add.commute)
+    apply(subst sum_on_new_is_sum_on_project_old')
+    subgoal
+      by(auto intro!: finite_subset[OF _ assms(1)])
+    apply(subst sum_on_new_is_sum_on_project_old)
+    subgoal
+      by(auto intro!: finite_subset[OF _ assms(1)])
+    apply(subst semigroup_add_class.add.assoc[symmetric])
+    apply(rule arg_cong2[where f = "(+)"])
+    subgoal
+          apply(subst ab_semigroup_add_class.add.commute)
+      apply(rule arg_cong2[where f = "(+)"])
+      subgoal
+        apply(auto intro!: arg_cong[of _ _ "sum w"]
+                 simp add: project_to_old_def max_cover_helpful_def)
+        using old_vertex_of_the_vertex_contained by blast
+      subgoal
+        apply(auto intro!: arg_cong[of _ _ "sum w"]
+                 simp add: project_to_old_def max_cover_irrel_def)
+        using old_vertex_of_the_vertex_contained apply blast
+        subgoal for e
+          by(auto intro!: exI[of _ e])
+        done
+      done
+    subgoal
+      apply(rule arg_cong[of _ _ "\<lambda> x. x * 2 * penalty G w"])
+      apply(rule arg_cong2[where f = "(-)"])
+      subgoal
+        apply(rule arg_cong[of _ _ real])
+        apply(rule arg_cong[of _ _ card])
+        by auto
+      subgoal
+      apply(rule arg_cong[of _ _ real])
+      apply(rule arg_cong[of _ _ card])
+      apply(auto simp add: project_to_old_def max_cover_helpful_def)
+      using old_vertex_of_the_vertex_contained by blast
+    done
+  done
+qed
+
+
   have "sum w'' E = sum w'' {e | e. e \<in> E \<and> (\<nexists> i. new_vertex i \<in> e)} 
                 + sum w'' {e | e i. e \<in> E \<and> new_vertex i \<in> e}"
     using assms(1) 
