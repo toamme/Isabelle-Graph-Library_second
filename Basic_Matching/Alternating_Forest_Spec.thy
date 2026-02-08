@@ -35,6 +35,10 @@ and get_path:
            last p \<in> vset_to_set (roots F) \<and>
            (walk_betw (abstract_forest F) v p (last p) \<or> p = [v]) \<and>
            distinct p"
+and get_path_prefices:
+    "\<And> F M v v' x p1 p2 p1' p2'. 
+      \<lbrakk>forest_invar M F; p1@x#p2 = get_path F v;  p1'@[x]@p2' = get_path F v'\<rbrakk> \<Longrightarrow>
+           p2 = p2'"
 and higher_forest_properties:
     "\<And> F M. forest_invar M F\<Longrightarrow> 
        card (vset_to_set (evens F)) > card (vset_to_set (odds F))"

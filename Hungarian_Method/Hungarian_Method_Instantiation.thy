@@ -534,10 +534,20 @@ lemmas init_potential_props=
 interpretation  satisfied_simple:
   alternating_forest_spec evens odds "get_path" "abstract_forest"
   forest_invar roots vset_inv vset_to_set
-  unfolding abstract_forest_def get_path_def  
-  by(intro alternating_forest_spec.intro 
-      fmnlp.simple_invariant_consequences fmnlp.complex_invariant_consequences(1,2)
-      | assumption | rule conjI  fmnlp.get_path_correct(1,2,3,4,5))+
+  unfolding abstract_forest_def get_path_def 
+proof(rule alternating_forest_spec.intro, goal_cases)
+  case (12 F M v v' x p1 p2 p1' p2')
+  then show ?case
+    by(auto intro!: fmnlp.get_path_prefices[of M F p1 x p2 v p1' p2' v'])
+next
+  case (14 F M u v)
+  then show ?case
+    using fmnlp.complex_invariant_consequences(1) by blast
+next
+  case (15 F M u v)
+  then show ?case
+    using fmnlp.complex_invariant_consequences(2) by blast
+qed (simp_all add: fmnlp.simple_invariant_consequences fmnlp.get_path_correct(1,2,3,4,5))
 
 abbreviation "\<ww> \<equiv> (\<lambda> e. edge_costs (pick_one e) (pick_another e))"
 

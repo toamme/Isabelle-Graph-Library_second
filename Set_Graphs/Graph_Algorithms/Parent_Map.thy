@@ -301,6 +301,20 @@ proof(rule ccontr, goal_cases)
     by simp
 qed
 
+lemma follow_cons_3: "\<exists>l. follow v = v # l"
+  by (metis follow_cons follow_nempty list.exhaust)
+
+lemma follow_cons_3': obtains l where "follow v = v # l"
+  by (metis follow_cons follow_nempty list.exhaust)
+
+lemma follow_cons_4: "parent v = Some v' \<Longrightarrow> follow v = v # (follow v')"
+  using follow_psimps
+  by auto
+
+lemma follow_pinduct:
+  "(\<And>v. (\<And>x2. parent v = Some x2 \<Longrightarrow> P x2) \<Longrightarrow> P v) \<Longrightarrow> P a"
+  by (metis follow.pinduct[OF follow_dom])
+
 end
 
 lemma follow_cong:
@@ -451,5 +465,9 @@ lemma parent_specD:
   and parent_specI:
   "wf {(x, y) |x y. (Some x = parent y)} \<Longrightarrow> parent_spec parent" for parent
   by(auto simp add: parent_spec_def)
+
+lemma parent_follow_same:
+   "parent p \<Longrightarrow> follow_impl p = follow p"
+  by(auto intro!: ext simp add: parent.follow_dom parent_spec_i.follow_dom_impl_same)
 
 end

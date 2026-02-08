@@ -1114,6 +1114,14 @@ proof-
     by (simp add: p_def follow_def parents_here.follow_distinct)
 qed
 
+lemma get_path_prefices:
+  assumes "forest_invar M F" "p1@x#p2 = get_path F v" "p1'@x#p2' = get_path F v'"
+  shows "p2 = p2'"
+  using assms
+  by(auto intro!: parent.from_tree[of "parent_lookup (parents F)" v p1 x p2 v' p1' p2']
+                  follow_dom_invar_parent_wf(1)
+           elim!: forest_invarE
+        simp add: get_path_def  parent_follow_same[OF follow_dom_invar_parent_wf(1)] follow_def)
 end
                               
 context
@@ -1125,7 +1133,7 @@ interpretation  satisfied_simple:
                           vset_invar vset_to_set
   using complex_invariant_consequences(1,2) 
   by(intro alternating_forest_spec.intro simple_invariant_consequences)
-    (auto simp add: get_path_correct(1,2,3,4,5))
+    (auto simp add: get_path_correct(1,2,3,4,5) get_path_prefices)
 
 lemma satisfied_simple_extension_precond_same:
   "satisfied_simple.forest_extension_precond F M x y z = forest_extension_precond F M x y z"
