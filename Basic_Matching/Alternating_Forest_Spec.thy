@@ -41,7 +41,7 @@ and get_path_prefices:
            p2 = p2'"
 and higher_forest_properties:
     "\<And> F M. forest_invar M F\<Longrightarrow> 
-       card (vset_to_set (evens F)) > card (vset_to_set (odds F))"
+       card (vset_to_set (evens F)) = card (vset_to_set (odds F)) +  card (vset_to_set (roots F))"
     "\<And> F M u v. \<lbrakk>forest_invar M F; {u, v} \<in> M\<rbrakk>\<Longrightarrow>
         {u, v} \<in> abstract_forest F \<or> 
           {u, v} \<inter> (Vs (abstract_forest F) \<union> vset_to_set (roots F)) = {}"
@@ -91,9 +91,10 @@ alternating_forest_spec evens odds get_path abstract_forest forest_invar roots
 and empty_forest:
     "\<And> R. evens (empty_forest R) = R"
     "\<And> R. odds (empty_forest R) = vset_empty"
+    "\<And> R. roots (empty_forest R) = R"
     "\<And> R. abstract_forest (empty_forest R) = {}"
     "\<And> R M. \<lbrakk>matching M; vset_invar R; vset_to_set R \<inter> Vs M = {}; 
-           finite (vset_to_set R); vset_to_set R \<noteq> {}\<rbrakk>
+           finite (vset_to_set R)\<rbrakk>
           \<Longrightarrow> forest_invar M (empty_forest R)"
 
 end

@@ -44,6 +44,7 @@ global_interpretation forest_manipulation_spec_i: forest_manipulation_spec
     and empty_forest = forest_manipulation_spec_i.empty_forest
   by(auto intro!: forest_manipulation_spec.intro aug_a_matching.buddy_map.Map_axioms
       simp add: RBT_Set.empty_def set.Set_axioms)
+term primal_dual_path_search_spec.search_path
 
 global_interpretation pd_path_search_spec: primal_dual_path_search_spec
   (*the graph*)
@@ -56,6 +57,7 @@ global_interpretation pd_path_search_spec: primal_dual_path_search_spec
     (*the forest*)
     and evens = evens
     and odds = odds
+    and roots = roots
     and abstract_forest = "abstract_forest"
     and get_path = "get_path"
     and extend_forest_even_unclassified = 
@@ -96,7 +98,6 @@ global_interpretation pd_path_search_spec: primal_dual_path_search_spec
   for (*the graph*) G left right buddy edge_costs right_neighbs
     (*the potential*) initial_pot potential_lookup potential_upd
     (*sets of vertices*) vset_iterate1 vset_iterate2 vset_iterate3 vset_filter
-
 defines search_path = pd_path_search_spec.search_path
   and search_path_loop_impl = pd_path_search_spec.search_path_loop_impl
   and new_potential = pd_path_search_spec.new_potential

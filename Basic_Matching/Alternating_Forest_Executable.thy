@@ -92,7 +92,7 @@ definition "invar_basic \<M>=
            finite (vset_to_set (odds F)) \<and>
            vset_to_set (roots F) \<subseteq> vset_to_set (evens F) \<and>
            vset_to_set (roots F) \<inter> Vs \<M> = {} \<and>
-         card (vset_to_set (odds F)) < card (vset_to_set (evens F)) \<and>
+         card (vset_to_set (odds F)) + card (vset_to_set (roots F)) = card (vset_to_set (evens F)) \<and>
          dom (parent_lookup (parents F)) = dom (origin_lookup (origins F)) - vset_to_set (roots F) \<and>
          dom (parent_lookup (parents F)) \<subseteq> Vs (abstract_forest F) \<and>
          origin_lookup (origins F) ` ( vset_to_set (roots F) \<union> Vs (abstract_forest F)) =
@@ -110,7 +110,7 @@ lemma invar_basicE:
            finite (vset_to_set (evens F)); finite (vset_to_set (odds F));
            vset_to_set (roots F) \<subseteq> vset_to_set (evens F);
            vset_to_set (roots F) \<inter> Vs \<M> = {};
-         card (vset_to_set (odds F)) < card (vset_to_set (evens F));
+         card (vset_to_set (odds F)) + card (vset_to_set (roots F)) = card (vset_to_set (evens F));
          dom (parent_lookup (parents F)) = dom (origin_lookup (origins F)) - vset_to_set (roots F);
          dom (parent_lookup (parents F)) \<subseteq> Vs (abstract_forest F);
          origin_lookup (origins F) ` ( vset_to_set (roots F) \<union> Vs (abstract_forest F)) =
@@ -128,7 +128,7 @@ lemma invar_basicE:
            finite (vset_to_set (evens F)); finite (vset_to_set (odds F));
            vset_to_set (roots F) \<subseteq> vset_to_set (evens F);
            vset_to_set (roots F) \<inter> Vs \<M> = {};
-         card (vset_to_set (odds F)) < card (vset_to_set (evens F));
+         card (vset_to_set (odds F)) + card (vset_to_set (roots F)) = card (vset_to_set (evens F));
          dom (parent_lookup (parents F)) = dom (origin_lookup (origins F)) - vset_to_set (roots F);
          dom (parent_lookup (parents F)) \<subseteq> Vs (abstract_forest F);
          origin_lookup (origins F) ` ( vset_to_set (roots F) \<union> Vs (abstract_forest F)) =
@@ -149,14 +149,16 @@ lemma invar_basicE:
   "invar_basic \<M> F \<Longrightarrow>  finite (vset_to_set (odds F))"
   "invar_basic \<M> F \<Longrightarrow>  vset_to_set (roots F) \<subseteq> vset_to_set (evens F)"
   "invar_basic \<M> F \<Longrightarrow>  vset_to_set (roots F) \<inter> Vs \<M> = {}"
-  "invar_basic \<M> F \<Longrightarrow> card (vset_to_set (odds F)) < card (vset_to_set (evens F))"
+  "invar_basic \<M> F \<Longrightarrow> 
+    card (vset_to_set (odds F)) + card (vset_to_set (roots F)) = card (vset_to_set (evens F))"
   "invar_basic \<M> F \<Longrightarrow> 
   dom (parent_lookup (parents F)) = dom (origin_lookup (origins F)) - vset_to_set (roots F)"
   "invar_basic \<M> F \<Longrightarrow> dom (parent_lookup (parents F)) \<subseteq> Vs (abstract_forest F)"
-  "invar_basic \<M> F \<Longrightarrow>origin_lookup (origins F) ` ( vset_to_set (roots F) \<union> Vs (abstract_forest F)) =
+  "invar_basic \<M> F \<Longrightarrow> 
+    origin_lookup (origins F) ` ( vset_to_set (roots F) \<union> Vs (abstract_forest F)) =
          Some ` (vset_to_set (roots F))"
-  "invar_basic \<M> F \<Longrightarrow>Vs (abstract_forest F) - Vs \<M>  \<subseteq> vset_to_set (roots F)"
-  "invar_basic \<M> F \<Longrightarrow>finite (abstract_forest F)"
+  "invar_basic \<M> F \<Longrightarrow> Vs (abstract_forest F) - Vs \<M>  \<subseteq> vset_to_set (roots F)"
+  "invar_basic \<M> F \<Longrightarrow> finite (abstract_forest F)"
   by(force simp add: invar_basic_def)+
 (*similar to blossom*)
 definition "invar_matching_both_or_none \<M> F =
@@ -972,7 +974,7 @@ lemma simple_invariant_consequences:
     "vset_invar (roots F)"
     "vset_to_set (roots F) \<subseteq> vset_to_set (evens F)"
     "vset_to_set (roots F) \<inter> Vs M = {}"
-    "card (vset_to_set (odds F)) < card (vset_to_set (evens F))"
+    "card (vset_to_set (evens F)) = card (vset_to_set (odds F)) + card (vset_to_set (roots F))"
   using  invar_basicD[OF forest_invarD(1)[OF assms]]
   by simp_all
 
@@ -996,24 +998,13 @@ lemmas ordinary_extension_properties =
 lemma empty_forest_correctess:
   "evens (empty_forest R) = R"
   "odds (empty_forest R) = vset_empty"
+  "roots (empty_forest R) = R"
   "abstract_forest (empty_forest R) = {}"
   "\<lbrakk>matching M ; vset_invar R; vset_to_set R \<inter> Vs M = {}; 
-    finite (vset_to_set R) ; vset_to_set R \<noteq> {}\<rbrakk>
+    finite (vset_to_set R)\<rbrakk>
    \<Longrightarrow> forest_invar M (empty_forest R)"
 proof(goal_cases)
-  case 1
-  then show ?case 
-    by(auto simp add: empty_forest_def)
-next
-  case 2
-  then show ?case 
-    by(auto simp add: empty_forest_def)
-next
-  case 3
-  then show ?case 
-    by(auto simp add: empty_forest_def abstract_forest_def parent(2))
-next
-  case 4
+  case 5
   note four = this
   have orig_inv_foldr: "origin_invar (foldr (\<lambda>x. origin_upd x x) ys origin_empty)"
     for ys
@@ -1075,7 +1066,7 @@ next
       by(auto intro!: invar_odd_to_parent_non_matchingI
           simp add: parent(2) empty_forest_def vset(2))
   qed
-qed
+qed (auto simp add: empty_forest_def abstract_forest_def parent(2))
 
 lemma get_path_correct:
   assumes"forest_invar M F" "v \<in> vset_to_set (evens F)" "p = get_path  F v"

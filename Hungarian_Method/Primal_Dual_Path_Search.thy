@@ -71,6 +71,7 @@ notation edge_costs ("\<w>")
 
 abbreviation "aevens state \<equiv> vset_to_set (evens (forest state))"
 abbreviation "aodds state \<equiv> vset_to_set (odds (forest state))"
+abbreviation "aroots state \<equiv> vset_to_set (roots (forest state))"
 abbreviation "missed_at state v \<equiv> abstract_real_map (missed_lookup (missed state)) v"
 abbreviation "\<pi> v \<equiv> abstract_real_map (potential_lookup initial_pot) v"
 abbreviation "\<F> state \<equiv> abstract_forest (forest state)"
@@ -616,7 +617,8 @@ definition "invar_basic state=
      fst ` heap_abstract (heap state) \<subseteq> Vs G \<and>
      aevens state \<subseteq> L \<and> aodds state \<subseteq> R \<and>
     {l | l r. ben_lookup (best_even_neighbour state) r = Some l} \<subseteq> aevens state \<and>
-    aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state)))"
+    aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state)) \<and>
+    aroots state = L - Vs \<M>)"
 
 lemma invar_basicE:
   "invar_basic state \<Longrightarrow>
@@ -629,7 +631,8 @@ lemma invar_basicE:
     fst ` heap_abstract (heap state) \<subseteq> Vs G;
     aevens state \<subseteq> L; aodds state \<subseteq> R;
     {l | l r. ben_lookup (best_even_neighbour state) r = Some l} \<subseteq> aevens state;
-    aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state))\<rbrakk> \<Longrightarrow> P)
+    aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state));
+    aroots state = L - Vs \<M>\<rbrakk> \<Longrightarrow> P)
    \<Longrightarrow> P"
 and invar_basicI:
   "\<lbrakk>forest_invar \<M> (forest state);
@@ -641,7 +644,8 @@ and invar_basicI:
     fst ` heap_abstract (heap state) \<subseteq> Vs G;
     aevens state \<subseteq> L; aodds state \<subseteq> R;
     {l | l r. ben_lookup (best_even_neighbour state) r = Some l} \<subseteq> aevens state;
-    aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state))\<rbrakk> 
+    aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state));
+    aroots state = L - Vs \<M>\<rbrakk> 
    \<Longrightarrow> invar_basic state"
 and invar_basicD:
   "invar_basic state \<Longrightarrow> forest_invar \<M> (forest state)"
@@ -657,6 +661,7 @@ and invar_basicD:
   "invar_basic state \<Longrightarrow> 
     {l | l r. ben_lookup (best_even_neighbour state) r = Some l} \<subseteq> aevens state"
   "invar_basic state \<Longrightarrow> aodds state \<subseteq> dom (ben_lookup (best_even_neighbour state))"
+  "invar_basic state \<Longrightarrow> aroots state = L - Vs \<M>"
   by(auto simp add: invar_basic_def)
 
 definition "invar_feasible_potential state =
@@ -1757,7 +1762,13 @@ proof-
     case 12 
     show ?case 
       using r_l'_in_G basic_invars(12)
-      by(auto simp add: state'_def F'_is F_def ben_def after_ben_update(5) G(5)[OF  l'_in_L] insert_commute)
+      by(auto simp add: state'_def F'_is F_def ben_def after_ben_update(5) G(5)[OF  l'_in_L] 
+                        insert_commute)
+  next
+    case 13
+    show ?case 
+      using basic_invars(13) forest_extend(5)[OF forest_extension_precond]
+      by(auto simp add: state'_def F'_def F_def)
   qed
   have F_invar:"forest_invar \<M> (forest state)" "vset_invar (evens (forest state))"
     "vset_invar (odds (forest state))"
@@ -2539,6 +2550,7 @@ lemma search_path_loop_fail_cond_dual_unbounded:
     "invar_feasible_potential state"
     "invar_best_even_neighbour_heap state"
     "invar_best_even_neighbour_map state"
+    "\<not> L \<subseteq> Vs \<M>"
   shows "\<exists> p. (\<forall> u v. {u, v} \<in> G \<longrightarrow> edge_costs u v \<ge> p u +  p v)
                \<and> sum p (L \<union> R) \<ge> bound"
 proof-
@@ -2604,8 +2616,13 @@ proof-
     have sum5: "sum p (L \<union> R - aevens state - aodds state) = 
                sum (\<pi>\<^sup>* state) (L \<union> R - aevens state - aodds state)"
       by(subst p_def sum_cong[of _ _ "\<pi>\<^sup>* state"]) simp+
-    have card_diff: " card (aevens state) >  card (aodds state)"
-      using invar_basicD(1)[OF assms(2)] higher_forest_properties(1) by blast
+    have "card (aevens state) = card (aodds state) + card (aroots state)"
+      using invar_basicD(1)[OF assms(2)] higher_forest_properties(1) by simp
+    moreover have "card (aroots state) > 0" 
+      using invar_basicD(13)[OF assms(2)] assms(6)
+      by (simp add: card_gt_0_iff finite_L)
+    ultimately have card_diff: " card (aevens state) >  card (aodds state)"
+      by simp
     have sum6:"sum (\<pi>\<^sup>* state) (L \<union> R) = sum (\<pi>\<^sup>* state) (aevens state) + sum (\<pi>\<^sup>* state) (L \<union> R - aevens state)"
       using finite_forest(1)[OF invar_basicD(1)[OF assms(2)]]  invar_basicD(9)[OF assms(2)]
       by(subst comm_monoid_add_class.sum.union_disjoint[of 
@@ -2642,9 +2659,10 @@ lemma augpath_None_gen_unbounded_dual:
     "invar_best_even_neighbour_map state"
     "invar_out_of_heap state"
     "augpath (search_path_loop state) = None"
+    "\<not> L \<subseteq> Vs \<M>"
   shows "\<exists> p.  (\<forall> u v. {u, v} \<in> G \<longrightarrow> edge_costs u v \<ge> p u +  p v)
              \<and> sum p (L \<union> R) \<ge> bound"
-  using assms
+  using assms(1-8)
 proof(induction state rule: search_path_loop_induct, goal_cases)
   case 1
   then show ?case
@@ -2656,7 +2674,7 @@ next
   proof(cases state rule: search_path_loop_cases)
     case 1
     then show ?thesis 
-      using search_path_loop_fail_cond_dual_unbounded IH(3-9) 
+      using search_path_loop_fail_cond_dual_unbounded IH(3-10) assms(9)
       by auto
   next
     case 2
@@ -3069,7 +3087,7 @@ proof(goal_cases)
     case 1
     then show ?case 
     using forest_roots
-    by(auto intro!: empty_forest(4) 
+    by(auto intro!: empty_forest(5) 
           simp add: initial_state_def  \<M>_is_matching) 
   next
     case 2
@@ -3088,7 +3106,7 @@ proof(goal_cases)
   next
     case 5
     then show ?case 
-      by (simp add: empty_forest(3) initial_state_def)
+      by (simp add: empty_forest(4) initial_state_def)
   next
     case 6
      show ?case 
@@ -3152,6 +3170,10 @@ proof(goal_cases)
      case 12
      show ?case
        by (simp add: empty_forest(2) initial_state_def vset(2))
+   next
+     case 13
+     show ?case
+       by(auto simp add: initial_state_def forest_roots_def empty_forest(3) unmatched_lefts(1))
    qed
 next
   case 2
@@ -3164,14 +3186,13 @@ next
   case 3
   then show ?case 
     by(auto intro!: invar_forest_tightI
-          simp add:  initial_state_def empty_forest(3))
+          simp add:  initial_state_def empty_forest(4))
 next
   case 4
   then show ?case
     using matching(3)
     by(auto intro!: invar_matching_tightI
-          simp add:  initial_state_def empty_forest(3)
-                     working_potential_def empty_forest(1,2) missed(2)
+          simp add:  initial_state_def working_potential_def empty_forest(1,2) missed(2)
                      abstract_real_map_def)
 next
   case 5

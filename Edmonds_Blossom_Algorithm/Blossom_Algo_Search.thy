@@ -57,13 +57,13 @@ definition
 
 (*definition if1_1_cond where "if1_1_cond flabel v2 \<equiv> flabel v2 = None \<and> (\<exists>v3. {v2, v3} \<in> M)"*)
 
-function (domintros) compute_alt_path_loop:: "'F \<Rightarrow> (('a list \<times> 'a list) option)" where
-  "compute_alt_path_loop F = 
+function (domintros) compute_alt_path:: "'F \<Rightarrow> (('a list \<times> 'a list) option)" where
+  "compute_alt_path F = 
     (if if1_cond F then
        let
          (v1,v2,v3) = sel_if1 F;
           F' = extend_forest_even_unclassified F v1 v2 v3;
-         return = compute_alt_path_loop F'
+         return = compute_alt_path F'
        in
          return
      else if if2_cond F then
@@ -78,9 +78,6 @@ function (domintros) compute_alt_path_loop:: "'F \<Rightarrow> (('a list \<times
        in
          return)"
   by pat_completeness auto
-
-definition "compute_alt_paths = 
-   (if Vs G \<subseteq> Vs M then None else compute_alt_path_loop (empty_forest unmatcheds))"
 
 subsubsection \<open>Reasoning Infrastructure\<close>
 
@@ -226,28 +223,28 @@ qed
 
 
 lemma compute_alt_path_if1:
-  assumes "compute_alt_path_loop_dom F" 
+  assumes "compute_alt_path_dom F" 
     "if1_cond F"
     "(v1, v2, v3) = sel_if1 F"
     "F' = extend_forest_even_unclassified F v1 v2 v3"
-  shows "compute_alt_path_loop F = compute_alt_path_loop F'"
+  shows "compute_alt_path F = compute_alt_path F'"
   using assms
-  by (auto simp add: compute_alt_path_loop.psimps[OF assms(1)] Let_def split: if_splits prod.splits)
+  by (auto simp add: compute_alt_path.psimps[OF assms(1)] Let_def split: if_splits prod.splits)
 
 lemma compute_alt_path_pinduct_2':
-  assumes "compute_alt_path_loop_dom F"
-  "(\<And>F. compute_alt_path_loop_dom F \<Longrightarrow>
+  assumes "compute_alt_path_dom F"
+  "(\<And>F. compute_alt_path_dom F \<Longrightarrow>
     (\<And>v1 v2 v3 F'.
         \<lbrakk>if1_cond F; (v1,v2,v3) = sel_if1 F; F' = extend_forest_even_unclassified F v1 v2 v3\<rbrakk> \<Longrightarrow> P F')
        \<Longrightarrow> P F)"
   shows "P F"
-  apply(rule compute_alt_path_loop.pinduct[OF assms(1)])
+  apply(rule compute_alt_path.pinduct[OF assms(1)])
   using assms(2)
   by metis
 
 lemma compute_alt_path_pinduct_2:
-  "compute_alt_path_loop_dom F \<Longrightarrow> 
-  (\<And>F. compute_alt_path_loop_dom F \<Longrightarrow>
+  "compute_alt_path_dom F \<Longrightarrow> 
+  (\<And>F. compute_alt_path_dom F \<Longrightarrow>
     (\<And>v1 v2 v3 F'.
         \<lbrakk>if1_cond F; (v1,v2,v3) = sel_if1 F; F' = extend_forest_even_unclassified F v1 v2 v3\<rbrakk>
        \<Longrightarrow> P F') \<Longrightarrow>
@@ -289,11 +286,11 @@ definition "compute_alt_path_meas F = card (G - \<lbrace>F\<rbrace>)"
 
 lemma compute_alt_path_dom:
   assumes "finite \<lbrace>F\<rbrace>" "\<lbrace>F\<rbrace> \<subseteq> G" "forest_invar M F"
-  shows "compute_alt_path_loop_dom F"
+  shows "compute_alt_path_dom F"
   using assms
 proof(induction "compute_alt_path_meas F" arbitrary: F rule: nat_less_induct)
   case 1
-  then have IH: "compute_alt_path_loop_dom F'"
+  then have IH: "compute_alt_path_dom F'"
     if "compute_alt_path_meas F' < compute_alt_path_meas F" "finite \<lbrace>F'\<rbrace>" "\<lbrace>F'\<rbrace> \<subseteq> G"
        "forest_invar M F'"
     for F'
@@ -326,17 +323,17 @@ proof(induction "compute_alt_path_meas F" arbitrary: F rule: nat_less_induct)
      hence measure_decr:"compute_alt_path_meas F' < compute_alt_path_meas F"
        by(auto intro!: psubset_card_mono 
              simp add: compute_alt_path_meas_def F'_props(2) finite_E)
-     hence "compute_alt_path_loop_dom F'"
+     hence "compute_alt_path_dom F'"
        using F'_props(1,2) finite_forest(3)[of M F'] "1.prems"(2) \<open>{v1, v2} \<in> G\<close> matching(2) v1v2(2) 
        by (auto intro!: IH)
     }
     then show ?thesis
-      using compute_alt_path_loop.domintros
+      using compute_alt_path.domintros
       by metis
   next
     case False
     then show ?thesis
-      apply(subst compute_alt_path_loop.domintros)
+      apply(subst compute_alt_path.domintros)
       by blast+
   qed
 qed
@@ -345,7 +342,7 @@ subsection \<open>General Soundness\<close>
 
 lemma compute_alt_path_from_tree_1:
   assumes invars: "forest_invar M F"
-  and ret:"compute_alt_path_loop F = Some (p1, p2)" 
+  and ret:"compute_alt_path F = Some (p1, p2)" 
   and init: "finite \<lbrace>F\<rbrace>" "\<lbrace>F\<rbrace> \<subseteq> G"
   shows "last p1 \<notin> Vs M \<and>
        last p2 \<notin> Vs M \<and>
@@ -383,7 +380,7 @@ next
       note F'_props = forest_extend[OF precd, folded F'_def]
       have "forest_invar M (extend_forest_even_unclassified F v1 v2 v3)"
         using F'_def F'_props(1) by blast
-      moreover have "compute_alt_path_loop (extend_forest_even_unclassified F v1 v2 v3) = Some (p1, p2)"
+      moreover have "compute_alt_path (extend_forest_even_unclassified F v1 v2 v3) = Some (p1, p2)"
         using "2.hyps" "2.prems"(2) True compute_alt_path_if1 sel(1) by force
       moreover have "finite \<lbrace> extend_forest_even_unclassified F v1 v2 v3 \<rbrace>"
         using calculation(1) finite_forest(3) by auto
@@ -395,14 +392,14 @@ next
     case False
     then have if2_holds: "if2_cond F"
       using 2(4)
-      by(auto simp add: compute_alt_path_loop.psimps[OF 2(1)] split: if_splits prod.splits)
+      by(auto simp add: compute_alt_path.psimps[OF 2(1)] split: if_splits prod.splits)
     then obtain v1 v2  where v1v2r: "(v1,v2) = sel_if2 F" "if2 F v1 v2"
       using if2_cond_props''''
       by force
     hence s: "v1 \<in> aevens F" "p1 = get_path F v1" "v2 \<in> aevens F" "p2 = get_path F v2" "{v1, v2} \<in> G"
       unfolding if2_def
       using False 2(4) v1v2r(1)
-      by (auto simp add: compute_alt_path_loop.psimps[OF 2(1)] Let_def split: if_splits prod.splits)
+      by (auto simp add: compute_alt_path.psimps[OF 2(1)] Let_def split: if_splits prod.splits)
     note p1_props = get_path[OF 2(3) s(1,2)]
     note p2_props = get_path[OF 2(3) s(3,4)]
     have v1v2_not_in_M: "{v1, v2} \<notin> M"
@@ -456,7 +453,7 @@ qed
 subsection \<open>General Completeness\<close>
 
 lemma what_if_search_fails:
-  assumes "compute_alt_path_loop F = None"
+  assumes "compute_alt_path F = None"
    and     init: "finite \<lbrace>F\<rbrace>" "\<lbrace>F\<rbrace> \<subseteq> G"
    and invars: "forest_invar M F"
  shows "\<exists> F'. \<not> if1_cond F' \<and> \<not> if2_cond F' \<and> forest_invar M F' \<and> aroots F' = aroots F"
@@ -495,7 +492,7 @@ next
       case True
       hence False
         using IH(3) false
-        by(subst (asm) compute_alt_path_loop.psimps[OF IH(1)], cases "sel_if2 F")
+        by(subst (asm) compute_alt_path.psimps[OF IH(1)], cases "sel_if2 F")
           (auto dest!:  if2_cond_props'''') 
       thus ?thesis
         by simp
@@ -690,7 +687,7 @@ qed
 
 lemma compute_alt_path_from_tree_2:
   assumes invars: "forest_invar M F" 
-  and ret: "compute_alt_path_loop F = None"
+  and ret: "compute_alt_path F = None"
   and init: "finite \<lbrace>F\<rbrace>" "\<lbrace>F\<rbrace> \<subseteq> G" 
   and unmatcheds_even: "Vs G - Vs M \<subseteq> aroots F"
 shows "\<nexists>p. matching_augmenting_path M p \<and> path G p \<and> distinct p"
@@ -711,7 +708,6 @@ qed
 subsection \<open>Bringing it All Together: Final Correctness Theorems\<close>
 
 lemma init_props:
-  assumes "Vs G - Vs M \<noteq> {}"
   shows
   "forest_invar M (empty_forest unmatcheds)"
   "finite \<lbrace>empty_forest unmatcheds\<rbrace>"
@@ -719,11 +715,9 @@ lemma init_props:
   "Vs G - Vs M \<subseteq> aroots (empty_forest unmatcheds)"
 proof-
   show invar: "forest_invar M (empty_forest unmatcheds)" 
-    using assms
-    by(auto intro!: empty_forest(4) simp add: matching(1) unmatcheds finite_Vs)
+    by(auto intro!: empty_forest(5) simp add: matching(1) unmatcheds finite_Vs)
   have "\<lbrace> empty_forest unmatcheds \<rbrace> = {}"
-    using assms
-    by(auto simp add:empty_forest(3) matching(1) unmatcheds finite_Vs)
+    by(auto simp add:empty_forest(4) matching(1) unmatcheds finite_Vs)
   thus "finite \<lbrace> empty_forest unmatcheds \<rbrace>" "\<lbrace> empty_forest unmatcheds \<rbrace> \<subseteq> G"
     by auto
   show "Vs G - Vs M \<subseteq> aroots (empty_forest unmatcheds)"
@@ -731,27 +725,8 @@ proof-
     by auto
 qed
 
-lemma if_top_cond_False: "\<not> Vs G \<subseteq> Vs M \<Longrightarrow> Vs G - Vs M \<noteq> {}"
-  by simp
-
-lemma if_all_matched: 
-  assumes "Vs G \<subseteq> Vs M"
-  shows   "\<nexists> p. matching_augmenting_path M p \<and> path G p \<and> distinct p"
-proof(rule ccontr, goal_cases)
-  case 1
-  then obtain p where "matching_augmenting_path M p" "path G p" "distinct p"
-    by auto
-  hence "hd p \<in> Vs G - Vs M" 
-    using  assms
-    by(cases p)
-      (auto intro!: matching_graph.mem_path_Vs'[of p "hd p"] 
-          simp add: matching_augmenting_path_def  mem_path_Vs)
-  then show ?case 
-    using assms by auto
-qed
-
 lemma compute_alt_path_from_tree_sound:
-  assumes "compute_alt_paths = Some (p1, p2)"
+  assumes "compute_alt_path (empty_forest unmatcheds) = Some (p1, p2)"
   shows "last p1 \<notin> Vs M \<and>
        last p2 \<notin> Vs M \<and>
        hd p1 \<noteq> hd p2 \<and>
@@ -765,20 +740,11 @@ lemma compute_alt_path_from_tree_sound:
        (\<forall>x pref1 post1 pref2 post2. p1 = pref1 @ x # post1 \<and> p2 = pref2 @ x # post2 \<longrightarrow> post1 = post2) \<and>
        alt_path M (hd p1 # p2) \<and> 
        alt_path M (hd p2 # p1)"
-proof(cases "Vs G \<subseteq> Vs M")
-  case True
-  then show ?thesis 
-    using assms by(auto simp add: compute_alt_paths_def)
-next
-  case False
-  then show ?thesis
-    using init_props if_top_cond_False assms
-    by(intro compute_alt_path_from_tree_1[of "empty_forest unmatcheds"])
-      (auto simp add: compute_alt_paths_def)
-qed
+  using init_props assms
+  by(intro compute_alt_path_from_tree_1[of "empty_forest unmatcheds"]) auto
 
 lemma compute_alt_path_from_tree_sound':
-  shows "compute_alt_path_spec G M compute_alt_paths"
+  shows "compute_alt_path_spec G M (compute_alt_path (empty_forest unmatcheds))"
   using compute_alt_path_from_tree_sound
   unfolding compute_alt_path_spec_def
   apply(intro conjI)
@@ -786,19 +752,9 @@ lemma compute_alt_path_from_tree_sound':
 
 lemma compute_alt_path_from_tree_complete:
   assumes "\<exists>p. matching_augmenting_path M p \<and> path G p \<and> distinct p"
-  shows "\<exists>match_blossom_comp. compute_alt_paths = Some match_blossom_comp"
-proof(cases "Vs G \<subseteq> Vs M")
-  case True
-  then show ?thesis 
-    using assms if_all_matched by simp
-next
-  case False
-  then show ?thesis
-    using init_props if_top_cond_False assms 
-          compute_alt_path_from_tree_2[of "empty_forest unmatcheds"]
-    by(cases "compute_alt_path_loop (empty_forest unmatcheds)")
-      (auto simp add: compute_alt_paths_def)
-qed
+  shows "\<exists>match_blossom_comp. compute_alt_path (empty_forest unmatcheds) = Some match_blossom_comp"
+  using compute_alt_path_from_tree_2[of "empty_forest unmatcheds"] init_props assms
+  by force
 
 end 
 
@@ -845,8 +801,9 @@ interpretation forest: forest_manipulation
                   forest_manipulation_axioms.intro set_interate_correct)
 
 definition "compute_paths G M = 
-  compute_alt_path.compute_alt_paths id forest.get_path forest.extend_forest_even_unclassified
-     forest.empty_forest forest.abstract_forest evens G M sel (Vs G - Vs M)"
+  compute_alt_path.compute_alt_path id 
+     forest.get_path forest.extend_forest_even_unclassified
+      forest.abstract_forest evens G M sel (forest.empty_forest (Vs G - Vs M))"
 
 context 
   fixes G M::"'a set set"
@@ -895,5 +852,4 @@ qed
 
 lemmas find_max_matching_works = find_max_matching_works 
 end
-
 end
