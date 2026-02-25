@@ -69,13 +69,19 @@ lemma multigraph_pathE':
 lemma deltas_in_E: "delta_plus x \<subseteq> \<E>" "delta_minus x \<subseteq> \<E>"
   by(auto simp add: delta_plus_def delta_minus_def)
 
-text \<open>We define operators for denoting the neighbours of a vertex.\<close>
+text \<open>We define operators for denoting the neighbours.\<close>
 
 definition gamma_plus::"'a \<Rightarrow> 'a set" ("\<gamma>\<^sup>+") where
     "\<gamma>\<^sup>+ u = {v | v e.  e \<in> \<E> \<and> fst e = u \<and> snd e = v}"
                                    
 definition gamma_minus::"'a \<Rightarrow> 'a set" ("\<gamma>\<^sup>-") where
     "\<gamma>\<^sup>- u = {v | v e.  e \<in> \<E> \<and> fst e = v \<and> snd e = u}"
+
+definition Gamma_plus::"'a set \<Rightarrow> 'a set" ("\<Gamma>\<^sup>+") where
+    "\<Gamma>\<^sup>+ X = {v | v e.  e \<in> \<E> \<and> fst e \<in> X \<and> snd e = v \<and> v \<notin> X}"
+                                   
+definition Gamma_minus::"'a set \<Rightarrow> 'a set" ("\<Gamma>\<^sup>-") where
+    "\<Gamma>\<^sup>- X = {v | v e.  e \<in> \<E> \<and> fst e = v \<and> snd e \<in> X \<and> v \<notin> X}"
 
 end
 
