@@ -108,6 +108,10 @@ lemma matchingI:
   "(\<And>e1 e2. \<lbrakk>e1 \<in> M; e2 \<in> M; e1 \<noteq> e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}) \<Longrightarrow> matching M"
   by (auto simp: matching_def)
 
+lemma matchingD:
+  "\<lbrakk>matching M; e1 \<in> M; e2 \<in> M; e1 \<noteq> e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}"
+  by (auto simp: matching_def)
+
 lemma matching_def2:
   "matching M \<longleftrightarrow> (\<forall>v \<in> Vs M. \<exists>!e\<in>M. v \<in> e)"
   unfolding matching_def Vs_def by blast
@@ -1294,6 +1298,141 @@ proof(rule, all \<open>rule\<close>, goal_cases)
         using e vs_member[of x] by auto
     qed
   qed
+qed
+
+lemma matching_edge_rev_alt_path_cases:
+  assumes preconds: "rev_alt_path M p" "e \<in> M" "dblton_graph M" "matching M"
+    and cases: 
+    "\<And>  u v i. \<lbrakk>p \<noteq>[]; even i; i < length p -1; edges_of_path p ! i = e;
+                       p ! i = u; p ! (i+1) = v; e = {u, v}\<rbrakk> \<Longrightarrow> P "
+    "\<And> u v. \<lbrakk>p \<noteq>[];u = last p; v \<notin> set p; odd (length p); e = {u, v}\<rbrakk> \<Longrightarrow> P "
+    "e \<inter> set p = {} \<Longrightarrow> P"
+  shows P
+proof(cases "e \<inter> set p = {}")
+  case True
+  then show ?thesis 
+    using cases(3) by simp
+next
+  case False
+  then obtain u where u: "u \<in> set p" "u \<in> e" by auto
+  then obtain v where v: "e = {u, v}" "u \<noteq> v"
+    using dblton_graphE preconds(2,3) by blast
+  have p_not_Nil:"p \<noteq> Nil"
+    using u(1) by force
+  have ?thesis
+    if asm:  "v \<notin> set p"
+  proof-
+    have u_last:"u = last p"
+    proof(rule ccontr, goal_cases)
+      case 1
+      then obtain p1 p2 where "p = p1@[u]@p2" "p2 \<noteq> []"
+        using u(1) last_snoc[of _ u] single_in_append[of u] split_list[of u p] by force
+      hence u_p_index: "p!length p1 = u" "length p1 < length p" by auto
+      have "e \<in> set (edges_of_path p)"
+      proof(cases "even (length p1)")
+        case True
+        have index_less:"length p1 + 1 < length p" 
+          using "1" Suc_eq_plus1[of "length p1"] Suc_lessI[of "length p1" "length p"]
+            last_conv_nth[OF p_not_Nil]
+            u_p_index(1,2) diff_Suc_1'[of "length p1"]
+          by fastforce
+        hence "edges_of_path p ! length p1 = {p! length p1, p!(length p1+1)}"
+          by (simp add: edges_of_path_index)
+        moreover hence "{p! length p1, p!(length p1+1)} \<in> M" 
+          using True index_less add_less_cancel_right alternating_list_even_index[OF preconds(1)]
+            edges_of_path_length'[OF p_not_Nil]
+          by force
+        moreover hence "{p! length p1, p!(length p1+1)} = e"
+          using  doubleton_in_matching(1)[OF preconds(4)] preconds(2) u_p_index(1) v(1)
+          by auto
+        ultimately show ?thesis 
+          using  doubleton_eq_iff index_less nth_mem[of "length p1 + 1"]
+            that u_p_index(1) v(1)
+          by (auto simp add: doubleton_eq_iff)
+      next
+        case False
+        hence index_gtr_0:"length p1 > 0" by auto
+        hence "edges_of_path p ! (length p1 - 1) = {p! (length p1 - 1), p! length p1}"
+          by (simp add: edges_of_path_index u_p_index(2))
+        moreover hence "{p! (length p1 - 1), p! length p1} \<in> M" 
+          using False u_p_index(2) Suc_pred'[OF index_gtr_0] edges_of_path_length'[OF p_not_Nil]
+            Suc_eq_plus1[of "length (edges_of_path p)"]
+            Suc_less_eq[of "length p1 - 1" "length (edges_of_path p)"] even_Suc[of "length p1 - 1"]
+            alternating_list_even_index[OF preconds(1),of "length p1 - 1"] 
+          by argo
+        moreover hence "{p! (length p1 - 1), p! length p1} = e"
+          using  doubleton_in_matching(1)[OF preconds(4)] preconds(2) u_p_index(1) v(1)
+          by (auto simp add: insert_commute)
+        ultimately show ?thesis 
+          using  less_imp_diff_less nth_mem that u_p_index(2) v(1)
+          by(auto simp add: doubleton_eq_iff)
+      qed
+      thus False
+        by (simp add: edge_not_in_edges_in_path that v(1))
+    qed
+    moreover have "odd (length p)"
+    proof(rule ccontr, goal_cases)
+      case 1
+      hence "edges_of_path p ! (length p - 2) \<in> M" 
+        using p_not_Nil 
+        by(force intro!:  alternating_list_even_index[OF assms(1)]  diff_less_mono2 Suc_lessI
+            simp add: edges_of_path_length)
+      moreover have "edges_of_path p ! (length p - 2) = {p!(length p - 2), u}" 
+        using 1 u_last p_not_Nil
+        by(subst edges_of_path_index, all \<open>cases p rule: rev_cases\<close>)auto
+      moreover have "{p!(length p - 2), u}= e" 
+        using calculation(1,2) 
+          matching_unique_match[OF preconds(4) u(2) _ preconds(2)]
+        by auto
+      ultimately have "v \<in> set p" 
+        using doubleton_eq_iff  p_not_Nil v(1)
+        by(auto simp add: doubleton_eq_iff)
+      thus False
+        by (simp add: that)
+    qed
+    ultimately show ?thesis
+      using asm
+      by(auto intro!: cases(2)[of _ v] simp add: v(1))
+  qed
+  moreover have ?thesis
+    if asm:  "v \<in> set p"
+  proof-
+    obtain p1 p2 p3 u' v' where ps_split: "p=p1@[u']@p2@[v']@p3" "{u', v'} = {u, v}"
+      using asm u(1) v(2) unfolding in_set_conv_decomp[of u] apply auto
+      unfolding in_set_conv_decomp[of v] by (auto simp add: doubleton_eq_iff)
+    show ?thesis
+    proof(cases "even (length p1)")
+      case True
+      hence "edges_of_path p!length p1 \<in> M"  
+        by(intro alternating_list_even_index[OF assms(1)])
+          (auto simp add: edges_of_path_length ps_split(1))
+      moreover have aa:"edges_of_path p!length p1 = {u', p!(length p1 + 1)}" 
+        by(subst edges_of_path_index)(auto simp add: ps_split)
+      ultimately have "edges_of_path p!length p1 = {u, v}"
+        using ps_split(2)  doubleton_in_matching(1)[of M u'  v'] preconds(2,4) v(1) by simp
+      then show ?thesis 
+        using True p_not_Nil  aa  ps_split(2)[symmetric]
+        by(intro cases(1)[of "length p1" u' v'])
+          (force simp add: ps_split(1) v(1) doubleton_eq_iff)+
+    next
+      case False
+      hence odd_index: "odd (length p1)" by auto
+      hence "edges_of_path p!(length p1 - 1)\<in> M"  
+        by(intro alternating_list_even_index[OF assms(1)])
+          (auto simp add: edges_of_path_length ps_split(1))
+      moreover have aa:"edges_of_path p!(length p1 -1)= {p!(length p1 - 1), u'}" 
+        by(subst edges_of_path_index)(auto simp add: ps_split odd_index)
+      ultimately have "edges_of_path p!(length p1 - 1)= {u, v}"
+        using ps_split(2)  doubleton_in_matching(1)[of M u'  v'] preconds(2,4) v(1)
+        by (simp add: insert_commute)
+      then show ?thesis 
+        using False p_not_Nil  aa  ps_split(2)[symmetric]
+        by(intro cases(1)[of "length p1 - 1" v' u'])
+          (force simp add: ps_split(1) v(1) doubleton_eq_iff)+
+    qed
+  qed
+  ultimately show ?thesis
+    by auto
 qed
 
 subsection \<open>Matchings and Optimisation\<close>

@@ -300,6 +300,85 @@ lemma edge_in_graph_in_quot:
   "e \<in> M \<Longrightarrow> (P ` e) \<in> (quot_graph P M)"
   by (auto simp: quot_graph_def)
 
+lemma quot_graph_gen_comp:
+   "quot_graph P2 (quot_graph P1 G) = quot_graph (P2 o P1) G"
+  by(auto simp add: quot_graph_def)
+
+lemma quot_id: "quot_graph (image id) G = G"  "quot_graph id G = G"
+  by(auto simp add: quot_graph_def)
+
+lemma dblton_graph_contract_into_one_vert:
+  assumes "dblton_graph G"
+     and contr_def: "contr = (\<lambda> x. if x \<in> S then new_vert else x)"
+    shows "dblton_graph (quot_graph contr G - {{new_vert}})"
+proof(rule dblton_graphI, goal_cases)
+  case (1 e)
+  then obtain e' where e': "e'\<in>G" "e = contr ` e'" "e \<noteq> {new_vert}"
+    by (auto simp add: quot_graph_def)
+  then obtain u v where uv: "e' = {u, v}" "u \<noteq> v"
+    using assms(1) by(auto elim!: dblton_graphE)
+  have "e = {contr u, contr v}"
+    using uv e' by auto
+  moreover have "contr u \<noteq> contr v"
+    using uv e' by(auto simp add: contr_def)
+  ultimately show ?case
+    by auto
+qed
+
+lemma quot_graph_subset: 
+  "G \<subseteq> G' \<Longrightarrow> quot_graph contr G \<subseteq> quot_graph contr G'"
+  by(auto simp add: quot_graph_def)
+
+lemma quot_graph_comp: 
+  assumes contr1_def: "contr1 = (\<lambda> x. if x \<in> S then new_vert' else x)"
+      and contr2_def: "contr2 = (\<lambda> x. if x \<in> insert new_vert' T then new_vert else x)"
+      and contr_def: "contr = (\<lambda> x. if x \<in> S \<union> insert new_vert' T then new_vert else x)"
+  shows"quot_graph contr2 (quot_graph contr1 G - {{new_vert'}}) - {{new_vert}}
+      = quot_graph contr G - {{new_vert}}" 
+proof-
+  have contrs_comp: "contr = contr2 o contr1"
+    by(auto intro!: ext simp add: contr_def contr1_def contr2_def)
+  show ?thesis
+    unfolding quot_graph_def
+  proof(rule, all \<open>rule\<close>, goal_cases)
+    case (1 e)
+    then obtain e' e'' where es:
+      "e''\<in>G" "e' = contr1 ` e''" "e = contr2 ` e'" "e \<noteq> {new_vert}" 
+      "e' \<noteq>  {new_vert'}"
+      by fastforce
+    have e_contr:"e = contr ` e''" 
+      using contrs_comp es(2,3) by auto
+    show ?case 
+      using e_contr es(3,4,5)
+      by (auto intro!: bexI[OF _ es(1)] simp add: contr2_def)
+  next
+    case (2 e)
+    then obtain e' where e': "e'\<in>G" "e = contr ` e'" "e \<noteq> {new_vert}" 
+      by auto
+    show ?case 
+    proof(rule, goal_cases)
+      case 1
+      show ?case 
+      proof(rule, rule bexI[of _ "contr1 ` e'"], goal_cases)
+        case 1
+        then show ?case 
+          using contrs_comp e'(2) by auto
+      next
+        case 2
+        have "contr1 ` e' \<noteq> {new_vert}"  "contr1 ` e' \<noteq> {new_vert'}"
+          using e'(2,3) by(auto simp add: contr_def contr1_def)
+        then show ?case 
+          using e'(1)
+          by (auto intro!: bexI[of _ e'])
+      qed
+    next
+      case 2
+      then show ?case 
+        using e'(3) by simp
+    qed
+  qed
+qed
+
 (*definition rev_map where
   "rev_map P s u  \<equiv> SOME v. v \<in> s \<and> P v = u"*)
 
@@ -324,8 +403,6 @@ next
 qed simp
 
 text\<open>Locale that fixes the constants concerning graph quotients a.k.a.\ graph contractions\<close>
-
-
 
 locale pre_quot = choose sel +
               graph_abs E 
@@ -487,6 +564,21 @@ proof-
     using e_sub_s edge_in_quot_in_graph_1' that \<open>M \<subseteq> E\<close> by auto
   ultimately show ?thesis
     by blast
+qed
+
+lemma dblton_graph_contract_into_one_vert:
+  "\<lbrakk>dblton_graph G; contr = (\<lambda> v. if v \<in> S then new_vert else v); new_vert \<notin> Vs G - S\<rbrakk>
+       \<Longrightarrow> dblton_graph (quot_graph contr G - {{new_vert}})"
+proof(rule dblton_graphI, goal_cases)
+  case (1 e)
+  then obtain e' where "e = contr ` e'" "e' \<in> G" "contr ` e' \<noteq> {new_vert}"
+    by(auto simp add: quot_graph_def)
+  moreover then obtain u v where "e' = {u, v}" "u \<noteq> v"
+    using "1"(1) by force
+  ultimately have "e = {contr u, contr v}" "contr u \<noteq> contr v"
+    by (auto simp add: 1(2))
+  thus ?case
+    by auto
 qed
 
 lemma rev_map_map:

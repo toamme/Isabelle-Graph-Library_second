@@ -482,4 +482,102 @@ next
            simp add: alt_list_step 2(2))
  qed
 
+fun take_evens where
+ "take_evens Nil = Nil"|
+ "take_evens [x] = [x]" |
+ "take_evens (x1#x2#xs) = x1#take_evens xs"
+
+fun take_odds where
+ "take_odds Nil = Nil"|
+ "take_odds [x] = Nil" |
+ "take_odds (x1#x2#xs) = x2#take_odds xs"
+
+lemma take_evens_odds_splice: "splice (take_evens xs) (take_odds xs) = xs"
+  by(induction xs rule: take_evens.induct) auto
+
+lemma upto_map_init: 
+  "upto (int i+j) (i+k) = map (\<lambda> x. x + i) (upto j k)"
+proof(cases "j \<le> k")
+  case True
+  then obtain n where "int n = k - j"
+    by (metis diff_ge_0_iff_ge zero_le_imp_eq_int)
+  then show ?thesis 
+  proof(induction n arbitrary: i j k)
+    case 0
+    then show ?case by auto
+  next
+    case (Suc n)
+    have "[int i + j..int i + k] = (int i + j) # [int i + j + 1..int i + k]" 
+      using Suc.prems upto_rec1 by force
+    also have "... = (int i + j) # map (\<lambda>x. x + int i) [j + 1..k]"
+      using Suc(2) 
+      by (subst Suc(1)[of k "j + 1" i, symmetric])
+         (auto intro!: arg_cong2[where f = upto])
+    also have "... = map (\<lambda>x. x + int i) [j..k]"
+      using Suc(2) by(subst  upto_rec1[of j k]) auto
+    finally show ?case 
+      by simp
+  qed  
+qed auto
+
+lemma take_evens_is:
+  "take_evens xs = [xs! i . i <- map nat [0..int (length xs) - 1], even i]"
+proof(induction xs rule: take_evens.induct)
+  case (3 x1 x2 xs)
+  have indices_split_off_0_1:"[0..int (length (x1 # x2 # xs)) - 1] =
+        0#1#map (\<lambda> x. x + 2) [0..int (length xs) - 1]"
+    by(subst upto_split2[of 0 1 "int (length (x1 # x2 # xs)) - 1"])
+       (auto simp add: upto_map_init[of "nat (2::int)" 0 "int (length xs) - 1",
+                        symmetric, simplified], simp add: upto.simps)
+  have nat_indices_are:"map nat [0..int (length (x1 # x2 # xs)) - 1] = 
+        0 # Suc 0 # map (Suc o Suc) (map nat [0..int (length xs) - 1])"
+    by(subst indices_split_off_0_1) auto
+  have fun_comp_is: "(\<lambda>i. if even i then [(x1 # x2 # xs) ! i] else []) \<circ> (Suc \<circ> Suc \<circ> nat) =
+       (\<lambda>i. if even i then [xs ! i] else []) \<circ>  nat" 
+    by auto
+  show ?case 
+    using 3(1)
+    by(subst nat_indices_are)(auto simp add: fun_comp_is)
+qed auto
+
+lemma take_evens_set:
+  "set (take_evens xs) = {xs ! i | i. i < length xs \<and> even i}"
+proof-
+  have "\<lbrakk>i < length xs; even i\<rbrakk> 
+      \<Longrightarrow> \<exists>x\<in>{0..int (length xs) - 1} \<inter> {x. even (nat x)}. xs ! i = xs ! nat x" for i
+    by(auto intro!: bexI[of _ "int i"])
+  thus ?thesis
+    by(auto simp add: take_evens_is nat_less_iff)
+qed
+ 
+lemma take_odds_is:
+  "take_odds xs = [xs! i . i <- map nat [0..int (length xs) - 1], odd i]"
+proof(induction xs rule: take_odds.induct)
+  case (3 x1 x2 xs)
+  have indices_split_off_0_1:"[0..int (length (x1 # x2 # xs)) - 1] =
+        0#1#map (\<lambda> x. x + 2) [0..int (length xs) - 1]"
+    by(subst upto_split2[of 0 1 "int (length (x1 # x2 # xs)) - 1"])
+       (auto simp add: upto_map_init[of "nat (2::int)" 0 "int (length xs) - 1",
+                        symmetric, simplified], simp add: upto.simps)
+  have nat_indices_are:"map nat [0..int (length (x1 # x2 # xs)) - 1] = 
+        0 # Suc 0 # map (Suc o Suc) (map nat [0..int (length xs) - 1])"
+    by(subst indices_split_off_0_1) auto
+  have fun_comp_is: "(\<lambda>i. if odd i then [(x1 # x2 # xs) ! i] else []) \<circ> (Suc \<circ> Suc \<circ> nat) =
+       (\<lambda>i. if odd i then [xs ! i] else []) \<circ>  nat" 
+    by auto
+  show ?case 
+    using 3(1)
+    by(subst nat_indices_are)(auto simp add: fun_comp_is)
+qed auto
+
+lemma take_odds_set:
+  "set (take_odds xs) = {xs ! i | i. i < length xs \<and> odd i}"
+proof-
+  have "\<lbrakk>i < length xs; odd i\<rbrakk> 
+      \<Longrightarrow> \<exists>x\<in>{0..int (length xs) - 1} \<inter> {x. odd (nat x)}. xs ! i = xs ! nat x" for i
+    by(auto intro!: bexI[of _ "int i"])
+  thus ?thesis
+    by(auto simp add: take_odds_is nat_less_iff)
+qed
+
 end

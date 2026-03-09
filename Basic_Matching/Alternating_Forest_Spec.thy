@@ -60,6 +60,32 @@ lemma forest_extension_precondI:
   x \<noteq> y; y \<noteq> z; x \<noteq> z\<rbrakk>
 \<Longrightarrow>forest_extension_precond F M x y z "
   by(auto simp add: forest_extension_precond_def)
+
+definition 
+   "contract_fork_precond \<M> F v v' B1 B2 u new_vert P contr = 
+    (forest_invar \<M> F \<and>  matching \<M> \<and> dblton_graph \<M> \<and> 
+     get_path F v = B1@[u]@P \<and> get_path F v' = B2@[u]@P \<and> set B1 \<inter> set B2 ={} \<and>
+     v \<in> vset_to_set (evens F) \<and>  v' \<in> vset_to_set (evens F) \<and> 
+     new_vert \<notin> Vs \<M> \<union> vset_to_set (evens F) \<union> vset_to_set (odds F) - (set B1 \<union> set B2 \<union> {u}) \<and>
+     contr = (\<lambda> v. if v \<in> {u} \<union> set B1 \<union> set B2 then new_vert else v))"
+
+lemma contract_fork_precondI:
+ "\<lbrakk>forest_invar \<M> F; matching \<M>; dblton_graph \<M>; get_path F v = B1@[u]@P;
+   get_path F v' = B2@[u]@P; set B1 \<inter> set B2 = {}; v \<in> vset_to_set (evens F);
+   v' \<in> vset_to_set (evens F); 
+   new_vert \<notin> Vs \<M> \<union> vset_to_set (evens F) \<union> vset_to_set (odds F) - (set B1 \<union> set B2 \<union> {u});
+   contr = (\<lambda> v. if v \<in> {u} \<union> set B1 \<union> set B2 then new_vert else v)\<rbrakk>
+   \<Longrightarrow> contract_fork_precond \<M> F v v' B1 B2 u new_vert P contr"
+and contract_fork_precondE:
+ "contract_fork_precond \<M> F v v' B1 B2 u new_vert P contr \<Longrightarrow>
+ (\<lbrakk>forest_invar \<M> F; matching \<M>; dblton_graph \<M>; get_path F v = B1@[u]@P;
+   get_path F v' = B2@[u]@P; set B1 \<inter> set B2 = {}; v \<in> vset_to_set (evens F);
+   v' \<in> vset_to_set (evens F); 
+   new_vert \<notin> Vs \<M> \<union> vset_to_set (evens F) \<union> vset_to_set (odds F) - (set B1 \<union> set B2 \<union> {u});
+   contr = (\<lambda> v. if v \<in> {u} \<union> set B1 \<union> set B2 then new_vert else v)\<rbrakk>
+   \<Longrightarrow> Q)
+  \<Longrightarrow> Q"
+  by(auto simp add: contract_fork_precond_def)
 end
 
 locale alternating_forest_ordinary_extension_spec = 

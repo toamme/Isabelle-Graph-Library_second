@@ -257,4 +257,28 @@ lemma snoc_eq_iff_butlast':
 lemma neq_Nil_conv_snoc: "xs \<noteq> [] \<longleftrightarrow> (\<exists>x ys. xs = ys @ [x])"
   by (auto simp add: snoc_eq_iff_butlast')
 
+lemma card_of_even_numbers_upto:
+  "card {i | i. i < n \<and> even i} = Suc n div 2 "
+proof(induction n)
+  case (Suc n)
+  have rw:"{i |i. i < Suc n \<and> even i} = 
+       (if even n then insert n {i |i. i < n \<and> even i}
+       else {i |i. i < n \<and> even i})" 
+    using less_Suc_eq by auto
+  thus ?case
+    using Suc by auto
+qed simp
+
+lemma card_of_odd_numbers_upto:
+  "card {i | i. i < n \<and> odd i} = n div 2 "
+proof(induction n)
+  case (Suc n)
+  have rw:"{i |i. i < Suc n \<and> odd i} = 
+       (if odd n then insert n {i |i. i < n \<and> odd i}
+       else {i |i. i < n \<and> odd i})" 
+    using less_Suc_eq by auto
+  thus ?case
+    using Suc by auto
+qed simp
+
 end

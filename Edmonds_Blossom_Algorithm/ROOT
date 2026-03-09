@@ -13,6 +13,7 @@ session "Blossom" = Basic_Matching +
     "Blossom_Algo_Contraction"
     "Blossom_Algo_Compute_Aug_Path"
     "Blossom_Algo_Search"
+    Alternating_Forest_Contraction
 
   document_files
     "root.tex"

@@ -796,7 +796,7 @@ interpretation forest: forest_manipulation
   and vset_isin = "\<lambda> S x. x \<in> S"
   and vset_to_set = id
   and vset_invar = "\<lambda> S. finite S"
-  and vset_iterate = set_iterate
+  and vset_iterate_origin = set_iterate
   by(auto intro!: forest_manipulation.intro forest_manipulation_spec.intro Map.intro Set.intro 
                   forest_manipulation_axioms.intro set_interate_correct)
 
@@ -826,7 +826,7 @@ interpretation path_compute: compute_alt_path
     and M = M
     and sel = sel
     and unmatcheds = "Vs G - Vs M"
-     using forest.satisified
+     using forest.satisfied
    by(auto intro!: compute_alt_path.intro choose_axioms compute_alt_path_axioms.intro
          simp add: graph_abs.intro match_axioms.intro match_def g.graph_abs_axioms 
                    \<open>M \<subseteq> G\<close> \<open>matching M\<close> match_axioms_def  \<open>graph_invar G\<close> graph_abs_def)

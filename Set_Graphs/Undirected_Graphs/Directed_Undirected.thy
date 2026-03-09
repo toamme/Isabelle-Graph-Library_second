@@ -151,6 +151,30 @@ lemma D_of_edges_of_path:
   by(induction p rule: edges_of_path.induct)
     (auto split: prod.split simp add: doubleton_eq_iff)
 
+lemma UD_subseteq: "A \<subseteq> B \<Longrightarrow> UD A \<subseteq> UD B"
+  by(auto simp add: UD_def)
+
+lemma Vs_dVs_UD: "Vs (UD G) = dVs G"
+  by(auto simp add: UD_def dVs_def Vs_def)
+
+lemma finite_UD: "finite G \<longleftrightarrow> finite (UD G)"
+  unfolding UD_def
+proof(rule, goal_cases)
+  case 1
+  then show ?case 
+    using finite_vertices_iff
+    by(auto intro!: finite_UnionD[of "{{uub, uuc} |uub uuc. (uub, uuc) \<in> G}"] simp add: dVs_def)
+next
+  case 2
+  hence "G \<subseteq> Vs {{u, v} |u v. (u, v) \<in> G} \<times> Vs {{u, v} |u v. (u, v) \<in> G}" 
+    by auto
+  moreover have "finite (Vs {{u, v} |u v. (u, v) \<in> G})"
+    using 2 by(auto simp add: Vs_def)
+  ultimately show ?case 
+    by(auto intro!: finite_subset[OF _ finite_cartesian_product,
+          of G "Vs {{u, v} |u v. (u, v) \<in> G}" "Vs {{u, v} |u v. (u, v) \<in> G}"])
+qed
+
 context graph_abs
 begin
 

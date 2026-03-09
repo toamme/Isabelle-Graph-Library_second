@@ -480,7 +480,7 @@ lemmas missed = origin
 lemmas best_even_neighbour = origin
 
 interpretation fmnlp: forest_manipulation
-  where vset_iterate = "\<lambda> f T init. fold_rbt (\<lambda> x y. f y x) init T"
+  where vset_iterate_origin = "\<lambda> f T init. fold_rbt (\<lambda> x y. f y x) init T"
     and vset_empty = vset_empty
     and vset_invar = vset_inv
     and vset_to_set = vset_to_set
