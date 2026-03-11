@@ -1,5 +1,6 @@
 theory Imperative_DS
-imports Imperative_Base "Data_Structures.Set_Choose" "Data_Structures.Map_Addons"
+  imports Imperative_Base "Data_Structures.Set_Choose" "Data_Structures.Map_Addons"
+Data_Structures.Set2_Addons
 begin
 
   (* Marrying functional Set-ADT and its imperative version, using a multi-valued refinement assertion *)
@@ -140,17 +141,43 @@ begin
         using Cons.prems
         apply (sep_auto simp: dls_diff_def)
         done
-    qed    
-      
-      
-      
-      
-  end        
+    qed  
+(*
+definition default_union_impl
+   *)        
+end     
 
 
+locale imp_set_conn2 = 
+ imp_set_conn where is_set = is_set and invar = invar +
+ Set2 where union = union and invar = invar +
+ imp_set_union where is_set = is_set and union = union_impl +
+ imp_set_inter where is_set = is_set and inter = inter_impl +
+ imp_set_diff where is_set = is_set and diff = diff_impl
+for is_set :: "'x set \<Rightarrow> 'setimpl \<Rightarrow> assn"
+and invar ::"'funset \<Rightarrow> bool"
+and union :: "'funset \<Rightarrow> 'funset \<Rightarrow> 'funset"
+and union_impl inter_impl diff_impl
+begin
+context
+      includes automation and automation2
+      notes [simp] = assn_def 
+    begin  
 
+      lemma union_rule[sep_heap_rules]:
+       "<assn s1 s1i * assn s2 s2i> union_impl s1i s2i <\<lambda> r. assn (union s1 s2) r* assn s2 s2i>"
+        by sep_auto
 
+      lemma inter_rule[sep_heap_rules]:
+       "<assn s1 s1i * assn s2 s2i> inter_impl s1i s2i <\<lambda> r. assn (inter s1 s2) r * assn s2 s2i>"
+        by sep_auto
 
+      lemma diff_rule[sep_heap_rules]: 
+       "<assn s1 s1i * assn s2 s2i> diff_impl s1i s2i <\<lambda> r. assn (diff s1 s2) r * assn s2 s2i>"
+        by sep_auto
+
+    end  
+  end
 
 
 

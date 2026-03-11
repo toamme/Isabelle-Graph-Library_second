@@ -50,7 +50,7 @@ shows "<is_it S Simpl S' it * \<up> (S' \<noteq> {})> simple_prog fimpl acc it
       apply(rule ht_cons_post[of _ _ 
            "\<lambda>r. \<up> ( r = f x acc) * (\<up> (x \<in> S')* is_set S Simpl)"])
         apply(rule ht_cons_pre[OF _ ht_frame[OF assms[of x acc]]])
-        by(sep_auto intro: quit_iteration)
+        by(sep_auto intro:ht_cons_pre[OF _ ht_frame[OF assms[of x acc]]] quit_iteration)
       done
     done
 

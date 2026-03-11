@@ -1,8 +1,7 @@
 theory DFS_Imperative
-imports DFS Directed_Set_Graphs.Pair_Graph_Imperative DFS_Example
+  imports DFS Directed_Set_Graphs.Pair_Graph_Imperative DFS_Example
+"HOL-Library.IArray"
 begin
-
-  
     
   section \<open>Imperative DFS Locale\<close>
   
