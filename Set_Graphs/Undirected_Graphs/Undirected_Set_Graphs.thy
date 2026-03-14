@@ -91,6 +91,14 @@ lemma subgraph_vs_subset_eq:
   unfolding Vs_def
   by auto
 
+lemma Vs_of_edge: "Vs {e} = e"
+  by(auto simp add: Vs_def)
+
+lemma remove_disjoint_edges_equality:
+  assumes "Vs (G - G') \<inter> Vs G' = {}"
+  shows "Vs (G - G') = Vs G - Vs G'"
+  using assms by (auto simp add: Vs_def)
+
 subsection \<open>Degrees\<close>
 
 definition degree where

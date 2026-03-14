@@ -65,7 +65,7 @@ definition
    "contract_fork_precond \<M> F v v' B1 B2 u new_vert P contr = 
     (forest_invar \<M> F \<and>  matching \<M> \<and> dblton_graph \<M> \<and> 
      get_path F v = B1@[u]@P \<and> get_path F v' = B2@[u]@P \<and> set B1 \<inter> set B2 ={} \<and>
-     v \<in> vset_to_set (evens F) \<and>  v' \<in> vset_to_set (evens F) \<and> 
+     v \<in> vset_to_set (evens F) \<and> v' \<in> vset_to_set (evens F) \<and> 
      new_vert \<notin> Vs \<M> \<union> vset_to_set (evens F) \<union> vset_to_set (odds F) - (set B1 \<union> set B2 \<union> {u}) \<and>
      contr = (\<lambda> v. if v \<in> {u} \<union> set B1 \<union> set B2 then new_vert else v))"
 
@@ -86,6 +86,24 @@ and contract_fork_precondE:
    \<Longrightarrow> Q)
   \<Longrightarrow> Q"
   by(auto simp add: contract_fork_precond_def)
+
+definition 
+ "odd_expansion_precond \<M> F u mu p = 
+  (forest_invar \<M> F \<and> matching \<M> \<and> u \<in> vset_to_set (odds F) \<and> {u, mu} \<in> \<M> \<and>
+  odd (length p) \<and> set p \<inter> (Vs (abstract_forest F) \<union> vset_to_set (roots F) \<union> Vs \<M>) \<subseteq> {u} \<and> 
+  distinct p)"
+
+lemma odd_expansion_precondE:
+  "\<lbrakk>odd_expansion_precond \<M> F u mu p; 
+    \<lbrakk>forest_invar \<M> F; matching \<M>; u \<in> vset_to_set (odds F); {u, mu} \<in> \<M>; odd (length p);
+     set p \<inter> (Vs (abstract_forest F) \<union> vset_to_set (roots F) \<union> Vs \<M>) \<subseteq> {u};  distinct p\<rbrakk> \<Longrightarrow> P \<rbrakk>
+   \<Longrightarrow> P"
+and odd_expansion_precondI:
+  "\<lbrakk>forest_invar \<M> F; matching \<M>; u \<in> vset_to_set (odds F); {u, mu} \<in> \<M>; odd (length p);
+     set p \<inter> (Vs (abstract_forest F) \<union> vset_to_set (roots F) \<union> Vs \<M>) \<subseteq> {u};  distinct p\<rbrakk> 
+   \<Longrightarrow> odd_expansion_precond \<M> F u mu p"
+  by(auto simp add: odd_expansion_precond_def)
+
 end
 
 locale alternating_forest_ordinary_extension_spec = 

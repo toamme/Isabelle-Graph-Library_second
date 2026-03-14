@@ -1,5 +1,5 @@
 theory More_Lists
-  imports Main "HOL-Library.Extended_Real"
+  imports Main "HOL-Library.Extended_Real" "HOL-Eisbach.Eisbach"
 begin
 
 lemma list_2_preds_aux:
@@ -844,5 +844,60 @@ lemma itrev_rev_gen:"itrev_aux xs ys = rev xs @ ys"
 
 lemma itrev_is_rev[simp]: "itrev = rev"
   by(auto simp add: itrev_rev_gen[of _ Nil, simplified] itrev_def)
+
+lemma distinct_indexE:
+   "\<lbrakk>distinct xs; (\<And> i j. \<lbrakk>i < length xs; j < length xs; xs! i = xs ! j\<rbrakk> \<Longrightarrow> i = j) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  and distinct_indexD:
+   "\<lbrakk>distinct xs; i < length xs; j < length xs; xs! i = xs ! j\<rbrakk> \<Longrightarrow> i = j"
+  by (simp add: nth_eq_iff_index_eq)+
+
+lemma list_cases_hd_and_last:
+  "\<lbrakk>xs = Nil \<Longrightarrow> P; \<And> x. xs = [x] \<Longrightarrow> P; \<And> x y xs'. xs = x#xs'@[y] \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by(cases xs, all \<open>cases xs rule: rev_cases\<close>) (auto elim!: rev_exhaust)
+
+fun foldl2 :: "('b \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'b) \<Rightarrow> 'b \<Rightarrow> 'a list \<Rightarrow> 'b" where
+foldl2_Nil:  "foldl2 f a [] = a" |
+foldl2_Sing:  "foldl2 f a [x] = a" |
+foldl2_Cons: "foldl2 f a (x # y#xs) = foldl2 f (f a x y) (y#xs)"
+
+fun foldr2 :: "('a \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> 'a list \<Rightarrow> 'b \<Rightarrow> 'b" where
+foldr2_Nil:  "foldr2 f [] = id" |
+foldr2_Sing: "foldr2 f [_] = id"|
+foldr2_Cons: "foldr2 f (x # y# xs) = f x y \<circ> foldr2 f (y#xs)"
+
+lemma list_nempty_induct:
+  "\<lbrakk>xs \<noteq> []; \<And> x. P [x]; \<And> x y xs. P (y#xs) \<Longrightarrow> P (x#y#xs)\<rbrakk> \<Longrightarrow> P xs"
+  by (metis list.exhaust list_nonempty_induct)
+
+lemma foldr2_append_one:
+  assumes "xs \<noteq> []"
+  shows "foldr2 (\<lambda>x1 x2 y. f y x2 x1) (xs @ [v']) (f a v v') =
+       foldr2 (\<lambda>x1 x2 y. f y x2 x1) (xs @ [v', v]) a"
+  by(induction rule: list_nempty_induct[OF assms]) simp+
+
+lemma foldl2_conv_foldr2:
+  "foldl2 f a xs = foldr2 (\<lambda>x1 x2 y. f y x2 x1) (rev xs) a"
+proof(induction xs arbitrary: a f rule: list_induct3)
+  case 1
+  then show ?case by simp
+next
+  case (2 v)
+  then show ?case by simp
+next
+  case (3 v v' l)
+  have "foldr2 (\<lambda>x1 x2 y. f y x2 x1) (rev l @ [v']) (f a v v') =
+    foldr2 (\<lambda>x1 x2 y. f y x2 x1) (rev l @ [v', v]) a"
+  proof(cases l)
+    case (Cons a list)
+    then show ?thesis 
+      using foldr2_append_one by fast
+  qed simp
+  thus ?case 
+    by(simp add: 3)
+qed
+
+lemma list_induct_longer_2:
+  "\<lbrakk>length xs \<ge> 2; \<And> x y. P [x, y]; \<And> x y z xs. P (y#z#xs) \<Longrightarrow> P (x#y#z#xs)\<rbrakk> \<Longrightarrow> P xs"
+  by (metis list_induct3_len_geq_2 list_cases3)
 
 end

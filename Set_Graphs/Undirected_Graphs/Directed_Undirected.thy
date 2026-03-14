@@ -175,6 +175,12 @@ next
           of G "Vs {{u, v} |u v. (u, v) \<in> G}" "Vs {{u, v} |u v. (u, v) \<in> G}"])
 qed
 
+lemma special_UD_hom_subtract:
+  assumes "\<And> u v. \<lbrakk>(u, v) \<in> G; (v, u) \<in> G\<rbrakk> \<Longrightarrow> False" "G' \<subseteq> G"
+    shows "UD (G - G') = UD G - UD G'"
+  using assms(2)
+  by(auto simp add: UD_def doubleton_eq_iff dest: assms(1)) blast
+
 context graph_abs
 begin
 

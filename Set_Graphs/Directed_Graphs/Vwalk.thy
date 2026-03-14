@@ -281,6 +281,14 @@ lemma v_in_edge_in_vwalk_gen:
 lemma edges_of_vwalk_dVs: "dVs (set (edges_of_vwalk p)) \<subseteq> set p"
   by (auto intro: v_in_edge_in_vwalk simp: dVs_def)
 
+lemma edges_of_vwalk_prepend_one:
+   "set (edges_of_vwalk xs) \<subseteq> set (edges_of_vwalk (x#xs))"
+  by(cases xs) auto
+
+lemma edges_of_vwalk_append_one:
+   "set (edges_of_vwalk xs) \<subseteq> set (edges_of_vwalk (xs@[x]))"
+  by(cases xs rule: rev_cases) (auto simp add: edges_of_vwalk_append_two_vertices)
+
 lemma last_v_snd_last_e:
   assumes "length p \<ge> 2"
   shows "last p = snd (last (edges_of_vwalk p))" \<comment> \<open>is this the best formulation for this?\<close>

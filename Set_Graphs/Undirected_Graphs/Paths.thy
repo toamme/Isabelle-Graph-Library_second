@@ -988,9 +988,16 @@ lemma path_edges_subset:
   using assms
   by (induction, simp_all)
 
-lemma edges_of_path_symmetric_split:"edges_of_path (xs@[x,y]@ys) = edges_of_path (xs@[x]) @[{x,y}] @ edges_of_path (y#ys)"
-  by (metis append_is_Nil_conv edges_of_path.simps(2) edges_of_path.simps(3) edges_of_path_append_2 
-           edges_of_path_append_3 hd_append2 last_ConsL last_ConsR list.discI list.sel(1))
+lemma Vs_of_edges_of_path:
+  assumes "length p \<ge> 2"
+  shows "Vs (set (edges_of_path p)) = set p"
+  by(induction rule: list_induct_longer_2[OF assms])
+    (simp_all add: vs_insert insert_commute)
+
+lemma edges_of_path_symmetric_split:
+  "edges_of_path (xs@[x,y]@ys) = edges_of_path (xs@[x]) @[{x,y}] @ edges_of_path (y#ys)"
+  using edges_of_path_append_3[of "[x, y]" ys] edges_of_path_append_2[of "[x, y] @ ys" xs]
+  by auto
 
 lemma non_last_vertex_or_even_list_in_even_edge:
   assumes "distinct p" "length p \<ge> 2" "x \<in> set p"

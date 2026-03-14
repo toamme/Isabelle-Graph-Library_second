@@ -1202,6 +1202,12 @@ lemma odds_unique_child':
   shows "y = y'"
   using assms odds_unique_child[of \<M> F x] by auto
 
+lemma odds_child:
+  assumes "forest_invar \<M> F" "x \<in> vset_to_set (odds F)" "matching \<M>"
+  obtains y where "parent_lookup (parents F) y = Some x" "{x, y} \<in> \<M>"
+    "y \<in> vset_to_set (evens F)"
+  using assms odds_unique_child[of \<M> F x] by metis
+
 lemma abstract_forest_dblton_graph:
   "forest_invar \<M> F \<Longrightarrow> dblton_graph (abstract_forest F)"
 proof(rule dblton_graphI, goal_cases)
@@ -1213,6 +1219,121 @@ proof(rule dblton_graphI, goal_cases)
     by(auto dest!: invar_parent_wfD parent_specD Parent_Map.wf_no_loop)
   ultimately show ?case  by blast
 qed
+
+lemma forest_invar_extend_matching_outside_forest:
+  assumes "forest_invar \<M> F" "matching \<M>'" "\<M>' \<supseteq> \<M>" 
+          "(\<M>' - \<M>) \<inter> abstract_forest F = {}"
+          "Vs (\<M>' - \<M>) \<inter> vset_to_set (roots F)= {}"
+    shows "forest_invar \<M>' F"
+proof(rule forest_invarI)
+  note F_invar_here = forest_invarD[OF assms(1)]
+  note invar_basic_here = invar_basicD[OF F_invar_here(1)]
+  have p1: "Vs (abstract_forest F) - Vs \<M>' \<subseteq> vset_to_set (roots F)"      
+    using assms(3,5) Vs_subset[of \<M> \<M>'] F_invar_here(1) vs_member_intro[of _ _ \<M>']
+    by(auto  elim!:  invar_basicE)
+  have p2:  "vset_to_set (roots F) \<inter> Vs \<M>' = {}"
+  proof(rule ccontr, goal_cases)
+    case 1
+    then obtain e x where ex: "e \<in> \<M>'" "x \<in> e" "x \<in> vset_to_set (roots F) \<inter> Vs \<M>'"
+      by(auto simp add: vs_member)+
+    hence "e \<notin> \<M>"
+      using assms(1) simple_invariant_consequences(10) by auto
+    hence "e \<in> \<M>' - \<M>" 
+      using ex by auto
+    hence "x \<in> Vs (\<M>' - \<M>)" 
+      using ex(2) by auto
+    thus False 
+      using assms(5) ex(3) by auto
+  qed
+
+  show "invar_basic \<M>' F"
+    using assms(1) p1 p2
+    by(auto intro!: invar_basicI elim!: forest_invarE invar_basicE)
+
+  show "invar_matching_both_or_none \<M>' F"
+  proof(rule invar_matching_both_or_noneI, goal_cases)
+    case (1 u v)
+    then show ?case 
+    proof(cases "{u, v} \<in> \<M>", goal_cases)
+      case 1
+      then show ?case 
+        using F_invar_here(2) invar_matching_both_or_noneD by blast
+    next
+      case 2
+      hence uv_not_in_forest:"{u, v} \<notin> abstract_forest F"
+        using assms(4) by auto
+      have "{u, v} \<inter> (Vs (abstract_forest F) \<union> vset_to_set (roots F)) = {}"
+      proof(rule ccontr, goal_cases)
+        case 1
+        then obtain x where x: "x = u \<or> x = v" "x \<in> Vs (abstract_forest F) \<union> vset_to_set (roots F)"
+          by auto
+        show False
+        proof(cases "x \<in> vset_to_set (roots F)")
+          case True
+          then show ?thesis 
+            using x(1) "2"(1) p2 edges_are_Vs[of u v \<M>'] edges_are_Vs_2[of u v \<M>']
+            by auto
+        next
+          case False
+          hence x_in_F:"x \<in> Vs (abstract_forest F)" 
+            using x by auto
+          hence "x \<in> Vs \<M>"
+            using False invar_basic_here(16) by auto
+          then obtain ee where "ee \<in> \<M>" "x \<in> ee"
+            by(auto simp add: vs_member)
+          moreover hence "ee = {u, v}" 
+            using"2"(1) assms(3) matching_unique_match[OF assms(2), of x ee "{u, v}"] x(1)
+            by auto
+          ultimately show False 
+            using "2"(2) by auto
+        qed
+      qed
+      thus ?case
+        by simp
+    qed
+  qed
+
+  show "invar_forest_even_and_odd F" "invar_parent_wf F" 
+       "invar_roots F" "invar_odd_is_parent F"
+    using F_invar_here by simp_all
+
+  show "invar_even_to_parent_matching \<M>' F"
+    using F_invar_here assms(3)
+    by(auto intro!: invar_even_to_parent_matchingI 
+             elim!: invar_even_to_parent_matchingE)
+
+  show "invar_odd_to_parent_non_matching \<M>' F"
+  proof(rule invar_odd_to_parent_non_matchingI, goal_cases)
+    case (1 u)
+    then obtain v where v: " parent_lookup (parents F) u = Some v" "{u, v} \<notin> \<M>"
+     using F_invar_here 
+     by(auto elim!: invar_odd_to_parent_non_matchingE)
+   hence "{u, v} \<in> abstract_forest F"
+     by(auto simp add: abstract_forest_def)
+   hence "{u, v} \<notin> \<M>'"
+     using  assms(4) v(2) by auto
+   thus ?case 
+     using v(1) by auto
+  qed
+qed
+
+definition "Dabstract_forest F = {(x, y) | x y. Some x = parent_lookup (parents F) y}"
+
+lemma Dabstract_forest_UD:
+  "UD (Dabstract_forest F) = abstract_forest F"
+  by(force simp add: Dabstract_forest_def abstract_forest_def UD_def)
+
+lemma invar_parent_Dabstract_forest_wf:
+  "invar_parent_wf F \<longleftrightarrow> wf (Dabstract_forest F)"
+  by (auto simp add: invar_parent_wf_def Dabstract_forest_def parent_spec_def)
+
+lemma finite_abstract_Dabstract_forest:
+  "finite (abstract_forest F) \<longleftrightarrow> finite (Dabstract_forest F)"
+  by(auto simp add: Dabstract_forest_UD[symmetric] simp add: finite_UD)
+
+lemma dVs_Vs_Dabstract_abstract_forest:
+  "dVs (Dabstract_forest F) = Vs (abstract_forest F)"
+  using Vs_dVs_UD[of "Dabstract_forest F"] Dabstract_forest_UD[of F] by simp
 
 end
                               

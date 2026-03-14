@@ -281,4 +281,12 @@ proof(induction n)
     using Suc by auto
 qed simp
 
+lemma domIff': "(m a = None) \<longleftrightarrow> (a \<notin> dom m)"
+  by auto
+
+lemma Collect2D: 
+  "(x, y) \<in> { (x, y) . P x y} \<Longrightarrow> P x y"
+  "(x, y) \<in> { (x, y) | x y . P x y} \<Longrightarrow> P x y"
+  by auto
+
 end

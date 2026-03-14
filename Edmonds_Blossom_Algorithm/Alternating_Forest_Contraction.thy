@@ -412,24 +412,6 @@ lemma Dquot_id:  "Dquot_graph id G = G"
 lemma Dquot_quot_UD:"UD (Dquot_graph P G) = quot_graph P (UD G)"
   by(auto simp add: Dquot_graph_def quot_graph_def UD_def)
 
-definition "Dabstract_forest F = {(x, y) | x y. Some x = parent_lookup (parents F) y}"
-
-lemma Dabstract_forest_UD:
-  "UD (Dabstract_forest F) = abstract_forest F"
-  by(force simp add: Dabstract_forest_def abstract_forest_def UD_def)
-
-lemma invar_parent_Dabstract_forest_wf:
-  "invar_parent_wf F \<longleftrightarrow> wf (Dabstract_forest F)"
-  by (auto simp add: invar_parent_wf_def Dabstract_forest_def parent_spec_def)
-
-lemma finite_abstract_Dabstract_forest:
-  "finite (abstract_forest F) \<longleftrightarrow> finite (Dabstract_forest F)"
-  by(auto simp add: Dabstract_forest_UD[symmetric] simp add: finite_UD)
-
-lemma dVs_Vs_Dabstract_abstract_forest:
-  "dVs (Dabstract_forest F) = Vs (abstract_forest F)"
-  using Vs_dVs_UD[of "Dabstract_forest F"] Dabstract_forest_UD[of F] by simp
-
 lemma Dquot_graph_alt_def:
   assumes contr_def: "contr = (\<lambda> v. if v \<in> set p then new_vert else v)"
     and new_vert_where: "new_vert \<notin> dVs G - set p"
@@ -3089,5 +3071,9 @@ next
  qed
 qed
 
+lemmas spec_satisfied =
+  fork_contraction_spec_satisfied.alternating_forest_fork_contraction_spec_axioms
+
 end
+thm forest_contract_manipulation.spec_satisfied
 end

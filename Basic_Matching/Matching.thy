@@ -127,6 +127,11 @@ lemma doubleton_in_matching:
   using assms
   by (fastforce simp: doubleton_eq_iff matching_def2 Vs_def)+
 
+lemma matching_edges_not_eqD:
+  assumes "matching M" "{x1,x2}\<in> M" "{y1,y2}\<in> M" "{x1,x2}\<noteq>{y1,y2}"
+  shows "x1 \<noteq> y1" "x2 \<noteq> y1" "x1 \<noteq> y2" "x2 \<noteq> y2"
+  by (metis assms(1,2,3,4) doubleton_eq_iff doubleton_in_matching)+
+
 lemma degree_matching_in_M:
   assumes "matching M" "v \<in> Vs M"
   shows "degree M v = 1"
@@ -293,6 +298,20 @@ proof(rule matchingI, rule ccontr, goal_cases)
   then show ?case
     using e1'_inter_e2'_empty x1(1) x2(1) by blast
 qed
+
+lemma remove_matching_edges_Vs:
+  assumes "matching M" "M' \<subseteq> M"
+  shows "Vs (M - M') = Vs M - Vs M'"
+  using  assms(1,2)
+  by(intro remove_disjoint_edges_equality)
+    (auto simp add: Vs_def dest: matching_unique_match)
+
+lemma remove_matching_edge_Vs:
+  assumes "matching M" "e \<in> M"
+  shows "Vs (M - {e}) = Vs M - e"
+  using  assms(1,2)
+  by(subst remove_matching_edges_Vs)
+    (auto simp add: Vs_def dest: matching_unique_match)
 
 lemma matching_remove_vertices:
   "matching M \<Longrightarrow> matching (M \<setminus> X)"
@@ -1433,6 +1452,42 @@ next
   qed
   ultimately show ?thesis
     by auto
+qed
+
+text \<open>If we alternatingly pick edges on a distinct path, the collected edges are matchings:\<close>
+
+lemma even_edges_of_distinct_path_are_matching:
+  assumes "distinct p"
+  shows "matching {edges_of_path p ! i | i. Suc i < length p \<and> even i}"
+proof(rule matchingI, goal_cases)
+  case (1 e1 e2)
+      then obtain i j where ij: 
+          "e1 = edges_of_path p ! i" "Suc i < length p" "even i"
+          "e2 = edges_of_path p ! j" "Suc j < length p" "even j" "i \<noteq> j"
+        by blast
+      hence "e1 = {p ! i, p ! Suc i}" "e2 = {p ! j, p ! Suc j}"
+        by (simp add: edges_of_path_index)+
+      then show ?case 
+        using ij(2,3,5-7) assms distinct_indexD[OF assms, of j "Suc i"]
+              distinct_indexD[OF assms, of "Suc j" i]
+      by (auto simp add: nth_append_left nth_eq_iff_index_eq)
+  qed
+
+lemma odd_edges_of_distinct_path_are_matching:
+  assumes "distinct p"
+  shows "matching {edges_of_path p ! i | i. Suc i < length p \<and> odd i}"
+proof(rule matchingI, goal_cases)
+  case (1 e1 e2)
+      then obtain i j where ij: 
+          "e1 = edges_of_path p ! i" "Suc i < length p" "odd i"
+          "e2 = edges_of_path p ! j" "Suc j < length p" "odd j" "i \<noteq> j"
+        by blast
+      hence "e1 = {p ! i, p ! Suc i}" "e2 = {p ! j, p ! Suc j}"
+        by (simp add: edges_of_path_index)+
+      then show ?case 
+        using ij(2,3,5-7) assms distinct_indexD[OF assms, of j "Suc i"]
+              distinct_indexD[OF assms, of "Suc j" i]
+      by (auto simp add: nth_append_left nth_eq_iff_index_eq)
 qed
 
 subsection \<open>Matchings and Optimisation\<close>
