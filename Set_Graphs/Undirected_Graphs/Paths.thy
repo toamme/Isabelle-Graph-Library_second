@@ -1296,6 +1296,14 @@ lemma edges_of_path_snoc_3:
   apply(subst edges_of_path_append_3)
   by auto
 
+lemma edges_of_path_index_append:
+ "length p \<ge> 2 \<Longrightarrow> edges_of_path (x#p) ! Suc i = edges_of_path p ! i"
+  by(cases p rule: list_cases4) auto
+
+lemma edges_of_path_index_append_tl:
+ "length p \<ge> 2 \<Longrightarrow> edges_of_path (x#p) ! Suc (Suc i) = edges_of_path (tl p) ! i"
+  by(cases p rule: list_cases4) auto
+
 lemma walk_betw_imp_epath:
   assumes "dblton_graph G" 
   shows "walk_betw G u p v \<Longrightarrow> epath G u (edges_of_path p) v" 

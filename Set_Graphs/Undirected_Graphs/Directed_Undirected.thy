@@ -25,6 +25,9 @@ and in_UD_symE: "\<lbrakk>{u, v} \<in> UD E; symmetric_digraph E; ((u, v) \<in> 
 and in_UD_symD: "\<lbrakk>{u, v} \<in> UD E; symmetric_digraph E\<rbrakk> \<Longrightarrow> (u, v) \<in> E"
   by(auto simp add: UD_def doubleton_eq_iff symmetric_digraph_def)
 
+lemma UD_of_swapped_pairs: "UD {(a, b), (b, a)} = {{a, b}}"
+  by(auto simp add: UD_def)
+
 lemma symmetric_digraph_walk_betw_vwalk_bet:
   assumes "symmetric_digraph E" "walk_betw (UD E) u p v"
   shows "vwalk_bet E u p v"

@@ -34,6 +34,8 @@ fun augment_impl
    (let M' = buddy_upd v u (buddy_upd u v M)
     in augment_impl M' vs)"
 
+definition "empty_matching = buddy_empty"
+
 lemmas [code] = augment_impl.simps
 definition "\<M> M = upairs_of_map (buddy_lookup M)"
 definition "\<M>_dir M = dpairs_of_map (buddy_lookup M)"
@@ -94,6 +96,10 @@ and invar_matchingD:
   "invar_matching G M \<Longrightarrow> graph_matching G (\<M> M)"
   "invar_matching G M \<Longrightarrow> finite (\<M> M)"
   by(auto simp add: invar_matching_def)
+
+lemma extend_graph: 
+ "\<lbrakk>invar_matching G M; G \<subseteq> G'\<rbrakk> \<Longrightarrow> invar_matching G' M"
+  by(auto elim!: invar_matchingE intro!: invar_matchingI)
 
 end
 
@@ -401,6 +407,11 @@ lemma empty_matching_props:
   "\<M> buddy_empty = {}"
    by(auto intro!: invar_matchingI symmetric_buddiesI no_self_loop_buddyI 
          simp add: buddies \<M>_def')
+
+lemma empty_matching_props':
+  "invar_matching G empty_matching"
+  "\<M> empty_matching = {}"
+  using empty_matching_props by(auto simp add: empty_matching_def)
 
 end
 end

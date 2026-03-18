@@ -132,6 +132,9 @@ lemma matching_edges_not_eqD:
   shows "x1 \<noteq> y1" "x2 \<noteq> y1" "x1 \<noteq> y2" "x2 \<noteq> y2"
   by (metis assms(1,2,3,4) doubleton_eq_iff doubleton_in_matching)+
 
+lemma matching_singleton: "matching {e}"
+  by(auto intro: matchingI)
+
 lemma degree_matching_in_M:
   assumes "matching M" "v \<in> Vs M"
   shows "degree M v = 1"
@@ -727,6 +730,20 @@ qed
 
 abbreviation "alt_path M p \<equiv> alt_list (\<lambda>e. e \<notin> M) (\<lambda>e. e \<in> M) (edges_of_path p)"
 abbreviation "rev_alt_path M p \<equiv> alt_list (\<lambda>e. e \<in> M) (\<lambda>e. e \<notin> M) (edges_of_path p)"
+
+(*TODO MOVE*)
+lemma alt_list_tl: "alt_list P Q xs \<Longrightarrow> alt_list Q P (tl xs)"
+  by(cases rule: alt_list.cases[of P Q xs]) (auto simp add: alt_list.intros)
+
+lemma alt_path_tl_rev_alt_path:
+ "alt_path M p \<Longrightarrow> rev_alt_path M (tl p)"
+  by(cases p rule: list_cases4)
+    (auto intro!: alt_list_tl alt_list.intros simp add: alt_list_step)
+
+lemma rev_alt_path_tl_alt_path:
+ "rev_alt_path M p \<Longrightarrow> alt_path M (tl p)"
+  by(cases p rule: list_cases4)
+    (auto intro!: alt_list_tl alt_list.intros simp add: alt_list_step)
 
 lemma matching_augmenting_path_rev:
   assumes "matching_augmenting_path M p"
@@ -1488,6 +1505,199 @@ proof(rule matchingI, goal_cases)
         using ij(2,3,5-7) assms distinct_indexD[OF assms, of j "Suc i"]
               distinct_indexD[OF assms, of "Suc j" i]
       by (auto simp add: nth_append_left nth_eq_iff_index_eq)
+  qed
+
+lemma in_rev_alt_path_part_of_matching:
+  assumes "rev_alt_path M p" "x \<in> set p" "even (length p)" "length p > 1"
+  obtains e where "e \<in> set (edges_of_path p)" "x \<in> e" "e \<in> M"
+proof(goal_cases)
+  case 1
+  note one = this
+  obtain i where i: "i < length p" "p ! i = x"
+    using assms(2) by(auto simp add: in_set_conv_nth)
+  have i_cases: "\<lbrakk>i = 0 \<Longrightarrow> thesis; \<lbrakk>i > 0; Suc i < length p\<rbrakk> 
+                  \<Longrightarrow> thesis; Suc i = length p \<Longrightarrow> thesis\<rbrakk> \<Longrightarrow> thesis" 
+    using Suc_lessI i(1) by blast
+  show thesis
+  proof(cases rule: i_cases)
+    case 1
+    hence "edges_of_path p ! 0 = {x, p ! 1}" "{x, p ! 1} \<in> set (edges_of_path p)" 
+          "0 < length (edges_of_path p)"
+      using assms(4) edges_of_path_index i(2) 
+      by (auto intro!: exI[of _ 0] simp add: in_set_conv_nth edges_of_path_length)
+    moreover hence "{x, p ! 1} \<in> M" 
+      using assms(1) by(auto dest: alternating_list_even_index)
+    ultimately show ?case 
+      by(auto intro!: one )
+  next
+    case 2
+    hence a1: "edges_of_path p ! i = {x, p ! Suc i}" "{x, p ! Suc i} \<in> set (edges_of_path p)" 
+          "i < length (edges_of_path p)"
+      using assms(4) edges_of_path_index i(2) 
+      by (auto intro!: exI[of _ i] simp add: in_set_conv_nth edges_of_path_length)
+    have a2: "edges_of_path p ! (i -1) = {p ! (i -1) , x}" "{p ! (i -1) , x} \<in> set (edges_of_path p)" 
+          "i - 1< length (edges_of_path p)"
+      using 2 assms(4) i(2) 
+      by (auto intro!: exI[of _ "i - 1"] 
+             simp add: in_set_conv_nth edges_of_path_length edges_of_path_index)
+    have "{p ! (i -1) , x} \<in> M \<or> {x, p ! Suc i} \<in> M"
+      using a1 a2 alternating_list_even_index[OF assms(1), of i] 
+            alternating_list_even_index[OF assms(1), of "i-1"]
+      by (cases "even i") auto
+    then show ?case 
+      using a1 a2 by(auto intro: one)
+  next
+    case 3
+    hence " {p ! (i -1) , x} = edges_of_path p ! (i -1)" "{p ! (i -1) , x} \<in> set (edges_of_path p)" 
+          "i - 1< length (edges_of_path p)"
+      using 3 assms(4) i(2) 
+      by (auto intro!: exI[of _ "i - 1"] 
+             simp add: in_set_conv_nth edges_of_path_length edges_of_path_index)
+    moreover hence "{p ! (i -1) , x} \<in> M"
+      using  "3" assms(3)
+      by(auto intro!: alternating_list_even_index[OF assms(1), of "i- Suc 0"])
+    ultimately show ?case 
+      using one[of "{p ! (i - 1), x}"] by auto
+  qed
+qed
+
+lemma matched_verts_in_rev_alt_path_path_edges:
+  assumes "rev_alt_path M p" "even (length p)" "matching M"
+  shows "{e | e. e \<in> M \<and> e \<inter> set p \<noteq> {}} = 
+         {edges_of_path p ! i | i. Suc i < length p \<and> even i}"
+proof(cases "length p = 0")
+  case False
+  show ?thesis 
+  proof(rule, all \<open>rule\<close>, goal_cases)
+    case (1 e)
+    then obtain i where i: "i < length p" "p ! i \<in> e" "e \<in> M"
+      by auto (metis in_set_conv_nth)
+    hence pi_in_p:"p ! i \<in> set p" 
+      by simp
+    have "1 < length p" 
+      using False assms(2) by presburger
+    then obtain e' where e': "e' \<in> set (edges_of_path p)" "p ! i \<in> e'"  "e' \<in> M"
+      using in_rev_alt_path_part_of_matching[OF assms(1) pi_in_p assms(2)] by blast
+    hence e'_is_e:"e' = e" 
+      using  i(2,3) matching_unique_match[OF assms(3)] by auto
+    then obtain j where  "Suc j < length p" "edges_of_path p ! j = e" 
+      using e' False  Suc_less_eq[of _ "length p - Suc 0"]
+      by (auto simp add: in_set_conv_nth edges_of_path_length)
+    moreover hence "even j" 
+      using alternating_list_odd_index[OF assms(1), of j] e' False Suc_less_eq[of _ "length p - Suc 0"]
+      by(auto simp add: edges_of_path_length e'_is_e) 
+    ultimately show ?case 
+      by auto
+  next
+    case (2 e)
+    then obtain i where "e = edges_of_path p ! i"  "Suc i < length p" "even i" 
+      by auto
+    moreover hence "i < length (edges_of_path p)"
+      by (simp add: edges_of_path_length)
+    ultimately show ?case 
+      by (auto dest: alternating_list_even_index[OF assms(1)] simp add: edges_of_path_index)
+  qed
+qed auto
+
+lemma beginning_of_alt_path_matched_partner_not_in_path: 
+  assumes "matching M" "{v, hd p} \<in> M" "alt_path M p" "odd (length p)"
+          "dblton_graph M" "distinct p"
+    shows "v \<notin> set p"
+proof-
+have rev_alt_path_here:"rev_alt_path M (tl p)"
+  by (simp add: alt_path_tl_rev_alt_path assms(3))
+  have v_not_hp_p:"v \<noteq> hd p"
+    using assms(2,5) by auto
+  show ?thesis
+  proof(rule ccontr, goal_cases)
+    case 1
+    hence len3:"length p \<ge> 3" 
+      using assms(4) v_not_hp_p Suc_leI odd_pos 
+        by(cases p rule: list_cases3)
+          (auto simp add: less_eq_Suc_le)
+      hence "length p > 1" by simp
+       have "v \<in> set (tl p)" 
+        using  "1"  v_not_hp_p by(cases p) auto
+      moreover have "even (length (tl p))" "length p > 1"
+        using assms(4) len3 by(all \<open>cases p\<close>) auto
+      ultimately obtain e where e: "e \<in> set (edges_of_path (tl p))" "v \<in> e" "e \<in> M"
+        using len3 by(elim in_rev_alt_path_part_of_matching[OF rev_alt_path_here, of v]) auto
+      moreover hence "hd p  \<in> e" 
+        using assms(2) matching_unique_match[OF assms(1)] by blast
+      ultimately have "hd p \<in> set (tl p)"
+        using v_in_edge_in_path_gen by force
+      thus False 
+        using assms(4,6) by(cases p) auto
+    qed
+  qed
+
+lemma odd_len_alt_path_matched_vertex_other_vertex:
+  assumes "matching M" "{v, hd p} \<in> M" "alt_path M p" "odd (length p)"
+          "dblton_graph M" "distinct p" "v \<notin> {ua, va}" "{ua, va} \<in> M"  "ua \<in> set p"
+    shows "va \<in> set p"
+proof-
+have rev_alt_path_here:"rev_alt_path M (tl p)"
+  by (simp add: alt_path_tl_rev_alt_path assms(3))
+  have v_not_hp_p:"v \<noteq> hd p"
+    using assms(2,5) by auto
+  have "ua \<in> set (tl p)" 
+    using assms(2,4,7,8,9)  doubleton_eq_iff[of ua v v ua] doubleton_in_matching(1)[OF assms(1), of ua v va]
+    by(cases p) auto
+  moreover hence "even (length (tl p))" "1 < length (tl p)" 
+    using assms(4) by(all \<open>cases p rule: list_cases4\<close>) auto
+  ultimately obtain e where "e \<in> set (edges_of_path (tl p))" "ua \<in> e" "e \<in> M"
+    using  in_rev_alt_path_part_of_matching[OF rev_alt_path_here, of ua] by auto
+  moreover hence "e = {ua, va}"
+    using assms(1,8) matchingD by auto
+  ultimately show ?thesis
+    using edge_not_in_edges_in_path[of ua "tl p" va] by(cases p) auto
+qed
+
+lemma odd_len_alt_path_matching_edge_both_verts:
+  assumes "matching M" "{v, hd p} \<in> M" "alt_path M p" "odd (length p)"
+          "dblton_graph M" "distinct p" "v \<notin> {ua, va}" "{ua, va} \<in> M" 
+    shows "ua \<in> set p \<longleftrightarrow> va \<in> set p"
+  using odd_len_alt_path_matched_vertex_other_vertex[OF assms(1-6)] assms(7,8)
+  by (auto simp add: insert_commute)
+
+lemma alt_path_intersected_with_matching:
+  assumes "matching M" "alt_path M p"
+  shows   "M \<inter> set (edges_of_path p) = {edges_of_path p ! i | i. Suc i < length p \<and> odd i}"
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 e)
+  then obtain i where "Suc i < length p" "edges_of_path p ! i = e" 
+    using gt_zero[of "Suc 0" "length p"] Suc_mono[of _ "length p - Suc 0"]
+    by(auto simp add:   in_set_conv_nth edges_of_path_length)
+  moreover hence "odd i" 
+    using alternating_list_even_index[OF assms(2), of i] 1
+    by(fastforce simp add: edges_of_path_length) 
+  ultimately show ?case
+    by auto
+next
+  case (2 e)
+  then show ?case 
+    using  alternating_list_odd_index[OF assms(2)]
+    by(auto simp add: edges_of_path_length) 
+qed
+
+lemma rev_alt_path_intersected_with_matching:
+  assumes "matching M" "rev_alt_path M p"
+  shows   "M \<inter> set (edges_of_path p) = {edges_of_path p ! i | i. Suc i < length p \<and> even i}"
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 e)
+  then obtain i where "Suc i < length p" "edges_of_path p ! i = e" 
+    using gt_zero[of "Suc 0" "length p"] Suc_mono[of _ "length p - Suc 0"]
+    by(auto simp add:   in_set_conv_nth edges_of_path_length)
+  moreover hence "even i"
+    using alternating_list_odd_index[OF assms(2), of i] 1
+    by(fastforce simp add: edges_of_path_length) 
+  ultimately show ?case
+    by auto
+next
+  case (2 e)
+  then show ?case 
+    by (auto intro!: alternating_list_even_index[OF assms(2)] 
+           simp add: edges_of_path_length)
 qed
 
 subsection \<open>Matchings and Optimisation\<close>

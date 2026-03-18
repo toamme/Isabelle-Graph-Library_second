@@ -3438,6 +3438,138 @@ proof(rule ccontr)
     by (metis UnionI assms(3) insertI1 insert_commute insert_subset)
 qed
 
+lemma alt_path_matching_quot:
+  assumes "matching M" "{v, hd p} \<in> M" "alt_path M p" "odd (length p)"
+          "dblton_graph M" "distinct p" "new_vert \<notin> Vs M -  set p"
+       and contr_def: "contr = (\<lambda> x. if x \<in> set p then new_vert else x)"
+     shows "quot_graph contr M - {{new_vert}} = 
+           M - set (edges_of_path (v#p)) \<union> {{v, new_vert}}"
+proof-
+have rev_alt_path_here:"rev_alt_path M (tl p)"
+  by (simp add: alt_path_tl_rev_alt_path assms(3))
+  have v_not_hp_p:"v \<noteq> hd p"
+    using assms(2,5) by auto
+  have hd_p_in_p:"hd p \<in> set p" 
+    using assms(4) by(cases p) auto
+  have v_not_in_p: "v \<notin> set p"
+    using assms by(intro beginning_of_alt_path_matched_partner_not_in_path) auto
+    show ?thesis
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 e)
+  then obtain e' where e':"e' \<in> M" "e = contr ` e'" "e \<noteq> {new_vert}"
+    by(auto simp add: quot_graph_def)
+  obtain ua va where ua_va:"e' = {ua, va}" 
+    using assms(5) e'(1) by auto
+  have rev_alt_path_here:"rev_alt_path M (tl p)"
+    by (simp add: alt_path_tl_rev_alt_path assms(3))
+  then show ?case 
+  proof(cases rule: matching_edge_rev_alt_path_cases[OF rev_alt_path_here e'(1) assms(5,1)])
+    case (1 u' v' i)
+    then show ?thesis 
+      using e' by auto (auto simp add: contr_def nth_tl)
+  next
+    case (2 u v)
+    then show ?thesis 
+      by (simp add: assms(4))
+  next
+    case 3
+    show ?thesis 
+    proof(cases "v \<in> e'")
+      case True
+      hence "e' = {hd p, v}" 
+        using e'(1) matchingD[OF assms(1,2)] by force
+      then show ?thesis 
+        using e' hd_p_in_p by(auto simp add: contr_def)
+    next
+      case False
+      hence "ua \<in> set p \<longleftrightarrow> va \<in> set p" 
+        using assms e'(1)  
+        by(intro odd_len_alt_path_matching_edge_both_verts) (auto simp add: ua_va) 
+      hence "ua \<notin> set p" "va \<notin> set p"
+        using e'(2,3)  by (force simp add: contr_def ua_va)+
+      hence "contr ` e' = e'"
+        by(auto simp add: ua_va contr_def)
+      moreover have "e' \<notin> set (edges_of_path (v # p))"
+        using False \<open>ua \<notin> set p\<close> ua_va v_in_edge_in_path by fastforce
+     ultimately show ?thesis
+       by (simp add: e'(1,2))
+    qed 
+  qed
+next
+  case (2 e)
+  then show ?case 
+  proof(rule UnE, goal_cases)
+    case 1
+    hence eM: "e \<in> M" "e \<notin> set (edges_of_path (v # p))"
+      by auto
+    then obtain ua va where uava: "e = {ua, va}"
+      using assms(5) by auto
+    show ?case 
+  proof(cases rule: matching_edge_rev_alt_path_cases[OF rev_alt_path_here eM(1) assms(5,1)])
+    case (1 u' v' i)
+    hence "e \<in> set (edges_of_path (v # p))"
+      unfolding in_set_conv_nth
+      by(intro exI[of _ "Suc (Suc i)"] )
+        (auto simp add: edges_of_path_index_append_tl edges_of_path_length )
+    then show ?thesis 
+      using eM(2) by simp
+  next
+    case (2 u' v')
+    then show ?thesis 
+      by (simp add: assms(4))
+  next
+    case 3
+    have  "e \<noteq> {hd p, v}"
+      using eM(2) assms(4) by(cases p rule: list_cases4) auto
+    hence "ua \<in> set p \<longleftrightarrow> va \<in> set p" 
+      using doubleton_in_matching(1)[OF assms(1)] assms(2) eM(1)
+        by(intro odd_len_alt_path_matching_edge_both_verts[OF assms(1) _ assms(3,4,5,6), of v]) 
+          (auto simp add: uava insert_commute)
+      hence "ua \<notin> set p" "va \<notin> set p" 
+        using eM 3 matching_partner_eqI[OF assms(1)] assms(2)
+        by(all \<open>cases p\<close>) (auto simp add: contr_def uava) 
+      hence "contr ` e = e" "e \<noteq> {new_vert}"
+        using assms(7) eM(1) by(auto simp add: uava contr_def)
+      thus ?thesis
+        by(auto intro!: bexI[of _ e] simp add: quot_graph_def eM(1))
+    qed
+  next 
+    case 2
+    hence "contr ` {v, hd p} = e" "e \<noteq> {new_vert}"
+      using hd_p_in_p  v_not_in_p assms(2,7) by(auto simp add: contr_def)
+    thus ?case
+      by(auto intro!: bexI[of _ "{v, hd p}"] simp add: quot_graph_def assms(2))
+  qed
+qed
+qed
+
+lemma set_minus_absorb: "A - B = A - (A \<inter> B)" by auto
+
+lemma alt_path_contract_matching: 
+  assumes "graph_matching G M" "{v, hd p} \<in> M" "alt_path M p" "odd (length p)"
+          "dblton_graph M" "distinct p" "new_vert \<notin> Vs M -  set p"
+and contr_def: "contr = (\<lambda> x. if x \<in> set p then new_vert else x)"
+shows "graph_matching (quot_graph contr G - {{new_vert}})
+                      (quot_graph contr M - {{new_vert}})"
+proof
+  have matchingM:"matching M"
+    using assms(1) by auto
+  have rev_alt_hre:"rev_alt_path M (v # p)" 
+    using assms(2,3,4) by(cases p) (auto simp add: alt_list_step)
+  note M_inter_p = rev_alt_path_intersected_with_matching[OF matchingM rev_alt_hre]
+  show "matching (quot_graph contr M - {{new_vert}})"
+    unfolding alt_path_matching_quot[OF matchingM assms(2-)]
+  proof(rule matching_vertex_disj_union, all \<open>(subst set_minus_absorb)?\<close>, goal_cases)
+    case 3
+    then show ?case
+      unfolding M_inter_p
+      using assms(4,7)  M_inter_p
+      by (subst remove_matching_edges_Vs[OF matchingM])(auto simp add: verts_of_even_eges[of "v#p", simplified] Vs_of_edge)
+  qed (auto simp add: matching_singleton matchingM matching_delete)
+  show "quot_graph contr M - {{new_vert}} \<subseteq> quot_graph contr G - {{new_vert}}"
+    by(intro Diff_mono quot_graph_subset)(auto simp add: assms(1))
+qed
+
 context quot
 begin
 
