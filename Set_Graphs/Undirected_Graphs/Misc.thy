@@ -289,4 +289,32 @@ lemma Collect2D:
   "(x, y) \<in> { (x, y) | x y . P x y} \<Longrightarrow> P x y"
   by auto
 
+lemma card_image_subst: "\<lbrakk>inj_on f A; B = f ` A\<rbrakk> \<Longrightarrow> card A = card B"
+  using card_image by force
+
+lemma bij_betwE:
+  "\<lbrakk>bij_betw f A B; \<lbrakk>inj_on f A; f ` A = B\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by(auto simp add: bij_betw_def)
+
+lemma inj_onE: 
+  "\<lbrakk>inj_on f A; (\<And> x y. \<lbrakk>x\<in>A; y\<in>A; f x = f y\<rbrakk> \<Longrightarrow> x = y)\<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by(auto simp add: inj_on_def)
+
+lemma nat_geq_3I: "\<lbrakk>(n::nat) = 0 \<Longrightarrow> False; n = 1 \<Longrightarrow> False; n = 2 \<Longrightarrow> False\<rbrakk> \<Longrightarrow> n \<ge> 3"
+  by fastforce
+
+lemma sum_of_two_things: "x \<noteq> y \<Longrightarrow> sum f {x, y} = f x + f y"
+  by simp
+
+lemma sum_nat_index_shift:
+  "sum f {(a::nat)..<a + b} = sum (\<lambda> i. f (i + a)) {0..<b}"
+  by(auto simp add: comm_monoid_add_class.sum.reindex[of "\<lambda> i. i + a" "{0..<b}", 
+             simplified, symmetric] add.commute)
+
+lemma sum_nat_some_index_shift:
+  "sum f ({(a::nat)..<a + b} \<inter> A) = sum (\<lambda> i. f (i + a)) ({0..<b} \<inter> {x | x. x + a \<in> A})"
+  by(subst comm_monoid_add_class.sum.reindex[of "\<lambda> i. i + a" _ f, simplified, 
+              symmetric])
+    (auto intro!: sum.cong rev_image_eqI[of _ "{0..<b} \<inter> {uu. uu + a \<in> A}" _ "\<lambda>x. x + a", of "x - a" x for x])
+
 end

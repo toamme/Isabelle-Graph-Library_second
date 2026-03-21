@@ -394,6 +394,14 @@ lemma Delta_finite:
   "finite G \<Longrightarrow> finite (Delta G X)"
   by(auto intro!: finite_subset[of  _ G] simp add: Delta_def)
 
+lemma Delta_inverse_set_mp:
+  "\<lbrakk>G \<subseteq> G'; e \<in> Delta G' X; e \<in> G\<rbrakk> \<Longrightarrow> e \<in> Delta G X"
+  by(auto simp add: Delta_def)
+
+lemma Delta_set_mp:
+  "\<lbrakk>G \<subseteq> G'; e \<in> Delta G X\<rbrakk> \<Longrightarrow> e \<in> Delta G' X"
+  by(auto simp add: Delta_def)
+
 subsection \<open>Removing Vertices\<close>
 
 definition remove_vertices_graph :: "'a graph \<Rightarrow> 'a set \<Rightarrow> 'a graph" (infixl "\<setminus>" 60) where

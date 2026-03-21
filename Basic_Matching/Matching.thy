@@ -487,6 +487,76 @@ proof -
   qed
 qed
 
+lemma unmatcheds_in_set_delta_card:
+  assumes "matching M" "X \<subseteq> Vs M" "finite (Vs M)" "dblton_graph M"
+  shows "card (X - Vs {uu \<in> M. uu \<subseteq> X}) = card (Delta M X)"
+proof(rule  iffD1[OF bij_betw_iff_card], goal_cases)
+  case 1
+  then show ?case 
+    using assms(2)
+    by(intro rev_finite_subset[OF assms(3)]) auto
+next
+  case 2
+  then show ?case 
+    by (simp add: Delta_finite assms(3) finite_Vs_then_finite)
+next
+  case 3
+  define f where "f =(\<lambda> x. SOME e. e \<in> M \<and> x \<in> e)"
+  show ?case
+  proof(rule exI[of _ f], unfold bij_betw_def, rule, goal_cases)
+    case 1
+    then show ?case 
+    proof(rule inj_onI, goal_cases)
+      case (1 x y)
+      have hlp:"\<exists> e. e \<in> M \<and> x \<in> e"
+        using 1(1) assms(2) vs_member[of x M] subsetD[of X "Vs M" x]
+        by force
+      have fx_prop: "f x \<in> M" "x \<in> f x"
+        using someI_ex[OF hlp] by(auto simp add: f_def)
+      have hlp:"\<exists> e. e \<in> M \<and> y \<in> e"
+        by (meson "1"(2) Diff_iff assms(2) subsetD vs_member)
+      have fy_prop:"f y \<in> M" "y \<in> f y"
+        using someI_ex[OF hlp] by(auto simp add: f_def)
+      obtain a b where ab: "f x = {a, b}"
+        using assms(4) fx_prop(1) by auto
+      hence "a \<in> X \<and> b \<notin> X \<or> a \<notin> X \<and> b \<in> X" 
+        using 1(1,2) fx_prop(1,2) by (auto simp add: vs_member)
+      then show ?case 
+        using fy_prop fx_prop  "1"(1,2,3)by(auto simp add: ab)
+    qed
+  next
+    case 2
+    then show ?case 
+    proof(rule, all \<open>rule\<close>, goal_cases)
+      case (1 e)
+      then obtain x where x: "x \<in> X" "x \<notin> Vs {uu \<in> M. uu \<subseteq> X}" "e = f x" by auto
+      hence ex: "\<exists> e. e \<in> M \<and> x \<in> e" 
+        using assms(2) in_mono[of X "Vs M" x] vs_transport[of x M "{R \<in> M. R \<subseteq> X}"] 
+        by auto
+      have "e \<in> M" "x \<in> e" 
+        using  x(3)  someI_ex[OF ex] by(auto simp add: f_def)
+      moreover obtain a b where "e = {a, b}"
+        using assms(4) calculation(1) by auto
+      ultimately show ?case 
+         using x(1,2) by(auto simp add: Delta_def insert_commute)
+    next
+      case (2 e)
+      then obtain x y where xy: "x \<in> X" "y \<notin> X" "{x, y} \<in> M" "e = {x, y}"
+        by (auto simp add: Delta_def)
+      hence "x \<in> X - Vs {uu \<in> M. uu \<subseteq> X}" 
+        using assms(1) by (auto simp add: vs_member dest: matching_unique_match)
+      moreover have "f x \<in> M" "x \<in> f x"
+        using someI[of "\<lambda> e. e \<in> M \<and> x \<in> e" "{x, y}"] xy
+        by(auto simp add: f_def)
+      moreover hence "f x = {x, y}" 
+        using assms(1) xy(3) disjoint_insert(1)[of "f x" x "{y}"] matchingD[of M "f x" "{x, y}"]
+        by auto
+      ultimately show ?case
+        using xy by auto
+    qed
+  qed
+qed
+
 subsection \<open>Augmenting and Alternating Paths\<close>
 
 definition matching_augmenting_path where
@@ -2215,6 +2285,71 @@ lemma perfect_matching_if_projected_to_matched_verts:
   shows "perfect_matching (graph_inter_Vs G (Vs M)) M"
   using assms 
   by(fastforce intro!: perfect_matchingI simp add: graph_inter_Vs_def Vs_def)
+
+lemma perfect_maching_card_parity_delta:
+  assumes "X \<subseteq> Vs G" "graph_invar G" "perfect_matching G M"  "finite (Vs G)"
+  shows "(card (Delta M X)) mod 2 = card X mod 2"
+proof -
+  have X_in_M: "X \<subseteq> Vs M"
+    using assms(1) perfect_matchingD(3)[OF assms(3)] 
+    by simp
+  have finiteX: "finite X"
+    using assms(1,4) rev_finite_subset by auto
+  have matching':"matching {e | e. e \<in> M \<and> e \<subseteq> X}"
+    using assms(3) 
+    by (auto intro:matching_subgraph[of M] elim: perfect_matchingE)
+  have degree_one: "\<And> v. v \<in> X \<Longrightarrow> degree M v = 1"
+    using assms(1,3) perfect_matching_member[of G M] degree_matching_in_M[of M]
+    by auto
+  hence sum_deg_is_card: "(\<Sum>v\<in>X. degree M v) = card X" 
+    by (auto simp add:  of_nat_eq_enat)
+  moreover have "(\<Sum>v\<in>X. degree M v) = sum (degree M) (X - Vs {e | e. e \<in> M \<and> e \<subseteq> X}) +
+           sum (degree M) (Vs {e | e. e \<in> M \<and> e \<subseteq> X})"
+    by(rule comm_monoid_add_class.sum.subset_diff)
+      (auto simp add: vs_member finiteX)
+  moreover have  "sum (degree M) (Vs {e | e. e \<in> M \<and> e \<subseteq> X}) 
+                 = sum (degree {e | e. e \<in> M \<and> e \<subseteq> X}) (Vs {e | e. e \<in> M \<and> e \<subseteq> X}) "
+    using assms(3)  matching_unique_match[of M]
+    by(intro comm_monoid_add_class.sum.cong[OF refl])
+      (auto intro!: trans[OF unique_edge_degree_one[where G = M] 
+                  unique_edge_degree_one[where G = "{uu \<in> M. uu \<subseteq> X}", symmetric]] 
+       simp add: vs_member dest!: perfect_matchingD(2))
+  moreover have "sum (degree {e | e. e \<in> M \<and> e \<subseteq> X}) (Vs {e | e. e \<in> M \<and> e \<subseteq> X}) = 
+     2 * card {e | e. e \<in> M \<and> e \<subseteq> X}"
+    using assms(3) 
+    by(subst bigraph_handshaking_lemma)
+      (auto intro!: graph_invar_subset[OF assms(2)] dest: perfect_matching_subgraphD)
+  moreover have "sum (degree M) (X - Vs {e | e. e \<in> M \<and> e \<subseteq> X}) = 
+                 card (Delta M X)"
+  proof-
+    have "card (X - Vs {uu \<in> M. uu \<subseteq> X}) = card (Delta M X)"
+    using assms(2,3,4) X_in_M
+    by(subst unmatcheds_in_set_delta_card)
+      (auto intro!: dblton_graph_subset[of G] elim!: perfect_matchingE)
+  thus ?thesis
+    by(auto simp add: degree_one of_nat_eq_enat)
+qed
+  ultimately show ?thesis
+    using assms(4) by auto presburger
+qed
+
+corollary perfect_maching_odd_set_odd_delta:
+  assumes "X \<subseteq> Vs G" "graph_invar G" "perfect_matching G M" "finite (Vs G)" "odd (card X)"
+  shows "odd (card (Delta M X))"
+  using perfect_maching_card_parity_delta[OF assms(1-4)] assms(5) 
+  by auto
+
+corollary perfect_maching_even_set_even_delta:
+  assumes "X \<subseteq> Vs G" "graph_invar G" "perfect_matching G M" "finite (Vs G)" "even (card X)"
+  shows "even (card (Delta M X))"
+  using perfect_maching_card_parity_delta[OF assms(1-4)] assms(5) 
+  by auto
+
+corollary perfect_maching_odd_set_delta_geq_1:
+  assumes "X \<subseteq> Vs G" "graph_invar G" "perfect_matching G M" "finite (Vs G)" "odd (card X)"
+  shows "card (Delta M X) \<ge> 1"
+  using perfect_maching_odd_set_odd_delta[OF assms] 
+  by presburger
 
 subsubsection \<open>Weighted Matchings\<close>
 
