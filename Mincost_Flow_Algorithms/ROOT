@@ -4,6 +4,7 @@ session "Mincost_Flow_Algorithms" = "HOL-Library" +
 sessions
   Undirected_Set_Graphs
   Flow_Theory
+  Laminar_Family
 
 theories
   Path_Aug_Opt
@@ -16,7 +17,6 @@ theories
   Orlins
   Maintain_Forest_Time
   Send_Flow_Time
-  Laminar_Family
   Orlins_Time
   
 

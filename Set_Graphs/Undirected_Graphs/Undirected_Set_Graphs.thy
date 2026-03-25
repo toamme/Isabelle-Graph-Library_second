@@ -763,4 +763,21 @@ lemma bigraph_handshaking_lemma:
   by(subst general_handshaking_lemma)
     (auto simp add: doublton_graph_edge_card_sums)
 
+lemma lower_bound_for_number_of_edges:
+  assumes "graph_invar E"
+  shows "2* card E \<ge> card (Vs E)"
+  unfolding enat_ord_code(1)[symmetric]
+            bigraph_handshaking_lemma[OF assms, symmetric]
+  unfolding card_eq_sum
+proof(subst enat_sum_distr[symmetric], goal_cases)
+  case 1
+  then show ?case 
+    using assms by simp
+next
+  case 2
+  then show ?case 
+    unfolding enat_1
+    by(rule ordered_comm_monoid_add_class.sum_mono degree_Vs)+
+qed
+
 end

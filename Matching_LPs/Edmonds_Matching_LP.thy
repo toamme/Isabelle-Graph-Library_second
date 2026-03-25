@@ -15,20 +15,20 @@ and  in_odd_subsetsD: "Y \<in> \<Omega> X \<Longrightarrow> Y \<subseteq> X"
 lemma odd_subsets_finite: "finite X \<Longrightarrow> finite (\<Omega> X)"
   by(auto simp add: odd_subsets_def)
 
-definition "omega_eps E e = {U | U. U \<in> \<Omega> (Vs E) \<and> e \<in> Delta E U}"
+definition "end_sets E e = {U | U. U \<in> \<Omega> (Vs E) \<and> e \<in> Delta E U}"
 
-lemma in_omega_epsE:
- "\<lbrakk>U \<in> omega_eps E e; \<lbrakk>U \<in> \<Omega> (Vs E); e \<in> Delta E U\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-and in_omega_epsI:
- "\<lbrakk>U \<in> \<Omega> (Vs E); e \<in> Delta E U\<rbrakk> \<Longrightarrow> U \<in> omega_eps E e"
-and in_omega_epsD:
- "U \<in> omega_eps E e \<Longrightarrow> U \<in> \<Omega> (Vs E)"
- "U \<in> omega_eps E e \<Longrightarrow> e \<in> Delta E U"
-  by(auto simp add: omega_eps_def)
+lemma in_end_setsE:
+ "\<lbrakk>U \<in> end_sets E e; \<lbrakk>U \<in> \<Omega> (Vs E); e \<in> Delta E U\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+and in_end_setsI:
+ "\<lbrakk>U \<in> \<Omega> (Vs E); e \<in> Delta E U\<rbrakk> \<Longrightarrow> U \<in> end_sets E e"
+and in_end_setsD:
+ "U \<in> end_sets E e \<Longrightarrow> U \<in> \<Omega> (Vs E)"
+ "U \<in> end_sets E e \<Longrightarrow> e \<in> Delta E U"
+  by(auto simp add: end_sets_def)
 
-lemma finite_omega_eps:
- "finite (Vs E) \<Longrightarrow> finite (omega_eps E e)"
-  by(auto simp add: omega_eps_def Delta_def odd_subsets_finite)
+lemma finite_end_sets:
+ "finite (Vs E) \<Longrightarrow> finite (end_sets E e)"
+  by(auto simp add: end_sets_def Delta_def odd_subsets_finite)
 
 definition "odd_subsets_strict X = {Y | Y. Y \<subseteq> X \<and> odd (card Y) \<and> card Y \<ge> 3}"
 
@@ -57,58 +57,58 @@ lemma odd_subsets_odd_subsets_strict_sum:
            elim!: in_odd_subsets_strictE 
         simp add: odd_subsets_strict_finite sum_inner_function_to_image[OF inj_singleton])
 
-definition "omega_eps_strict E e = {U | U. U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E) \<and> e \<in> Delta E U}"
+definition "end_sets_strict E e = {U | U. U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E) \<and> e \<in> Delta E U}"
 
-lemma in_omega_eps_strictE:
- "\<lbrakk>U \<in> omega_eps_strict E e; \<lbrakk>U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E); e \<in> Delta E U\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-and in_omega_eps_strictI:
- "\<lbrakk>U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E); e \<in> Delta E U\<rbrakk> \<Longrightarrow> U \<in> omega_eps_strict E e"
-and in_omega_eps_strictD:
- "U \<in> omega_eps_strict E e \<Longrightarrow> U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E)"
- "U \<in> omega_eps_strict E e \<Longrightarrow> e \<in> Delta E U"
-  by(auto simp add: omega_eps_strict_def)
+lemma in_end_sets_strictE:
+ "\<lbrakk>U \<in> end_sets_strict E e; \<lbrakk>U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E); e \<in> Delta E U\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+and in_end_sets_strictI:
+ "\<lbrakk>U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E); e \<in> Delta E U\<rbrakk> \<Longrightarrow> U \<in> end_sets_strict E e"
+and in_end_sets_strictD:
+ "U \<in> end_sets_strict E e \<Longrightarrow> U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E)"
+ "U \<in> end_sets_strict E e \<Longrightarrow> e \<in> Delta E U"
+  by(auto simp add: end_sets_strict_def)
 
-lemma omega_eps_strict_in_omege_eps:
-  "omega_eps_strict E e \<subseteq> omega_eps E e"
-  by(auto simp add: omega_eps_strict_def omega_eps_def odd_subsets_odd_subsets_strict)
+lemma end_sets_strict_in_omege_eps:
+  "end_sets_strict E e \<subseteq> end_sets E e"
+  by(auto simp add: end_sets_strict_def end_sets_def odd_subsets_odd_subsets_strict)
 
-lemma finite_omega_eps_strict:
- "finite (Vs E) \<Longrightarrow> finite (omega_eps_strict E e)"
-  by(auto simp add: omega_eps_strict_def Delta_def odd_subsets_strict_finite)
+lemma finite_end_sets_strict:
+ "finite (Vs E) \<Longrightarrow> finite (end_sets_strict E e)"
+  by(auto simp add: end_sets_strict_def Delta_def odd_subsets_strict_finite)
 
 definition "feasible_min_perfect_dual_edmonds E w (\<pi>::'v set \<Rightarrow> real) = 
- ((\<forall> e \<in> E. sum \<pi> (omega_eps E e) \<le> w e) \<and> (\<forall> U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E). \<pi> U \<ge> 0))"
+ ((\<forall> e \<in> E. sum \<pi> (end_sets E e) \<le> w e) \<and> (\<forall> U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E). \<pi> U \<ge> 0))"
 
 lemma feasible_min_perfect_dual_edmondsI:
-  "\<lbrakk>\<And> e. e \<in> E\<Longrightarrow> sum \<pi> (omega_eps E e) \<le> w e;
+  "\<lbrakk>\<And> e. e \<in> E\<Longrightarrow> sum \<pi> (end_sets E e) \<le> w e;
     \<And> U. U \<in> \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E) \<Longrightarrow> \<pi> U \<ge> 0\<rbrakk>
    \<Longrightarrow> feasible_min_perfect_dual_edmonds E w \<pi>"
 and feasible_min_perfect_dual_edmondsE:
   "\<lbrakk>feasible_min_perfect_dual_edmonds E w \<pi>;
-    \<lbrakk>\<And> e. e \<in> E \<Longrightarrow> sum \<pi> (omega_eps E e) \<le> w e; \<And> U. U \<in> \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E) \<Longrightarrow> \<pi> U \<ge> 0\<rbrakk> \<Longrightarrow>P\<rbrakk> \<Longrightarrow> P"
+    \<lbrakk>\<And> e. e \<in> E \<Longrightarrow> sum \<pi> (end_sets E e) \<le> w e; \<And> U. U \<in> \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E) \<Longrightarrow> \<pi> U \<ge> 0\<rbrakk> \<Longrightarrow>P\<rbrakk> \<Longrightarrow> P"
 and feasible_min_perfect_dual_edmondsD:
-  "\<lbrakk>feasible_min_perfect_dual_edmonds E w \<pi>; e \<in> E\<rbrakk> \<Longrightarrow> sum \<pi> (omega_eps E e) \<le> w e"
+  "\<lbrakk>feasible_min_perfect_dual_edmonds E w \<pi>; e \<in> E\<rbrakk> \<Longrightarrow> sum \<pi> (end_sets E e) \<le> w e"
    "\<lbrakk>feasible_min_perfect_dual_edmonds E w \<pi>; U \<in>  \<Omega>\<^sub>\<ge>\<^sub>3 (Vs E)\<rbrakk> \<Longrightarrow> \<pi> U \<ge> 0"
   by(auto simp add: feasible_min_perfect_dual_edmonds_def)
 
-lemma omega_eps_elementary_and_compound_endsets:
+lemma end_sets_elementary_and_compound_endsets:
  "\<lbrakk>{u, v} \<in> E; u \<noteq> v\<rbrakk> 
-  \<Longrightarrow> omega_eps E {u, v} = {{u}, {v}} \<union> omega_eps_strict E {u, v}"
+  \<Longrightarrow> end_sets E {u, v} = {{u}, {v}} \<union> end_sets_strict E {u, v}"
   by(auto intro!: nat_geq_3I 
-        simp add: omega_eps_def odd_subsets_strict_def odd_subsets_def Delta_def doubleton_eq_iff
-                  card_1_singleton_iff insert_commute omega_eps_strict_def) 
+        simp add: end_sets_def odd_subsets_strict_def odd_subsets_def Delta_def doubleton_eq_iff
+                  card_1_singleton_iff insert_commute end_sets_strict_def) 
 
-lemma feasible_sum_omega_eps_strict_positive:
+lemma feasible_sum_end_sets_strict_positive:
   assumes "feasible_min_perfect_dual_edmonds E w \<pi>"
-  shows "sum \<pi> (omega_eps_strict E e) \<ge> 0"
+  shows "sum \<pi> (end_sets_strict E e) \<ge> 0"
     using assms
-    by(auto elim!: in_omega_eps_strictE feasible_min_perfect_dual_edmondsE 
+    by(auto elim!: in_end_sets_strictE feasible_min_perfect_dual_edmondsE 
            intro!: ordered_comm_monoid_add_class.sum_nonneg)
 
-lemma sum_potential_omega_eps_split_off_eps:
+lemma sum_potential_end_sets_split_off_eps:
   assumes "e \<in> E" "e = {u, v}" "u \<noteq> v" "finite (Vs E)"
-  shows "sum \<pi> (omega_eps E e) = \<pi> {u} + \<pi> {v} + sum \<pi> (omega_eps_strict E {u, v})"
-proof((subst assms(2) omega_eps_elementary_and_compound_endsets)+, goal_cases)
+  shows "sum \<pi> (end_sets E e) = \<pi> {u} + \<pi> {v} + sum \<pi> (end_sets_strict E {u, v})"
+proof((subst assms(2) end_sets_elementary_and_compound_endsets)+, goal_cases)
     case 1
     then show ?case 
       using assms by fastforce
@@ -121,8 +121,8 @@ proof((subst assms(2) omega_eps_elementary_and_compound_endsets)+, goal_cases)
     then show ?case 
     by(subst comm_monoid_add_class.sum.union_disjoint)
       (auto intro!: sum_of_two_things 
-       elim!: in_omega_eps_strictE in_odd_subsets_strictE 
-       simp add:  finite_omega_eps_strict assms)
+       elim!: in_end_sets_strictE in_odd_subsets_strictE 
+       simp add:  finite_end_sets_strict assms)
 qed
 
 lemma feasible_min_perfect_dual_edmonds_is_feasible_min_perfect_dual:
@@ -133,29 +133,29 @@ proof(rule feasible_min_perfect_dualI, goal_cases)
   note one = this
   hence uv: "u \<noteq> v" 
     using assms(1) by(auto dest: graph_invar_edgeD)
-  from 1 have "sum \<pi> (omega_eps E {u, v}) \<le> w {u, v}"
+  from 1 have "sum \<pi> (end_sets E {u, v}) \<le> w {u, v}"
     using assms(2)
     by(auto elim!: feasible_min_perfect_dual_edmondsE)
-  moreover have "sum \<pi> (omega_eps E e) = 
-       \<pi> {u} + \<pi> {v} + sum \<pi> (omega_eps_strict E {u, v})"
+  moreover have "sum \<pi> (end_sets E e) = 
+       \<pi> {u} + \<pi> {v} + sum \<pi> (end_sets_strict E {u, v})"
     using 1 uv assms
-    by(auto intro!: sum_potential_omega_eps_split_off_eps)
-  moreover have "sum \<pi> (omega_eps_strict E {u, v}) \<ge> 0"
-    using assms(2) feasible_sum_omega_eps_strict_positive by simp
+    by(auto intro!: sum_potential_end_sets_split_off_eps)
+  moreover have "sum \<pi> (end_sets_strict E {u, v}) \<ge> 0"
+    using assms(2) feasible_sum_end_sets_strict_positive by simp
   ultimately show ?case 
     by(simp add: 1)
 qed
 
-definition "odd_tight_subgraph E w \<pi> = {e | e. e \<in> E \<and> w e = sum \<pi> (omega_eps E e)}"
+definition "odd_tight_subgraph E w \<pi> = {e | e. e \<in> E \<and> w e = sum \<pi> (end_sets E e)}"
 
 lemma in_odd_tight_subgraphE:
   "\<lbrakk>e \<in> odd_tight_subgraph E w \<pi> ;
-     \<lbrakk>e \<in> E; w e = sum \<pi> (omega_eps E e)\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+     \<lbrakk>e \<in> E; w e = sum \<pi> (end_sets E e)\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
 and in_odd_tight_subgraphI:
-  "\<lbrakk>e \<in> E; w e = sum \<pi> (omega_eps E e)\<rbrakk> \<Longrightarrow> e \<in> odd_tight_subgraph E w \<pi> "
+  "\<lbrakk>e \<in> E; w e = sum \<pi> (end_sets E e)\<rbrakk> \<Longrightarrow> e \<in> odd_tight_subgraph E w \<pi> "
 and in_odd_tight_subgraphD:
   "e \<in> odd_tight_subgraph E w \<pi> \<Longrightarrow> e \<in> E"
-  "e \<in> odd_tight_subgraph E w \<pi> \<Longrightarrow> w e = sum \<pi> (omega_eps E e)"
+  "e \<in> odd_tight_subgraph E w \<pi> \<Longrightarrow> w e = sum \<pi> (end_sets E e)"
   by(auto simp add: odd_tight_subgraph_def)
 
 lemma weak_duality_theorem_nonneg_primal_min_eq_and_ineq: 
@@ -411,22 +411,22 @@ qed
 
 lemma omega_delta_col_times_dual_omega_sol:
   assumes "e \<in> G" "G_enum e = i" "Vs G = V"
-  shows "col omega_delta_matrix i \<bullet> dual_omega_sol \<pi> = sum \<pi> (omega_eps_strict G e)"
+  shows "col omega_delta_matrix i \<bullet> dual_omega_sol \<pi> = sum \<pi> (end_sets_strict G e)"
 proof-
   have "(\<Sum>ia = 0..<\<omega>. of_bool (G_enum_inv i \<in> Delta G (\<Omega>\<^sub>3_enum_inv ia)) * \<pi> (\<Omega>\<^sub>3_enum_inv ia)) =
-    sum \<pi> (omega_eps_strict G e)"
+    sum \<pi> (end_sets_strict G e)"
   proof-
    have inv:"G_enum_inv i = e" 
     using assms(1,2) by force
    hence "(\<Sum>ia\<in>{0..<\<omega>} \<inter> {ia. G_enum_inv i \<in> Delta G (\<Omega>\<^sub>3_enum_inv ia)}. \<pi> (\<Omega>\<^sub>3_enum_inv ia)) =
-    sum \<pi> (omega_eps_strict G (G_enum_inv i))"
+    sum \<pi> (end_sets_strict G (G_enum_inv i))"
     by(subst comm_monoid_add_class.sum.reindex[of "\<Omega>\<^sub>3_enum_inv" _ \<pi>, simplified, symmetric])
       (auto intro!: inj_on_subset[OF \<Omega>\<^sub>3_enum_inv_inj_on] arg_cong[where f = "sum \<pi>"]
-                    in_omega_eps_strictI 
+                    in_end_sets_strictI 
                     rev_image_eqI[of "\<Omega>\<^sub>3_enum _" _ _ \<Omega>\<^sub>3_enum_inv, where uu4 = x and b = x for x]
                     \<Omega>\<^sub>3_enum_less_n
           simp add: assms(1,3)
-             elim!: in_omega_eps_strictE)
+             elim!: in_end_sets_strictE)
    thus ?thesis
     by (auto simp add: inv)
    qed 
@@ -441,10 +441,10 @@ qed
 lemma dual_omega_sol_at_index: "i < \<omega> \<Longrightarrow> dual_omega_sol \<pi> $ i = \<pi> (\<Omega>\<^sub>3_enum_inv i)"
   by(auto simp add: dual_omega_sol_def)
 
-lemma is_sum_omega_eps:
+lemma is_sum_end_sets:
   assumes "i < m" "dblton_graph G"  "Vs G = V"
   shows "col incidence_matrix i \<bullet> dual_sol (\<lambda>x. \<pi> {x}) + col omega_delta_matrix i \<bullet> dual_omega_sol \<pi>
-         = sum \<pi> (omega_eps G (G_enum_inv i))"
+         = sum \<pi> (end_sets G (G_enum_inv i))"
   proof-
     obtain e where e: "e \<in> G" "G_enum e = i" "G_enum_inv i = e" 
       using assms by fastforce
@@ -454,7 +454,7 @@ lemma is_sum_omega_eps:
       using assms  finite_VsG
       by(simp add: incidence_col_times_dual_sol[of x y i "\<lambda>x. \<pi> {x}"]
                    omega_delta_col_times_dual_omega_sol weight_vect_at_index
-                   sum_potential_omega_eps_split_off_eps[of _ _ x y])
+                   sum_potential_end_sets_split_off_eps[of _ _ x y])
   qed
 
 lemma dual_omega_dot_pi_vect_pi_sum: "1\<^sub>v \<omega> \<bullet> dual_omega_sol \<pi> = sum \<pi> (\<Omega>\<^sub>\<ge>\<^sub>3 V)"
@@ -492,7 +492,7 @@ proof-
     if asm: "i < m" for i
     using asm assms
     by(auto intro!: feasible_min_perfect_dual_edmondsD(1) 
-          simp add: is_sum_omega_eps weight_vect_at_index)
+          simp add: is_sum_end_sets weight_vect_at_index)
   thus ?th1
     by(simp add: less_eq_vec_def)
   thus ?th2
@@ -580,8 +580,8 @@ lemma omega_row_times_dual_sol_dual_pi_sum:
   shows "(\<Sum>i = 0..< n + \<omega>.
              (dual_sol (\<lambda>x. \<pi> {x}) @\<^sub>v dual_omega_sol \<pi>) $ i *
              row (incidence_matrix @\<^sub>r omega_delta_matrix) i $ ie) = 
-      sum \<pi> (omega_eps G (G_enum_inv ie))" 
-      (is  "(\<Sum>i = 0..< n + \<omega>. ?f i) =  sum \<pi> (omega_eps G (G_enum_inv ie))")
+      sum \<pi> (end_sets G (G_enum_inv ie))" 
+      (is  "(\<Sum>i = 0..< n + \<omega>. ?f i) =  sum \<pi> (end_sets G (G_enum_inv ie))")
 proof-
   have ie_G:"G_enum_inv ie \<in> G"
     by (simp add: assms)
@@ -617,7 +617,7 @@ proof-
   qed
   moreover have 
    "(\<Sum>i\<in>{0..<\<omega>} \<inter> {uu. G_enum_inv ie \<in> Delta G (\<Omega>\<^sub>3_enum_inv uu)}. \<pi> (\<Omega>\<^sub>3_enum_inv i))
-    = sum \<pi> (omega_eps_strict G {u, v})"
+    = sum \<pi> (end_sets_strict G {u, v})"
   proof(subst sum_inner_function_to_image[of \<Omega>\<^sub>3_enum_inv], goal_cases)
     case 1
     then show ?case 
@@ -625,8 +625,8 @@ proof-
   next
     case 2
     then show ?case 
-      by(auto elim!: in_omega_eps_strictE
-             intro!: arg_cong[of _ _"sum \<pi>"] in_omega_eps_strictI 
+      by(auto elim!: in_end_sets_strictE
+             intro!: arg_cong[of _ _"sum \<pi>"] in_end_sets_strictI 
                      rev_image_eqI[of _ _ _ \<Omega>\<^sub>3_enum_inv, where x = "\<Omega>\<^sub>3_enum b" and b = b for b]
            simp add: assms(3) uv(1) \<Omega>\<^sub>3_enum_less_n)
   qed
@@ -637,7 +637,7 @@ proof-
                     if_distrib[of "\<lambda> x. _ * x"]  if_distrib[of "\<lambda> x. x * _"] 
                     comm_monoid_add_class.sum.If_cases dim_weight_dual_sol dual_sol_def 
                     dual_omega_sol_def add.commute[of \<omega> n] sum_nat_some_index_shift
-                    sum_potential_omega_eps_split_off_eps[OF ie_G uv finite_VsG]) 
+                    sum_potential_end_sets_split_off_eps[OF ie_G uv finite_VsG]) 
 qed
   
 lemma graph_slack_to_matrix_slack_dual:
@@ -799,5 +799,372 @@ lemma edmonds_min_weight_perfect_matching_criterion:
     shows "min_weight_perfect_matching G w M"
   using assms
   by(auto intro!: edmonds_matching_LP_standard.results(6) edmonds_matching_LP_standard.intro)
+
+lemma edmonds_primal_dual_cases:
+  assumes edge: "\<exists> u v. e = {u, v} \<and> u \<noteq> v"
+  assumes cases: 
+    "\<And> X u v. \<lbrakk>X \<in> pluses; e \<subseteq> X; e = {u, v};u \<noteq> v\<rbrakk> \<Longrightarrow> P"
+    "\<And> X u v. \<lbrakk>X \<in> minuses; e \<subseteq> X; e = {u, v};u \<noteq> v\<rbrakk> \<Longrightarrow> P"
+    "\<And> u v X Y. \<lbrakk>X \<in> pluses; u \<in> X; Y \<in> minuses; X \<noteq> Y; v \<in> Y; e = {u, v};u \<noteq> v\<rbrakk> \<Longrightarrow> P"
+    "\<And> u v X Y. \<lbrakk>X \<in> pluses; u \<in> X; Y \<in> pluses; X \<noteq> Y; v \<in> Y; e = {u, v};u \<noteq> v\<rbrakk> \<Longrightarrow> P"
+    "\<And> u v X Y. \<lbrakk>X \<in> minuses; u \<in> X; Y \<in> minuses; X \<noteq> Y; v \<in> Y; e = {u, v};u \<noteq> v\<rbrakk> \<Longrightarrow> P"
+    "\<And> u v. \<lbrakk>\<nexists> X. X \<in> pluses \<union> minuses \<and> u \<in> X; \<nexists> X. X \<in> pluses \<union> minuses \<and> v \<in> X;
+               e = {u, v};u \<noteq> v\<rbrakk> \<Longrightarrow> P"
+    "\<And> u v X . \<lbrakk>X \<in> pluses; u \<in> X; \<nexists> Y. Y \<in> minuses \<union> pluses \<and> v \<in> Y; e = {u, v}; u \<noteq> v\<rbrakk> \<Longrightarrow> P"
+    "\<And> u v Y. \<lbrakk>\<nexists> X. X \<in> pluses \<union> minuses \<and> u \<in> X; Y \<in> minuses; v \<in> Y; e = {u, v}; u \<noteq> v\<rbrakk> \<Longrightarrow> P"          
+  shows P
+proof-
+  obtain u v where uv: "e = {u, v}" "u \<noteq> v" 
+    using edge by auto
+  show ?thesis
+proof(cases "e \<inter> \<Union> pluses = {}", goal_cases)
+  case 1
+  then show ?case 
+  proof(cases "e \<inter> \<Union> minuses = {}", goal_cases)
+    case 1
+    then show ?case 
+      using cases(6)[of u v] uv 
+      by auto
+  next
+    case 2
+    then obtain Y where "Y \<in> minuses" "e \<inter> Y \<noteq> {}"
+      by auto
+    then show ?case
+      using 2
+proof(cases "e \<subseteq> \<Union> minuses", goal_cases, goal_cases)
+  case 1
+  then obtain X Y where "X \<in> minuses" "Y \<in> minuses" "u \<in> X" "v \<in> Y"
+    by (auto simp add: uv)
+  then show ?case 
+  proof(cases "X = Y", goal_cases)
+    case 1
+    then show ?case 
+      using uv cases(2)[of X u v] by auto
+  next
+    case 2
+    then show ?case 
+      using uv cases(5)[of X u Y v] by auto
+  qed
+next
+  case 2
+  then show ?case 
+    using uv cases(8)[of u Y v] cases(8)[of v Y u] by auto
+qed
+qed
+next
+  case 2
+  then show ?case
+  proof(cases "e \<subseteq> \<Union> pluses", goal_cases)
+    case 1
+    then obtain X Y where "X \<in> pluses" "u \<in> X" "Y \<in> pluses" "v \<in> Y"
+      using uv by auto
+    then show ?case
+    proof(cases "X = Y", goal_cases)
+      case 1
+      then show ?case 
+        using cases(1)[of X u v] uv by auto
+    next
+      case 2
+      then show ?case 
+        using cases(4)[of X u Y v] uv by auto
+    qed
+  next
+    case 2
+    then obtain X u v where Xuv: "X \<in> pluses" "e = {u, v}" "u \<in> X" "\<not> (\<exists> X \<in> pluses. v \<in> X)"
+      using uv by auto
+    then show ?case 
+      using 2
+    proof(cases "v \<in> \<Union> minuses", goal_cases)
+      case 1
+      then obtain Y where "Y \<in> minuses" "v \<in> Y" by auto
+      then show ?case 
+        using 1 cases(3)[of X u Y v] by auto
+    next
+      case 2
+      then show ?case 
+        using cases(7)[of X u v] by auto
+    qed
+  qed
+qed
+qed
+ 
+lemma edmonds_primal_dual_adjustment_result:
+ assumes disjointness:
+  "\<And> X Y. \<lbrakk>X \<in> pluses \<union> minuses; Y \<in> pluses \<union> minuses; X \<noteq> Y\<rbrakk> \<Longrightarrow> X \<inter> Y = {}"
+  "pluses \<inter> minuses = {}"
+ and \<pi>'_def: 
+   "\<pi>' = (\<lambda> X. if X \<in> pluses then \<pi> X + (\<epsilon>::real)
+               else if X \<in> minuses then \<pi> X - \<epsilon>
+               else \<pi> X)"
+ and omega: "pluses \<union> minuses \<subseteq> \<Omega> (Vs G)" "e = {u, v}" "u \<noteq> v" "e \<in> G" "finite (Vs G)"
+shows
+  "\<And> X u v. \<lbrakk>X \<in> pluses; e \<subseteq> X; e = {u, v};u \<noteq> v\<rbrakk> 
+             \<Longrightarrow> sum \<pi>' (end_sets G e) = sum \<pi> (end_sets G e)"
+  "\<And> X u v. \<lbrakk>X \<in> minuses; e \<subseteq> X; e = {u, v};u \<noteq> v\<rbrakk> 
+            \<Longrightarrow> sum \<pi>' (end_sets G e) = sum \<pi> (end_sets G e)"
+  "\<And> u v X Y. \<lbrakk>X \<in> pluses; u \<in> X; Y \<in> minuses; X \<noteq> Y; v \<in> Y; e = {u, v};u \<noteq> v\<rbrakk> 
+            \<Longrightarrow> sum \<pi>' (end_sets G e) = sum \<pi> (end_sets G e)"
+  "\<And> u v X Y. \<lbrakk>X \<in> pluses; u \<in> X; Y \<in> pluses; X \<noteq> Y; v \<in> Y; e = {u, v};u \<noteq> v\<rbrakk> 
+            \<Longrightarrow> sum \<pi>' (end_sets G e) = sum \<pi> (end_sets G e) + 2 * \<epsilon>"
+  "\<And> u v X Y. \<lbrakk>X \<in> minuses; u \<in> X; Y \<in> minuses; X \<noteq> Y; v \<in> Y; e = {u, v};u \<noteq> v\<rbrakk>
+            \<Longrightarrow> sum \<pi>' (end_sets G e) = sum \<pi> (end_sets G e) - 2 * \<epsilon>"
+  "\<And> u v. \<lbrakk>\<nexists> X. X \<in> pluses \<union> minuses \<and> u \<in> X; \<nexists> X. X \<in> pluses \<union> minuses \<and> v \<in> X;
+               e = {u, v};u \<noteq> v\<rbrakk> 
+            \<Longrightarrow> sum \<pi>' (end_sets G e) = sum \<pi> (end_sets G e)"
+  "\<And> u v X . \<lbrakk>X \<in> pluses; u \<in> X; \<nexists> Y. Y \<in> minuses \<union> pluses \<and> v \<in> Y; e = {u, v}; u \<noteq> v\<rbrakk> 
+            \<Longrightarrow> sum \<pi>' (end_sets G e) = sum \<pi> (end_sets G e) + \<epsilon>"
+  "\<And> u v X Y. \<lbrakk>\<nexists> X. X \<in> pluses \<union> minuses \<and> u \<in> X; Y \<in> minuses; v \<in> Y; e = {u, v}; u \<noteq> v\<rbrakk> 
+            \<Longrightarrow> sum \<pi>' (end_sets G e) = sum \<pi> (end_sets G e) - \<epsilon>"
+proof(goal_cases)
+  case (1 X u v)
+  note one = this
+  show ?case 
+  proof(rule sum.cong[OF refl], goal_cases)
+    case (1 x)
+    then show ?case 
+      using one disjointness 
+      by (auto elim!: in_end_setsE in_DeltaE simp add: \<pi>'_def doubleton_eq_iff)+
+  qed
+next
+  case (2 X u v)
+  note two = this
+  show ?case 
+  proof(rule sum.cong[OF refl], goal_cases)
+    case (1 x)
+    then show ?case 
+      using two disjointness 
+      by (auto elim!: in_end_setsE in_DeltaE simp add: \<pi>'_def doubleton_eq_iff)+
+  qed
+next
+  case (3 u v X Y)
+  note three = this
+  hence "u \<notin> Y" "v \<notin> X"
+    using disjointness by auto
+  hence omega_is: "end_sets G e = (end_sets G e - {X, Y}) \<union> {X, Y}"
+    using  omega(1,4)  "3"(1,2,3,4,5,6)
+    by(auto intro: in_DeltaI simp add: end_sets_def)
+  hence split_off: "sum f (end_sets G e) = sum f (end_sets G e - {X, Y}) + f X + f Y" for f
+    using 3(4) 
+    by(subst sum.subset_diff[of "{X, Y}" "end_sets G e" f])
+      (auto simp add: finite_end_sets omega(5)  ab_semigroup_add_class.add_ac(1))
+  have Y_not_pus: "Y \<notin> pluses"
+    using disjointness(2) three(3) by blast
+  have "sum \<pi>' (end_sets G e - {X, Y}) =  sum \<pi> (end_sets G e - {X, Y})"
+  proof(rule sum.cong[OF refl], goal_cases)
+    case (1 x)
+    then show ?case 
+      using  disjointness three(1,2,3,5,6)
+      by (auto elim!: in_end_setsE in_DeltaE simp add: \<pi>'_def doubleton_eq_iff)+
+  qed
+  thus ?case 
+    using  Y_not_pus three(1, 3)
+    by (auto simp add: split_off \<pi>'_def)
+next
+  case (4 u v X Y)
+note four = this
+  hence "u \<notin> Y" "v \<notin> X"
+    using disjointness by auto
+  hence omega_is: "end_sets G e = (end_sets G e - {X, Y}) \<union> {X, Y}"
+    using  omega(1,4)  4(1,2,3,4,5,6)
+    by(auto intro: in_DeltaI simp add: end_sets_def)
+  hence split_off: "sum f (end_sets G e) = sum f (end_sets G e - {X, Y}) + f X + f Y" for f
+    using 4(4) 
+    by(subst sum.subset_diff[of "{X, Y}" "end_sets G e" f])
+      (auto simp add: finite_end_sets omega(5)  ab_semigroup_add_class.add_ac(1))
+  have "sum \<pi>' (end_sets G e - {X, Y}) =  sum \<pi> (end_sets G e - {X, Y})"
+  proof(rule sum.cong[OF refl], goal_cases)
+    case (1 x)
+    then show ?case 
+      using  disjointness four(1,2,3,5,6)
+      by (auto elim!: in_end_setsE in_DeltaE simp add: \<pi>'_def doubleton_eq_iff)+
+  qed
+  thus ?case 
+    using  four(1,3)
+    by (auto simp add: split_off \<pi>'_def)
+next
+  case (5 u v X Y)
+  note five = this
+  hence "u \<notin> Y" "v \<notin> X"
+    using disjointness by auto
+  hence omega_is: "end_sets G e = (end_sets G e - {X, Y}) \<union> {X, Y}"
+    using  omega(1,4)  5(1,2,3,4,5,6)
+    by(auto intro: in_DeltaI simp add: end_sets_def)
+  hence split_off: "sum f (end_sets G e) = sum f (end_sets G e - {X, Y}) + f X + f Y" for f
+    using 5(4) 
+    by(subst sum.subset_diff[of "{X, Y}" "end_sets G e" f])
+      (auto simp add: finite_end_sets omega(5)  ab_semigroup_add_class.add_ac(1))
+  have not_in_plus: "X \<notin> pluses" "Y \<notin> pluses" 
+    using disjointness(2) five(1,3) by auto
+  have "sum \<pi>' (end_sets G e - {X, Y}) =  sum \<pi> (end_sets G e - {X, Y})"
+  proof(rule sum.cong[OF refl], goal_cases)
+    case (1 x)
+    then show ?case 
+      using  disjointness five(1,2,3,5,6)
+      by (auto elim!: in_end_setsE in_DeltaE simp add: \<pi>'_def doubleton_eq_iff)+
+  qed
+  thus ?case 
+    using five(1,3) not_in_plus
+    by (auto simp add: split_off \<pi>'_def)
+next
+  case (6 u v)
+  note six = this
+  show ?case
+  proof(rule sum.cong[OF refl], goal_cases)
+    case (1 x)
+    then show ?case 
+      using six
+      by(auto elim!: in_DeltaE in_end_setsE simp add: \<pi>'_def)
+  qed
+next
+  case (7 u v X)
+  note seven = this
+   hence omega_is: "end_sets G e = (end_sets G e - {X}) \<union> {X}"
+    using  omega(1,4)  seven
+    by(auto intro: in_DeltaI simp add: end_sets_def)
+  hence split_off: "sum f (end_sets G e) = sum f (end_sets G e - {X}) + f X" for f
+    using seven
+    by(subst sum.subset_diff[of "{X}" "end_sets G e" f])
+      (auto simp add: finite_end_sets omega(5)  ab_semigroup_add_class.add_ac(1))
+  have "sum \<pi>' (end_sets G e - {X}) =  sum \<pi> (end_sets G e - {X})"
+  proof(rule sum.cong[OF refl], goal_cases)
+    case (1 x)
+    then show ?case 
+      using  disjointness seven
+      by (auto elim!: in_end_setsE in_DeltaE simp add: \<pi>'_def doubleton_eq_iff)+
+  qed
+  then show ?case 
+    using seven(1)
+    by(auto simp add: split_off \<pi>'_def)
+next
+  case (8 u v X Y)
+  note eight = this
+  hence omega_is: "end_sets G e = (end_sets G e - {Y}) \<union> {Y}"
+    using  omega(1,4)  eight
+    by(auto intro: in_DeltaI simp add: end_sets_def)
+  hence split_off: "sum f (end_sets G e) = sum f (end_sets G e - {Y}) + f Y" for f
+    using eight
+    by(subst sum.subset_diff[of "{Y}" "end_sets G e" f])
+      (auto simp add: finite_end_sets omega(5)  ab_semigroup_add_class.add_ac(1))
+  have not_plus: "Y \<notin> pluses"
+    using disjointness(2) eight(2) by blast
+  have "sum \<pi>' (end_sets G e - {Y}) =  sum \<pi> (end_sets G e - {Y})"
+  proof(rule sum.cong[OF refl], goal_cases)
+    case (1 x)
+    then show ?case 
+      using  disjointness eight
+      by (auto elim!: in_end_setsE in_DeltaE simp add: \<pi>'_def doubleton_eq_iff)+
+  qed
+  then show ?case 
+    using not_plus eight(2)
+    by(auto simp add: split_off \<pi>'_def)
+qed
+
+lemma edmonds_primal_dual_adjustment_feasibility:
+ assumes feasibility:  "feasible_min_perfect_dual_edmonds G w \<pi>" 
+ and disjointness:
+  "\<And> X Y. \<lbrakk>X \<in> pluses \<union> minuses; Y \<in> pluses \<union> minuses; X \<noteq> Y\<rbrakk> \<Longrightarrow> X \<inter> Y = {}"
+  "pluses \<inter> minuses = {}"
+ and \<pi>'_def: 
+   "\<pi>' = (\<lambda> X. if X \<in> pluses then \<pi> X + (\<epsilon>::real)
+               else if X \<in> minuses then \<pi> X - \<epsilon>
+               else \<pi> X)"
+ and omega: "pluses \<union> minuses \<subseteq> \<Omega> (Vs G)" "graph_invar G"
+ and epsilon: "\<epsilon> \<ge> 0"
+     "\<And> u v X Y. \<lbrakk>{u, v} \<in> G; u \<in> X; X \<in> pluses; v \<in> Y; Y \<in> pluses; X \<noteq> Y\<rbrakk> 
+         \<Longrightarrow>  \<epsilon> \<le> 1/2 * (w {u, v} - sum \<pi> (end_sets G {u, v}))"
+     "\<And> u v X . \<lbrakk>{u, v} \<in> G; u \<in> X; X \<in> pluses; \<nexists> Y. Y \<in> pluses \<union> minuses \<and> v \<in> Y\<rbrakk> 
+         \<Longrightarrow>  \<epsilon> \<le> w {u, v} - sum \<pi> (end_sets G {u, v})"
+     "\<And> X. \<lbrakk>X \<in> minuses; card X > 1\<rbrakk> \<Longrightarrow> \<epsilon> \<le> \<pi> X"
+shows "feasible_min_perfect_dual_edmonds G w \<pi>'" 
+proof(rule feasible_min_perfect_dual_edmondsI, goal_cases)
+  case (1 e)
+  obtain u v where preconds: "e = {u, v}" "u \<noteq> v" "e \<in> G" "finite (Vs G)"
+    using "1" omega(2) by blast
+  hence pc2: "\<exists>u v. e = {u, v} \<and> u \<noteq> v" by auto
+  note edmonds_primal_dual_adjustment_result =
+       edmonds_primal_dual_adjustment_result[OF disjointness \<pi>'_def omega(1) preconds, simplified]
+  show ?case 
+  proof(cases rule: edmonds_primal_dual_cases[OF pc2, of pluses _ minuses], goal_cases)
+    case (1 X u v)
+    then show ?thesis 
+      using feasible_min_perfect_dual_edmondsD(1)[OF  feasibility preconds(3)]
+            edmonds_primal_dual_adjustment_result(1)[OF 1]
+      by simp
+  next
+    case (2 X u v)
+    then show ?thesis 
+      using feasible_min_perfect_dual_edmondsD(1)[OF  feasibility preconds(3)]
+            edmonds_primal_dual_adjustment_result(2)[OF 2]
+      by simp
+  next
+    case (3 u v X Y)
+    then show ?thesis 
+      using feasible_min_perfect_dual_edmondsD(1)[OF  feasibility preconds(3)]
+            edmonds_primal_dual_adjustment_result(3)[OF 3]
+      by simp
+  next
+    case (4 u v X Y)
+    then show ?thesis
+      using feasible_min_perfect_dual_edmondsD(1)[OF  feasibility preconds(3)]
+            edmonds_primal_dual_adjustment_result(4)[OF 4]
+            epsilon(2)[OF _ 4(2,1,5,3,4)] preconds(3)
+      by (simp add: 4(6))
+  next
+    case (5 u v X Y)
+    then show ?thesis
+      using feasible_min_perfect_dual_edmondsD(1)[OF  feasibility preconds(3)]
+            edmonds_primal_dual_adjustment_result(5)[OF 5]
+            epsilon(1)
+      by (simp add: 5(6))
+  next
+    case (6 u v)
+    note 6 = 6[simplified]
+    then show ?thesis 
+      using feasible_min_perfect_dual_edmondsD(1)[OF  feasibility preconds(3)]
+            edmonds_primal_dual_adjustment_result(6)[OF 6]
+      by simp
+  next
+    case (7 u v X)
+    note 7 = 7[simplified]
+    then show ?thesis 
+      using feasible_min_perfect_dual_edmondsD(1)[OF feasibility]
+            edmonds_primal_dual_adjustment_result(7)[OF 7]
+            epsilon(3)[OF _ 7(2,1), of v] preconds(3) 
+      by force
+  next
+    case (8 u v Y)
+    note 8 = 8[simplified]
+    then show ?thesis 
+      using feasible_min_perfect_dual_edmondsD(1)[OF feasibility]
+            edmonds_primal_dual_adjustment_result(8)[OF 8] preconds(3) 
+            epsilon(1)
+      by force
+  qed
+next
+  case (2 U)
+  then show ?case 
+    unfolding \<pi>'_def
+  proof(cases "U \<in> pluses", unfold if_P if_not_P, goal_cases)
+    case 1
+    then show ?case 
+      using feasible_min_perfect_dual_edmondsD(2)[OF feasibility]
+            epsilon(1)
+      by simp
+  next
+    case 2
+    then show ?case 
+    proof(cases "U \<in> minuses", unfold if_P if_not_P, goal_cases)
+      case 1
+      then show ?case
+        using feasible_min_perfect_dual_edmondsD(2)[OF feasibility 1(1)]
+              epsilon(4)[of U]
+        by(auto elim!: in_odd_subsets_strictE)
+    next
+      case 2
+      then show ?case 
+        by(intro feasible_min_perfect_dual_edmondsD(2)[OF feasibility])
+    qed
+  qed
+qed
 
 end

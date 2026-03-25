@@ -1,7 +1,7 @@
 section \<open>Formalisation of the Running Time of Orlin's Algorithm\<close>
 
 theory Orlins_Time
-  imports Maintain_Forest_Time Send_Flow_Time Orlins Laminar_Family
+  imports Maintain_Forest_Time Send_Flow_Time Orlins Laminar_Family.Laminar_Family
 begin
 
 locale orlins_time =

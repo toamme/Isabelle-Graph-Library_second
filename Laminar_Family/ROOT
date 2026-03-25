@@ -1,0 +1,4 @@
+session "Laminar_Family" = "HOL" +
+  options [document = pdf]
+  theories
+    Laminar_Family
