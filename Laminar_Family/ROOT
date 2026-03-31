@@ -1,4 +1,6 @@
 session "Laminar_Family" = "HOL" +
   options [document = pdf]
+  sessions
+    "HOL-Eisbach"
   theories
     Laminar_Family

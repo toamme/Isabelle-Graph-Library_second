@@ -1675,11 +1675,7 @@ proof-
        using underlying_invars_pres[of k] stateX_def by simp
      ultimately show ?case 
        by(auto simp add:  underlying_invars_def inv_components_in_V_def x_prop(2) connected_component_def)
-    next
-      case 3 
-      then show ?case 
-        using V_non_empt by simp
-    qed
+   qed
     thus ?thesis
       by(rule laminar_family_number_of_sets[OF N_def \<V>_finite])
   qed

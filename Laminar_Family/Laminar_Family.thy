@@ -1,28 +1,213 @@
 section \<open>Laminar Families\<close>
 
 theory Laminar_Family
-  imports Main
+  imports Main "HOL-Eisbach.Eisbach"
 begin
+
+lemma card_geq_1_iff: "card X \<ge> Suc 0 \<longleftrightarrow> (finite X \<and> X \<noteq> {})"
+  using  card_gt_0_iff[of X] by auto
 
 definition "laminar U \<X> = 
             ((\<forall> X Y. X \<in> \<X> \<longrightarrow> Y \<in> \<X> \<longrightarrow> (X \<subseteq> Y \<or> Y \<subseteq> X \<or> X \<inter> Y = {}))
-            \<and> (\<forall> X \<in> \<X>. X \<noteq> {} \<and> X \<subseteq> U)
-            \<and> U \<noteq> {})"
+            \<and> (\<forall> X \<in> \<X>. X \<noteq> {} \<and> X \<subseteq> U))"
 
 lemma laminarI: 
-"(\<And> X Y. X \<in> \<X> \<Longrightarrow> Y \<in> \<X> \<Longrightarrow> (X \<subseteq> Y \<or> Y \<subseteq> X \<or> X \<inter> Y = {}))
-\<Longrightarrow> (\<And> X.  X \<in> \<X> \<Longrightarrow> X \<noteq> {} \<and> X \<subseteq> U)
-\<Longrightarrow> U \<noteq> {} \<Longrightarrow> laminar U \<X>"
+ "\<lbrakk>\<And> X Y. \<lbrakk>X \<in> \<X>; Y \<in> \<X>\<rbrakk> \<Longrightarrow> (X \<subseteq> Y \<or> Y \<subseteq> X \<or> X \<inter> Y = {});
+   \<And> X.  X \<in> \<X> \<Longrightarrow> X \<noteq> {} \<and> X \<subseteq> U\<rbrakk> \<Longrightarrow> laminar U \<X>"
 and  laminarE: 
-"laminar U \<X> \<Longrightarrow>
- ((\<And> X Y. X \<in> \<X> \<Longrightarrow> Y \<in> \<X> \<Longrightarrow> (X \<subseteq> Y \<or> Y \<subseteq> X \<or> X \<inter> Y = {}))
-\<Longrightarrow> (\<And> X.  X \<in> \<X> \<Longrightarrow> X \<noteq> {} \<and> X \<subseteq> U)
-\<Longrightarrow> U \<noteq> {} \<Longrightarrow> P ) \<Longrightarrow> P"
+ "\<lbrakk>laminar U \<X>;
+   \<lbrakk>\<And> X Y. \<lbrakk>X \<in> \<X>; Y \<in> \<X>\<rbrakk> \<Longrightarrow> (X \<subseteq> Y \<or> Y \<subseteq> X \<or> X \<inter> Y = {});
+    \<And> X.  X \<in> \<X> \<Longrightarrow> X \<noteq> {} \<and> X \<subseteq> U\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by(auto simp add: laminar_def)
 
 lemma finite_U_finite_family:
-"finite U \<Longrightarrow> laminar U \<X> \<Longrightarrow> finite \<X>"
+  "\<lbrakk>finite U; laminar U \<X>\<rbrakk> \<Longrightarrow> finite \<X>"
   by (meson Sup_le_iff finite_UnionD finite_subset laminar_def)
+
+lemma laminar_subset:
+ "\<lbrakk>laminar U \<X>; U \<subseteq> U'; \<X>' \<subseteq> \<X>\<rbrakk> \<Longrightarrow> laminar U' \<X>'"
+  by(auto intro!: laminarI elim!: laminarE) blast+
+
+lemma laminar_union:
+ "\<lbrakk>laminar U \<X>; laminar U' \<X>'; U \<inter> U' = {}\<rbrakk> \<Longrightarrow> laminar (U \<union> U') (\<X> \<union> \<X>')"
+  by(auto intro!: laminarI 
+           elim!: laminarE 
+        simp add: subset_eq[of _ U'] subset_eq[of _ U] disjoint_iff[of U U'], force, force)
+    (metis disjoint_insert(1) insert_absorb insert_subset)
+
+lemma empty_nin_laminar: "laminar U \<X> \<Longrightarrow> {} \<notin> \<X>"
+  by(auto elim!: laminarE)
+
+lemma laminar_Union_finite: "\<lbrakk>finite U; laminar U \<X>\<rbrakk> \<Longrightarrow> finite (\<Union> \<X>)"
+  by(auto intro!: finite_Union rev_finite_subset[of U] 
+           elim!: laminarE simp add: finite_U_finite_family laminarI) 
+
+definition "maximal_sets \<X> = { X| X. X \<in> \<X> \<and> (\<nexists> Y. Y \<in> \<X> \<and> Y \<supset> X)}"
+
+lemma in_maximal_setsE:
+  "\<lbrakk>X \<in> maximal_sets \<X>; \<lbrakk>X \<in> \<X>; \<And> Y. Y \<in> \<X> \<Longrightarrow> \<not> Y \<supset> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+and in_maximal_setsI:
+  "\<lbrakk>X \<in> \<X>; \<nexists> Y. Y \<in> \<X> \<and> Y \<supset> X\<rbrakk> \<Longrightarrow> X \<in> maximal_sets \<X>"
+and in_maximal_setsD:
+  "\<lbrakk>X \<in> maximal_sets \<X>; X \<in> \<X>; Y \<in> \<X>\<rbrakk> \<Longrightarrow> \<not> Y \<supset> X"
+  by (auto simp add: maximal_sets_def)
+
+lemma maximal_sets_subset: "maximal_sets \<X> \<subseteq> \<X>"
+  by(auto simp add: maximal_sets_def)
+
+lemma disjoint_maximal_sets_insert:
+  assumes "maxes \<subseteq> maximal_sets \<X>" "maxes \<noteq> {}" 
+          "\<And> X Y. \<lbrakk>X \<in> maxes; Y \<in> maxes\<rbrakk> \<Longrightarrow> X \<inter> Y = {}"
+  shows   "maximal_sets (insert (\<Union> maxes) \<X>) = maximal_sets \<X> - maxes \<union> {\<Union> maxes}"
+  using assms
+  by(force simp add: maximal_sets_def)
+
+lemma finite_there_is_maximal_set:
+  "\<lbrakk>finite \<X>; X \<in> \<X>\<rbrakk> \<Longrightarrow> \<exists> M \<in> maximal_sets \<X>. X \<subseteq> M"
+  by (auto dest!: finite_has_maximal2 simp add: maximal_sets_def)
+
+lemma finite_maximal_set:
+  "\<lbrakk>finite (\<Union> \<X>); X \<in> maximal_sets \<X>\<rbrakk> \<Longrightarrow> finite X"
+  by (meson Sup_upper in_maximal_setsE rev_finite_subset)
+
+lemma split_with_maximal_sets:
+  "finite \<X> \<Longrightarrow> \<X> = \<Union> {{X | X. X \<in> \<X> \<and> X \<subseteq> M} | M. M \<in> maximal_sets \<X>}" 
+proof(rule, goal_cases)
+  case 1
+  then show ?case 
+    by (auto dest!: finite_there_is_maximal_set)
+next
+  case 2
+  then show ?case 
+    by auto
+qed
+
+lemma union_split_with_maximal_sets:
+  "finite \<X> \<Longrightarrow> \<Union> \<X> = \<Union> (maximal_sets \<X>)" 
+proof(rule, goal_cases)
+  case 1
+  then show ?case 
+    by (auto dest!: finite_there_is_maximal_set)
+next
+  case 2
+  then show ?case 
+    by (simp add: Sup_subset_mono maximal_sets_subset)
+qed
+ 
+lemma laminar_maximal_sets_disjoint:
+ "\<lbrakk>laminar U \<X>; X \<in> maximal_sets \<X>; Y \<in> maximal_sets \<X>; X \<noteq> Y\<rbrakk> \<Longrightarrow> X \<inter> Y = {}"
+  by(auto elim!: laminarE simp add: maximal_sets_def) fast+
+
+lemma maximal_disjoint_subsets_disjoint:
+  assumes  "M \<in> maximal_sets \<X>"  "M' \<in> maximal_sets \<X>" "M \<inter> M' = {}" "{} \<notin> \<X>"
+  shows "{X |X. X \<in> \<X> \<and> X \<subseteq> M} \<inter> {X |X. X \<in> \<X> \<and> X \<subseteq> M'} = {}"
+  using assms
+  by (auto simp add: maximal_sets_def) (metis le_inf_iff subset_empty)
+
+lemma laminar_maximal_sets_nempty:
+ "\<lbrakk>laminar U \<X>; X \<in> maximal_sets \<X>\<rbrakk> \<Longrightarrow> X \<noteq> {}"
+  by(auto elim!: laminarE simp add: maximal_sets_def)
+
+lemma laminar_union_maximal_sets_not_in:
+ "\<lbrakk>laminar U \<X>; X \<in> maximal_sets \<X>; Y \<in> maximal_sets \<X>; X \<noteq> Y\<rbrakk> \<Longrightarrow> X \<union> Y \<notin> \<X>"
+  by(auto elim!: laminarE simp add: maximal_sets_def)
+
+lemma insertE_strict:
+  "\<lbrakk>y \<in> insert x X; y \<in> X \<Longrightarrow> P; \<lbrakk>y = x;y \<notin> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by blast
+
+lemma laminar_extension_with_maximal_sets:
+  assumes "laminar U \<X>" "\<Y> \<subseteq> maximal_sets \<X>" "\<Y> \<noteq> {}"
+  shows "laminar U (insert (\<Union> \<Y>) \<X>)"
+proof(cases "(\<Union> \<Y>) \<in> \<X>")
+  case True
+  hence "insert (\<Union> \<Y>) \<X> = \<X>" by blast
+  then show ?thesis 
+    using assms(1) by simp 
+next
+  case False
+  show ?thesis 
+  proof(rule laminarI, goal_cases)
+    case (1 X Y)
+    then show ?case 
+  proof(elim insertE_strict, goal_cases)
+    case 1
+    then show ?case
+      using assms(1) by(auto elim!: laminarE)
+  next
+    case 2
+    have "\<lbrakk>X \<in> \<X>; x \<in> X; \<forall>xa\<in>\<Y>. x \<notin> xa; xa \<in> Xa; Xa \<in> \<Y>; xa \<notin> X; xb \<in> X; xb \<in> Xaa; Xaa \<in> \<Y>\<rbrakk>
+          \<Longrightarrow> False"
+      for x xa Xa xb Xaa
+       proof(goal_cases)
+      case 1
+      then show ?case 
+      proof(cases "Xa = Xaa", goal_cases)
+        case 1
+        then show ?case 
+          using  assms(1,2)  maximal_sets_subset[of \<X>] 
+          by(auto elim!: laminarE simp add: disjoint_iff dest!: subsetD)       
+      next
+        case 2
+        hence maximals:"Xa \<in> maximal_sets \<X>" "Xaa \<in> maximal_sets \<X>"
+          using assms(2) by auto
+        hence "X \<subseteq> Xaa \<or> Xaa \<subseteq> X \<or> X \<inter> Xaa = {}" 
+          using "2"(1,5) assms(1)
+          by(auto elim!: in_maximal_setsE laminarE)
+        moreover have "Xaa \<in> \<X>" 
+          using in_maximal_setsE maximals(2) by blast
+        moreover have "\<not> Xaa \<subset> X"
+           using "2"(1)  maximals(2)
+           by(auto elim!: in_maximal_setsE)
+        ultimately show ?case 
+          using "2"(2-9) by auto  
+      qed
+    qed
+    then show ?case 
+      using 2 by blast
+  next
+    case 3
+    note 2 = this
+     have "\<lbrakk>Y \<in> \<X>; x \<in> Y; \<forall>xa\<in>\<Y>. x \<notin> xa; xa \<in> Xa; Xa \<in> \<Y>; xa \<notin> Y; xb \<in> Y; xb \<in> Xaa; Xaa \<in> \<Y>\<rbrakk>
+          \<Longrightarrow> False"
+      for x xa Xa xb Xaa
+       proof(goal_cases)
+      case 1
+      then show ?case 
+      proof(cases "Xa = Xaa", goal_cases)
+        case 1
+        then show ?case 
+          using  assms(1,2)  maximal_sets_subset[of \<X>] 
+          by(auto elim!: laminarE simp add: disjoint_iff dest!: subsetD)       
+      next
+        case 2
+        hence maximals:"Xa \<in> maximal_sets \<X>" "Xaa \<in> maximal_sets \<X>"
+          using assms(2) by auto
+        hence "Y \<subseteq> Xaa \<or> Xaa \<subseteq> Y \<or> Y \<inter> Xaa = {}" 
+          using "2"(1,5) assms(1)
+          by(auto elim!: in_maximal_setsE laminarE)
+        moreover have "Xaa \<in> \<X>" 
+          using in_maximal_setsE maximals(2) by blast
+        moreover have "\<not> Xaa \<subset> Y"
+           using "2"(1)  maximals(2)
+           by(auto elim!: in_maximal_setsE)
+        ultimately show ?case 
+          using "2"(2-9) by auto  
+      qed
+    qed
+    then show ?case 
+      using 2 by blast
+  next
+    case 4
+    then show ?case 
+      by simp
+  qed
+  next
+    case (2 X)
+    then show ?case 
+      using assms(1-3) by (force elim!: laminarE  in_maximal_setsE)
+  qed
+qed
 
 lemma laminar_family_number_of_sets:
   assumes "n = card U" "finite U" "laminar U \<X>"
@@ -122,10 +307,6 @@ next
           unfolding  laminar_def by auto
       qed
       ultimately show ?case by simp
-    next
-      case 3
-      then show ?case 
-        using V_non_empt by simp
     qed
     have cardY: "card \<Y> \<le> 2 * n - 1"
       using Suc.prems(1) Suc.prems(2) x_V_prop  
@@ -321,6 +502,138 @@ next
   qed
   ultimately show ?thesis by force
  qed
+qed
+
+lemma laminar_card_and_maximal_sets:
+  assumes "finite U" "laminar U \<X>" 
+  shows   "card \<X> \<le> 2* card (\<Union> \<X>) - card (maximal_sets \<X>)"
+proof-
+  have X_split:"\<X> = \<Union> {{X | X. X \<in> \<X> \<and> X \<subseteq> M} | M. M \<in> maximal_sets \<X>}"
+    using assms(1,2) finite_U_finite_family 
+    by(intro split_with_maximal_sets) auto
+  have X_split':"\<Union> \<X> = \<Union> (maximal_sets \<X>)"
+    using assms(1,2) finite_U_finite_family 
+    by(intro union_split_with_maximal_sets) auto
+  have "card \<X> = sum card {{X | X. X \<in> \<X> \<and> X \<subseteq> M} | M. M \<in> maximal_sets \<X>}"
+  proof(subst  X_split, rule card_UN_disjoint[where A = id, simplified], goal_cases)
+    case 1
+    then show ?case 
+      using assms(1,2) X_split finite_U_finite_family[of U \<X>]
+        finite_UnionD[of "{{uuba \<in> \<X>. uuba \<subseteq> uub} |uub. uub \<in> maximal_sets \<X>}"]
+      by simp
+  next
+    case 2
+    then show ?case 
+      using assms(1,2) finite_U_finite_family by fastforce
+  next
+    case 3
+    then show ?case
+    proof(rule, rule,rule, rule, rule, goal_cases)
+      case (1 XX YY X)
+      then obtain M M' where MM': "M \<in> maximal_sets \<X>" "XX = {X |X. X \<in> \<X> \<and> X \<subseteq> M}"
+          "M' \<in> maximal_sets \<X>" "YY = {X |X. X \<in> \<X> \<and> X \<subseteq> M'}"
+        by auto
+      hence X_props: "X \<in> \<X>" "X \<subseteq> M"  "X \<subseteq> M'"
+        using 1 by auto
+      then show ?case 
+        using 1(3,4) MM' laminar_maximal_sets_disjoint[OF assms(2) MM'(1,3)]
+              empty_nin_laminar[OF assms(2)] subset_empty[of X] 
+        by blast
+    next
+      case (2 i j)
+      then show ?case
+        by simp
+    qed
+  qed
+  also have "... = sum (\<lambda> M. card {X |X. X \<in> \<X> \<and> X \<subseteq> M}) (maximal_sets \<X>)"
+  proof(subst comm_monoid_add_class.sum.reindex[of
+            "\<lambda> M. {X |X. X \<in> \<X> \<and> X \<subseteq> M}"_ card, simplified comp_def, symmetric], goal_cases)
+    case 1
+    then show ?case
+      by(auto intro!: inj_onI elim!: in_maximal_setsE)
+  next
+    case 2
+    then show ?case  
+      by(auto intro!: arg_cong[of _ _ "sum _"])
+  qed
+  also have "... \<le> sum (\<lambda> X. 2* card X - 1) (maximal_sets \<X>)"
+  proof(rule ordered_comm_monoid_add_class.sum_mono, goal_cases)
+    case (1 M)
+    then show ?case 
+      using assms(1,2)
+      by(intro laminar_family_number_of_sets[OF refl])
+        (auto intro: finite_maximal_set[OF laminar_Union_finite]
+             intro!: laminarI
+               elim: laminarE) 
+  qed
+  also have "... =  2* sum card (maximal_sets \<X>) - card (maximal_sets \<X>)"
+  proof(subst sum_subtractf_nat, goal_cases)
+    case (1 x)
+    then show ?case
+      using assms(1,2)
+      by (auto simp add: card_geq_1_iff finite_maximal_set[OF laminar_Union_finite] 
+                         laminar_maximal_sets_nempty)
+  next
+    case 2
+    then show ?case 
+      by(auto intro!: arg_cong2[where f = "(-)"] simp add: semiring_0_class.sum_distrib_left)
+  qed
+  also have "... = 2 * (card (\<Union> \<X>)) - card (maximal_sets \<X>)"
+  proof(rule arg_cong2[where f = "(-)", OF _ refl], goal_cases)
+    case 1
+    have "sum card (maximal_sets \<X>) = card (\<Union> \<X>)"
+    proof(subst X_split', subst card_UN_disjoint[where A = id, simplified], goal_cases)
+      case 1
+      then show ?case 
+        by(auto intro!: finite_UnionD laminar_Union_finite[OF assms(1,2)] simp add: X_split'[symmetric])
+    next
+      case 2
+      then show ?case 
+        using assms(1,2) 
+        by(auto intro: finite_maximal_set[OF laminar_Union_finite])
+    next
+      case 3
+      then show ?case
+        using assms(2) laminar_maximal_sets_disjoint by fastforce
+    next
+      case 4
+      then show ?case by simp
+    qed
+    then show ?case 
+      by simp
+  qed
+  finally show ?thesis 
+    by simp
+qed
+
+lemma laminar_card_and_maximal_sets_card_universe:
+  assumes "finite U" "laminar U \<X>" 
+  shows   "card \<X> \<le> 2* card U - card (maximal_sets \<X>)"
+proof-
+  note laminar_card_and_maximal_sets[OF assms]
+  moreover have "2 * card (\<Union> \<X>) - card (maximal_sets \<X>) \<le> 2 * card U - card (maximal_sets \<X>)"
+    using assms(1,2) by(auto elim!: laminarE intro!: diff_le_mono card_mono)+
+  ultimately show ?thesis
+    by simp
+qed
+
+lemma two_maxes_laminar_card_not_max:
+  assumes "finite U" "laminar U \<X>" "X \<in> maximal_sets \<X>" "Y \<in> maximal_sets \<X>" "X \<noteq> Y"
+  shows   "card \<X> \<le> 2* (card U - 1)"
+proof(rule ccontr, goal_cases)
+  case 1
+  hence "card \<X> = 2 * card U - 1"
+    using laminar_family_number_of_sets[OF refl assms(1,2)] by simp
+  moreover have "card (insert (X \<union> Y) \<X>) = card \<X> + 1"
+    using laminar_union_maximal_sets_not_in assms finite_U_finite_family[OF assms(1)]
+    by(subst card_insert_disjoint) auto
+  moreover have "laminar U (insert (X \<union> Y) \<X>)"
+    using assms(3,4)
+    by(auto intro!: laminar_extension_with_maximal_sets[OF assms(2), of "{X, Y}", simplified])
+  moreover hence  "card (insert (X \<union> Y) \<X>) \<le> 2 * card U - 1" 
+    using laminar_family_number_of_sets[OF refl assms(1)] by simp
+  ultimately show ?case 
+    by simp
 qed
 
 end
