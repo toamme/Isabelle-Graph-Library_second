@@ -1,0 +1,8 @@
+session "Edmonds_Weighted_Blossom" = "HOL" +
+  options [document = pdf]
+  sessions
+    "Laminar_Family"
+    "Undirected_Set_Graphs"
+  theories
+    Blossom_Forest_Spec
+    Blossom_Forest

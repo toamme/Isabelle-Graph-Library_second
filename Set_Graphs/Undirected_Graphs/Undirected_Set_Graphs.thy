@@ -629,6 +629,9 @@ lemma graph_abs_empty[simp]: "graph_invar {}"
 lemma dblton_graph_union: "\<lbrakk>dblton_graph G; dblton_graph H\<rbrakk> \<Longrightarrow> dblton_graph (G \<union> H)"
   by (auto simp: graph_abs_def Vs_def dblton_graph_def)
 
+lemma dblton_graph_Union: "\<lbrakk>\<And> G. G \<in> \<G> \<Longrightarrow> dblton_graph G\<rbrakk> \<Longrightarrow> dblton_graph (\<Union> \<G>)"
+  by (auto simp: graph_abs_def Vs_def dblton_graph_def)
+
 lemma graph_invar_union: "\<lbrakk>graph_abs G; graph_abs H\<rbrakk> \<Longrightarrow> graph_abs (G \<union> H)"
   by (auto simp: graph_abs_def Vs_def dblton_graph_union)
 

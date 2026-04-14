@@ -1046,6 +1046,34 @@ lemma graph_abs_edges_of_distinct_path:
   "distinct p \<Longrightarrow> graph_invar (set (edges_of_path p))"
   by (induction p rule: edges_of_path.induct) auto
 
+lemma dblton_graph_edges_of_distinct_path_clsd_hd:
+  assumes  "distinct p" "length p \<ge> 2"
+  shows "dblton_graph (set (edges_of_path (p @ [hd p])))"
+  using assms(1)
+  by(induction rule: list_induct3_len_geq_2[OF assms(2)])
+    (auto simp add: graph_abs_edges_of_distinct_path)
+
+lemma dblton_graph_edges_of_distinct_path_clsd_last:
+  assumes  "distinct p" "length p \<ge> 2"
+  shows "dblton_graph (set (edges_of_path (last p # p)))"
+  using assms hd_rev[of p] set_rev[of "edges_of_path (last p # p)"]
+        edges_of_path_rev[of "last p # p"]
+  by (intro forw_subst[of _ _ dblton_graph, OF _
+          dblton_graph_edges_of_distinct_path_clsd_hd, of _ "rev p"]) 
+      auto
+
+lemma graph_abs_edges_of_distinct_path_clsd_hd:
+  assumes  "distinct p" "length p \<ge> 2"
+  shows "graph_invar (set (edges_of_path (p @ [hd p])))"
+  by (simp add: assms(1,2) dblton_graph_edges_of_distinct_path_clsd_hd
+      finite_dbl_finite_verts)
+
+lemma graph_abs_edges_of_distinct_path_clsd_last:
+  assumes  "distinct p" "length p \<ge> 2"
+  shows "graph_invar (set (edges_of_path (last p # p)))"
+  by (simp add: assms(1,2) dblton_graph_edges_of_distinct_path_clsd_last
+      finite_dbl_finite_verts)
+
 lemma distinct_no_self_loop_in_edges_of_path:
 "distinct p \<Longrightarrow> \<nexists> x. {x} \<in> set (edges_of_path p)"
   by(induction p rule: edges_of_path.induct) auto

@@ -82,7 +82,7 @@ assumes merge_spec:
             then \<Union> ((collect_elems L) ` (set ls))
             else collect_elems L i)"
 "\<And> L ls new_id. laminar_merge_precond L ls new_id 
-  \<Longrightarrow> max_ids (merge L ls new_id) = max_ids L - set ls \<union> {new_ids}"
+  \<Longrightarrow> max_ids (merge L ls new_id) = max_ids L - set ls \<union> {new_id}"
 "\<And> L ls new_id. laminar_merge_precond L ls new_id 
   \<Longrightarrow> laminar_abstract (merge L ls new_id) = 
      insert (\<Union> ((collect_elems L) ` (set ls))) (laminar_abstract L)"
@@ -105,6 +105,10 @@ assumes unmerge_spec:
         \<Longrightarrow> max_ids L' = max_ids L - {id} \<union> set ids"
 "\<And> L id L' ids. \<lbrakk>laminar_unmerge_precond L id; unmerge L id = (L', ids)\<rbrakk>
         \<Longrightarrow> laminar_abstract L' = laminar_abstract L - {collect_elems L id}"
+"\<And> L id L' ids. \<lbrakk>laminar_unmerge_precond L id; unmerge L id = (L', ids)\<rbrakk>
+        \<Longrightarrow> distinct ids"
+"\<And> L id L' ids. \<lbrakk>laminar_unmerge_precond L id; unmerge L id = (L', ids)\<rbrakk>
+        \<Longrightarrow> length ids \<ge> 2"
 
 locale laminar_iteration_spec =
  laminar_family_spec where collect_elems = collect_elems
@@ -115,7 +119,8 @@ and elems_iteration :: "'L \<Rightarrow> 'id \<Rightarrow> ('acc2 \<Rightarrow> 
 assumes max_qualified_iteration:
   "\<And> P L f acc. laminar_invar L \<Longrightarrow>
        \<exists> ids. set ids = {id | id mid. mid \<in> max_ids L
-                              \<and> collect_elems L id \<subseteq> collect_elems L mid \<and> P mid}
+          \<and> collect_elems L id \<subseteq> collect_elems L mid \<and> P mid 
+          \<and> id \<in> all_ids L}
           \<and> distinct ids \<and> max_qualified_iteration P L f acc = foldl f acc ids"
 and elems_iteration: 
   "\<And> L id f acc. laminar_invar L \<Longrightarrow>
