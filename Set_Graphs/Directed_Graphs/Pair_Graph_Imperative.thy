@@ -72,7 +72,36 @@ begin
       unfolding from_list_impl_def from_list_def'
       apply sep_auto
       done
+
+        definition 
+      finite_graph_assn :: "'v id_dl_graph \<Rightarrow> 'gimpl \<Rightarrow> assn"
+      where "finite_graph_assn lg lgi \<equiv> is_map lg lgi * \<up>(graph_inv lg) * \<up> (finite (dom lg))"  
+
+    lemma empty_graph_impl_finite_rule: "<emp> empty_graph_impl <finite_graph_assn (\<lambda>_. None)>"
+      unfolding empty_graph_impl_def finite_graph_assn_def by sep_auto
+      
+    lemma neighbourhood_impl_finite_rule: 
+      "<finite_graph_assn lg lgi> neighbourhood_impl lgi v
+       <\<lambda>r. finite_graph_assn lg lgi * \<up>( r = neighbourhood lg v \<and> distinct r )>"
+      unfolding finite_graph_assn_def neighbourhood_impl_def neighbourhood_def
+      by (sep_auto split: option.split)
     
+    lemma add_edge_impl_finite_rule: 
+      "<finite_graph_assn lg lgi> add_edge_impl lgi u v <\<lambda>r. finite_graph_assn (add_edge lg u v) r>"
+      unfolding add_edge_impl_def finite_graph_assn_def
+      apply (sep_auto) 
+      unfolding add_edge_def
+      apply (sep_auto split: option.split)
+      done
+
+    lemma from_list_impl_finite_rule:
+      shows "<emp> from_list_impl xs <finite_graph_assn (from_list xs)>"
+      supply R = foldM_refine[where I="\<lambda>_ _ G Gi. (finite_graph_assn G Gi)"] \<comment> \<open>Coupling relation is straightforward\<close>
+      supply R[sep_heap_rules] = R[where f="\<lambda>(u, v) G. add_edge G u v"] \<comment> \<open>The pair causes unification problems, so we need explicit instantiation\<close>
+      unfolding from_list_impl_def from_list_def'
+      using add_edge_impl_finite_rule empty_graph_impl_finite_rule apply sep_auto
+      done
+
   end    
 
 
