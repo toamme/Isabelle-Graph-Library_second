@@ -717,6 +717,12 @@ and to_dag_nh::"'nh_nv \<Rightarrow> 'nh_ex Heap"
 and lookup_dag_imp::"'ver \<Rightarrow> 'dag \<Rightarrow> 'nh_ex option Heap"
 and is_neighb_nv_emp::"'nh_nv \<Rightarrow> bool Heap"
 and dag_fold_imp::"('ver \<Rightarrow> 'dag \<Rightarrow> 'dag Heap) \<Rightarrow> 'front \<Rightarrow> 'dag \<Rightarrow> 'dag Heap"
+
+and dag_map_fold::"(('ver \<times> 'nh_ex) \<Rightarrow> 'adjmap_imp \<Rightarrow>  'adjmap_imp Heap)
+                 \<Rightarrow> 'dag \<Rightarrow> 'adjmap_imp \<Rightarrow>  'adjmap_imp Heap"
+and imp_adjmap_empty::"'adjmap_imp Heap" 
+and imp_adjmap_upd::"'ver \<Rightarrow> 'nh \<Rightarrow> 'adjmap_imp \<Rightarrow> 'adjmap_imp Heap"
+and to_ordinary_neighb::"'nh_ex \<Rightarrow> 'nh Heap"
 begin
 
 definition "neighbourhood_imp Gi v = 
@@ -756,6 +762,18 @@ definition "expand_tree_body Gi vis u dag =
 
 definition "expand_tree_imp Gi dag front vis = dag_fold_imp (expand_tree_body Gi vis) front dag"
 
+definition "put_graph_neighb Gi v new_nh =
+            imp_adjmap_upd v new_nh Gi"
+
+fun change_dag_format_body where
+  "change_dag_format_body (x, y) G =
+  do {nh \<leftarrow> to_ordinary_neighb y;
+      put_graph_neighb G x nh}"
+
+definition "change_dag_format dag = 
+      do { start \<leftarrow> imp_adjmap_empty;
+            dag_map_fold change_dag_format_body dag start}"
+
 end
 
 term foldM
@@ -789,7 +807,8 @@ BFS_subprocedures_Imperative_spec where unvisited_neighbs= unvisited_neighbs and
   dag_fold_imp = dag_fold_imp+
 imp_graph_map: imp_map_lookup is_map lookup_imp +
 imp_dag_map: imp_map_lookup is_dag lookup_dag_imp +
-imp_dag_map_upd: imp_map_update is_dag update_dag_imp 
+imp_dag_map_upd: imp_map_update is_dag update_dag_imp +
+adj_map_imp_upd: imp_map_update is_map imp_adjmap_upd
 for  fold_vset::"('ver \<Rightarrow> 'vset \<Rightarrow> 'vset) \<Rightarrow> 'vset \<Rightarrow> 'vset \<Rightarrow> 'vset"
 and fold_adjmap::"('ver \<Rightarrow> 'adjmap \<Rightarrow> 'adjmap) \<Rightarrow> 'vset \<Rightarrow> 'adjmap \<Rightarrow> 'adjmap"
 and unvisited_neighbs::"'nh \<Rightarrow> 'vis \<Rightarrow> 'nh_nv Heap"
@@ -814,6 +833,8 @@ and is_neighb_nv::"'vset \<Rightarrow> 'nh_nv \<Rightarrow> assn"
 and is_wfront::"'vset \<Rightarrow> 'wfront \<Rightarrow> assn"
 and is_front::"'vset \<Rightarrow> 'front \<Rightarrow> assn"
 and is_dag_nh::"'vset \<Rightarrow> 'nh_ex \<Rightarrow> assn"
+and map_fold::"(('ver \<times> 'vset) \<Rightarrow> 'adjmap \<Rightarrow>  'adjmap)
+                 \<Rightarrow> 'adjmap \<Rightarrow> 'adjmap \<Rightarrow>  'adjmap"
 assumes nd_emp_rule: "<emp> nh_emp <is_neighb \<emptyset>\<^sub>N >"
 and wf_empty_rule: "<emp> wf_empty<is_wfront \<emptyset>\<^sub>N>"
 and is_neighb_nv_emp_rule: 
@@ -859,7 +880,20 @@ and dag_fold_imp:
       < F * is_front front fronti * dag_assn init initi> 
          dag_fold_imp fi fronti initi 
       <\<lambda>r. F * is_front front fronti * dag_assn (fold_adjmap f front init) r>"
+and to_ordinary_neighb_rule:
+   "<is_dag_nh dag_nh dag_nhi> to_ordinary_neighb dag_nhi
+    <\<lambda> r. is_dag_nh dag_nh dag_nhi * is_neighb dag_nh r>"
+and dag_map_fold_rule:
+   "\<And> dag dagi fi initi init f F dag_assn A graph_assn.
+       (\<And> x nh nhi  G Gi. <F * dag_assn dag dagi * is_dag A dagi * graph_assn G Gi>
+                          fi (x, nhi) Gi
+                      <\<lambda> Gi. F* dag_assn dag dagi* is_dag A dagi * graph_assn (f (x, nh) G) Gi>) \<Longrightarrow>
+       <F * dag_assn dag dagi * is_dag A dagi * graph_assn init initi> dag_map_fold fi dagi initi
+       <\<lambda> Gi. F* dag_assn dag dagi* is_dag A dagi * graph_assn (map_fold f dag init) Gi>"
 begin
+
+find_theorems update_dag_imp
+
 
 definition "graph_assn Gr Gri = 
   (\<exists>\<^sub>A A. is_map A Gri * \<up> (finite (dom A)) *  \<up> (dom (lookup Gr) = dom A)*
@@ -1267,6 +1301,25 @@ lemma dag_empty_rule:
   unfolding dag_assn_def
   by(rule ht_exPI[where x = "\<lambda> x. None"])
     (sep_auto simp: Graph.adjmap.invar_empty Graph.adjmap.map_empty)
+
+lemma change_graph_neighb_rule:
+  "<graph_assn Gr Gi * is_neighb new_nh new_nhi> 
+    put_graph_neighb Gi v new_nhi
+   <\<lambda> r. graph_assn (update v new_nh Gr) r>" 
+  sorry
+
+lemma change_dag_format_body_rule:
+  "<graph_assn Gr Gi * is_dag_nh nhd nhdi>
+    change_dag_format_body (v, nhdi) Gi
+   <\<lambda> r. graph_assn (update v new_nh Gr) r * is_dag_nh nhd nhdi>"
+  sorry
+
+lemma change_dag_format_rule:
+  "<dag_assn dag dagi>
+   change_dag_format dagi
+  <\<lambda> r. dag_assn dag dagi * graph_assn (map_fold (\<lambda> (v, nhd) G. update v nhd G) dag empty) r>"
+  sorry
+thm dag_map_fold_rule
 
 end
 

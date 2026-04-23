@@ -1,5 +1,5 @@
 theory BFS_Refinement_Instantiation
-  imports BFS_Refinement
+  imports BFS_Refinement "HOL-Imperative_HOL.Array"
 begin
 
 definition "list_union xs ys = fold (\<lambda> y ys. if y \<in> set ys then ys else y#ys) ys xs"
