@@ -415,6 +415,22 @@ proof-
                     neighbourhood_def digraph_abs_def)
 qed
 
+lemma update_by_foldr:
+  assumes "adjmap_inv GG"
+  shows "adjmap_inv (foldr (\<lambda>x. update x (f x)) xs GG)"
+        "lookup (foldr (\<lambda>x. update x (f x)) xs GG) =
+       (\<lambda> x. if x \<in> set xs then Some (f x) else lookup GG x)"
+proof-
+  have  "lookup (foldr (\<lambda>x. update x (f x)) xs GG) =
+       (\<lambda> x. if x \<in> set xs then Some (f x) else lookup GG x)
+        \<and> adjmap_inv (foldr (\<lambda>x. update x (f x)) xs GG)"
+    by(induction xs)
+      (auto simp add: assms adjmap.map_update adjmap.invar_update)
+  thus "adjmap_inv (foldr (\<lambda>x. update x (f x)) xs GG)"
+        "lookup (foldr (\<lambda>x. update x (f x)) xs GG) =
+       (\<lambda> x. if x \<in> set xs then Some (f x) else lookup GG x)"
+    by auto
+qed
 
 end text \<open>@{const Pair_Graph_Specs}\<close>
 

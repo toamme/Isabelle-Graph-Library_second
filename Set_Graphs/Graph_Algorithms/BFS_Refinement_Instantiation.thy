@@ -1,5 +1,5 @@
 theory BFS_Refinement_Instantiation
-  imports BFS_Refinement "HOL-Imperative_HOL.Array"
+  imports BFS_Refinement "HOL-Imperative_HOL.Array" Array_Map_Iterator
 begin
 
 definition "list_union xs ys = fold (\<lambda> y ys. if y \<in> set ys then ys else y#ys) ys xs"
@@ -140,14 +140,6 @@ definition "add_list_to_set xs S= foldM ins xs S"
 
 end
 
-
-(*
-setup Locale_Code.open_block 
-interpretation hash_guarded_list: guarded_list is_hashset hs_ins hs_memb hs_new
-  by unfold_locales
-setup Locale_Code.close_block 
-*)
-
 locale list_array_map_based_bfs = 
 imp_set_ins is_set1 ins1 +
 imp_set_memb is_set1 memb1+
@@ -161,13 +153,17 @@ imp_set_empty is_set3 empty3 +
 imp_map_lookup is_map lookup_imp +
 imp_map_lookup is_dag lookup_dag_imp +
 imp_map_update is_dag update_dag_imp +
-imp_map_empty is_dag dag_empty 
+imp_map_empty is_dag dag_empty+
+imp_map_update is_map imp_adjmap_upd +
+imp_map_empty is_map imp_adjmap_empty+
+imp_map_iterate is_dag is_dag_it dag_it_init dag_it_has_next dag_it_next
 for is_set1:: "'v set \<Rightarrow> 'nset \<Rightarrow> assn" and ins1 memb1 empty1 
 and is_set2 :: "'v set \<Rightarrow> 'vis \<Rightarrow> assn" and memb2
 and is_set3 :: "'v set \<Rightarrow> 'dag_nh_set \<Rightarrow> assn" and memb3 and ins3 and empty3
 and is_map::"('v \<Rightarrow> 'v list option) \<Rightarrow> 'g_array \<Rightarrow> assn" and  lookup_imp
 and is_dag :: "('v \<Rightarrow> ('dag_nh_set \<times> 'v list) option) \<Rightarrow> 'a \<Rightarrow> assn"
-and lookup_dag_imp update_dag_imp dag_empty empty2 ins2
+and lookup_dag_imp update_dag_imp dag_empty empty2 ins2 imp_adjmap_upd
+and imp_adjmap_empty is_dag_it dag_it_init dag_it_has_next dag_it_next
 begin
 
 interpretation guarded_list is_set1 ins1 memb1 empty1
@@ -199,8 +195,6 @@ definition "imp_src_assn S Si = \<up> (S = Si)"
 lemma imp_src_to_cf_rule:  
   "<imp_src_assn S Si> imp_src_to_cf Si <\<lambda>r. imp_src_assn S Si * is_front S r>"
   by(sep_auto simp: imp_src_assn_def imp_src_to_cf_def is_front_def)
-
-find_theorems "_::'vis"
 
 definition "set_cf_visited imp_vis imp_cf = foldM ins2 imp_cf imp_vis"
 
@@ -264,6 +258,7 @@ interpretation subprocedures: BFS_subprocedures_Imperative
   and lookup_dag_imp = lookup_dag_imp
   and update_dag_imp = update_dag_imp
   and dag_empty = dag_empty
+  and to_ordinary_neighb = to_ordinary_list
 for G :: "'v \<Rightarrow> 'v list option"
 proof(rule BFS_subprocedures_Imperative.intro, goal_cases)
   case 1
@@ -291,6 +286,18 @@ next
     by unfold_locales
 next
   case 6
+  then show ?case
+    by unfold_locales
+next
+  case 7
+  then show ?case
+    by unfold_locales
+next
+  case 8
+  show ?case
+    by unfold_locales
+next
+  case 9
   thus ?case
   proof(rule BFS_subprocedures_Imperative_axioms.intro, goal_cases)
     case 1
@@ -355,6 +362,11 @@ next
       done
     thus ?case
       by(sep_auto simp: is_front_def)
+  next
+    case (12 dag_nh dag_nhi)
+    thus ?case
+      using dag_nh.to_ordinary_list_rule[of dag_nh dag_nhi]
+      by(cases dag_nhi)(sep_auto simp: is_neighb_def)
   qed
 qed
 
@@ -391,6 +403,7 @@ interpretation bfs_imp: BFS_Imperative
   and imp_src_assn = imp_src_assn 
   and G_imp = Gi
   and srcs = srcs
+  and change_dag_format = "subprocedures.change_dag_format"
 for Gi G srcs
 proof(rule BFS_Imperative.intro, goal_cases)
   case 1
@@ -432,43 +445,29 @@ next
     then show ?case 
       using subprocedures.next_frontier_imperative_rule[of G Gi cf imp_cf vis imp_vis]
       by sep_auto
+  next
+    case (8 dag dagi)
+    show ?case
+      by(rule subprocedures.change_dag_format_rule)
   qed
 qed
 
 lemmas BFS_refine = bfs_imp.BFS_refine
 lemmas graph_assn_def = subprocedures.graph_assn_def
 abbreviation "state_assn \<equiv> bfs_imp.state_assn"
+lemmas compute_dag_rule = bfs_imp.compute_dag_rule
 
 abbreviation "BFS_imp \<equiv> bfs_imp.BFS_imp"
 abbreviation "BFS_fun \<equiv> bfs_imp.BFS_impl"
-
-find_theorems  BFS.BFS_impl
-
-find_theorems subprocedures.expand_tree
-find_theorems BFS_subprocedures.expand_tree
-
+abbreviation "BFS_dag \<equiv> bfs_imp.compute_dag"
+abbreviation "BFS_init \<equiv> bfs_imp.initial_state"
 
 lemma "BFS_fun = 
   (\<lambda> G. BFS.BFS_impl Nil list_union (subprocedures.expand_tree G)
                   (subprocedures.next_frontier G))"
   by simp
 
-term is_set1
-term is_set2
-term is_set3
-term empty2
-term ins2
-term lookup_imp
 end
-(*
-definition "ias_is_empty S = do {s \<leftarrow> Array.len S;
-                                 return (s = 0)}"
-
-
-interpretation imp_set_is_empty is_ias ias_is_empty
-  apply unfold_locales
-  apply(sep_auto simp: is_ias_def ias_of_list_def ias_is_empty_def)
- *)
 
 setup Locale_Code.open_block 
 interpretation hash_guarded_list: guarded_list is_hashset hs_ins hs_memb hs_new
@@ -501,7 +500,13 @@ interpretation subprocedures: BFS_subprocedures_Imperative_spec
   and lookup_imp = iam_lookup
   and lookup_dag_imp = iam_lookup
   and update_dag_imp = iam_update
-  done
+  and imp_adjmap_upd = iam_update
+  and imp_adjmap_empty = iam_new
+  and dag_it_init = iam_it_init
+  and dag_it_has_next = iam_it_has_next
+  and dag_it_next = iam_it_next
+  and to_ordinary_neighb = hash_guarded_list.to_ordinary_list
+  done 
 
 interpretation top_loop: BFS_Imperative_spec
   where imp_dag_empty = iam_new
@@ -510,7 +515,8 @@ interpretation top_loop: BFS_Imperative_spec
   and imp_expand_tree = "subprocedures.expand_tree_imp Gi"
   and imp_next_frontier = "subprocedures.next_frontier_imperative Gi"
   and imp_cf_is_empty = imp_cf_is_empty
-  and imp_src_to_cf = imp_src_to_cf for Gi
+  and imp_src_to_cf = imp_src_to_cf 
+  and change_dag_format = "subprocedures.change_dag_format"for Gi
   done
 
 interpretation iam_graph: Pair_Graph_Imperative  
@@ -522,9 +528,8 @@ setup Locale_Code.close_block
 definition "BFS_imp = top_loop.BFS_imp"
 definition "initial_state = top_loop.initial_state_imp"
 definition "iam_graph_from_list = iam_graph.from_list_impl"
+definition "BFS_dag = top_loop.compute_dag"
 
-thm top_loop.initial_state_imp_def
-thm top_loop.BFS_imp.simps
 (*
 export_code BFS_imp imp_src_to_cf iam_new vis_empty
 
@@ -553,19 +558,18 @@ interpretation proofs: list_array_map_based_bfs
    is_iam iam_lookup iam_update iam_new 
    (*visited part 2*)
    ias_new ias_ins
+   (*building graph in original format from dag*)
+   iam_update iam_new
+   (*dag iterator*)
+   iam_is_it iam_it_init iam_it_has_next iam_it_next
   by unfold_locales
-
-find_theorems proofs.BFS_imp
-find_theorems top_loop.BFS_imp
 
 abbreviation "bfs_graph_assn \<equiv> BFS_subprocedures_Imperative.graph_assn"
 abbreviation "state_assn \<equiv> BFS_Imperative.state_assn"
 abbreviation "bfs_loop \<equiv> BFS_Imperative_spec.BFS_imp"
+abbreviation "bfs_dag \<equiv> BFS_Imperative_spec.compute_dag"
 
-thm proofs.BFS_refine
-thm iam_graph.from_list_impl_rule
-
-lemma "bfs_graph_assn (\<lambda>M. M) is_iam proofs.is_neighb = iam_graph.finite_graph_assn"
+lemma "bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb = iam_graph.finite_graph_assn"
   apply(rule ext)+
   unfolding proofs.graph_assn_def
   unfolding iam_graph.finite_graph_assn_def
@@ -606,13 +610,31 @@ lemma BFS_imp_def': "BFS_imp = proofs.BFS_imp"
       proofs.nh_emp_def proofs.set_cf_visited_def set_cf_visited_def
   by simp
 
+lemma BFS_dag_def': "BFS_dag = proofs.BFS_dag"
+  unfolding BFS_imp_def is_neighb_nv_emp_def nh_emp_def proofs.is_neighb_nv_emp_def
+      proofs.nh_emp_def proofs.set_cf_visited_def set_cf_visited_def BFS_dag_def
+      imp_src_to_cf_def proofs.imp_src_to_cf_def proofs.vis_empty_def
+      vis_empty_def
+  by simp
+  
+
 lemma BFS_imp_rule:
-"<bfs_graph_assn (\<lambda>M. M) is_iam proofs.is_neighb G Gi * proofs.state_assn s s_imp>
+"<bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb G Gi * proofs.state_assn s s_imp>
 BFS_imp Gi s_imp
-<\<lambda>s_imp'. bfs_graph_assn (\<lambda>M. M) is_iam proofs.is_neighb G Gi *
+<\<lambda>s_imp'. bfs_graph_assn  (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb G Gi *
     proofs.state_assn (proofs.BFS_fun G s) s_imp'>"
   unfolding BFS_imp_def'
   using proofs.BFS_refine
   by simp
+
+lemma BFS_dag_imp_rule:
+  "<bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb G Gi> 
+     BFS_dag Gi srcs
+   <\<lambda> r. bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb G Gi *
+        bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb 
+              (BFS_state.parents (proofs.BFS_fun G (proofs.BFS_init srcs))) r>"
+  using proofs.compute_dag_rule[of srcs srcs G Gi]
+  by(sep_auto simp: proofs.imp_src_assn_def BFS_dag_def')
+  
 
 end

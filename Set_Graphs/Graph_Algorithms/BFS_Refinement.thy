@@ -14,6 +14,7 @@ and set_cf_visited::"'imp_vis \<Rightarrow> 'imp_cf \<Rightarrow> 'imp_vis Heap"
 and imp_expand_tree::"'imp_dag \<Rightarrow> 'imp_cf \<Rightarrow> 'imp_vis \<Rightarrow> 'imp_dag Heap"
 and imp_next_frontier::"'imp_cf \<Rightarrow> 'imp_vis \<Rightarrow> 'imp_cf Heap"
 and imp_cf_is_empty::"'imp_cf \<Rightarrow> bool Heap"
+and change_dag_format::"'imp_dag \<Rightarrow> 'imp_G Heap"
 begin
 
 partial_function (heap) BFS_imp::
@@ -32,16 +33,23 @@ definition "initial_state_imp src_imp=
       p \<leftarrow> imp_dag_empty;
       v \<leftarrow> imp_vis_empty;
         return \<lparr>parents = p, current = cf, visited = v\<rparr>}"
+
+definition "compute_dag src_imp =
+    do {init \<leftarrow> initial_state_imp src_imp;
+        final \<leftarrow> BFS_imp init;
+        change_dag_format (parents final)}"
 end
 
 locale BFS_Imperative = 
  BFS  where expand_tree = expand_tree and insert = insert +
  BFS_Imperative_spec where  imp_src_to_cf = imp_src_to_cf and imp_expand_tree = imp_expand_tree
+  and change_dag_format = change_dag_format
  for  imp_src_to_cf :: "'imp_src \<Rightarrow> 'imp_cf Heap"
   and expand_tree::"'adjmap \<Rightarrow> 'vset \<Rightarrow> 'vset \<Rightarrow> 'adjmap"
   and insert :: "'ver \<Rightarrow> 'vset \<Rightarrow> 'vset" 
-  and imp_expand_tree::"'imp_dag \<Rightarrow> 'imp_cf \<Rightarrow> 'imp_vis \<Rightarrow> 'imp_dag Heap"+
-
+  and imp_expand_tree::"'imp_dag \<Rightarrow> 'imp_cf \<Rightarrow> 'imp_vis \<Rightarrow> 'imp_dag Heap"
+  and change_dag_format::"'imp_dag \<Rightarrow> 'imp_G Heap"+
+  
 fixes  G_imp::"'imp_G"
  and graph_assn::"'adjmap \<Rightarrow> 'imp_G \<Rightarrow> assn"
  and imp_src_assn::"'vset \<Rightarrow> 'imp_src \<Rightarrow> assn"
@@ -70,6 +78,10 @@ assumes imp_dag_empty: "<emp> imp_dag_empty <imp_dag_assn \<emptyset>\<^sub>G>"
     imp_next_frontier imp_cf imp_vis
     <\<lambda> r. imp_cf_assn (next_frontier cf vis) r * imp_vis_assn vis imp_vis * graph_assn G G_imp
           * imp_cf_assn cf imp_cf>"
+and change_dag_format_rule: 
+ "\<And> dag dagi. < imp_dag_assn dag dagi>
+      change_dag_format dagi
+     <\<lambda> r. imp_dag_assn dag dagi * graph_assn dag r>"
 begin
 
 definition "state_assn (s::('adjmap, 'vset) BFS_state)
@@ -180,6 +192,14 @@ lemma BFS_program_behaviour:
   using initial_refine BFS_refine 
   by sep_auto
 
+lemma compute_dag_rule:
+ "<imp_src_assn srcs srcs_imp * graph_assn G G_imp> 
+   compute_dag srcs_imp
+  <\<lambda> dag. imp_src_assn srcs srcs_imp * graph_assn G G_imp *
+      graph_assn (BFS_state.parents (BFS_impl initial_state)) dag>" 
+  unfolding compute_dag_def
+  using initial_refine BFS_refine change_dag_format_rule
+  by (sep_auto simp: state_assn_def)
  
 end
 
@@ -508,26 +528,6 @@ definition
   | None \<Rightarrow> return False
 }"
 
-(*
-lemma loop_fst_d_rule:
-"<is_2d_map M Mi>
- lookup1 i Mi
-<\<lambda> r. is_2d_map M Mi \<and>\<^sub>A is_map2 (M i) r>"
-  apply(auto simp add: is_2d_map_def)
-  using outer_lookup.lookup_rule apply sep_auto
-  subgoal for A a b
-    apply(rule mod_exI[of _ A])
-    using outer_lookup.lookup_rule[of A Mi i] apply sep_auto
-
-lemma "is_2d_map' f M A \<Longrightarrow>\<^sub>A is_map2 (f i) (the (A i)) *  true"
-  sorry
-
-lemma loop_fst_d_rule:
-"<is_map1 M Mi>
- lookup1 i Mi
-<\<lambda> r. is_map1 M Mi * \<up> (r = M i)>"
-  sorry
-*)
 lemma lookup_2d_rule:
  "<is_2d_map M Mi>
   lookup_2d Mi i j
@@ -585,116 +585,6 @@ lemma lookup_2d_rule:
       by sep_auto
     done
   done
-(*
-lemma lookup_2d_rule':
- "<is_2d_map' M Mi A>
-  lookup_2d Mi i j
-  <\<lambda> r. is_2d_map' M Mi A* \<up> (r = M i j)>"
-  unfolding lookup_2d_def is_2d_map'_def
-  apply(rule ht_bind[where R =
-     "\<lambda> r. is_map1 A Mi * \<up> (finite (dom A)) * \<up> (\<forall>i j. A i = None \<longrightarrow> M i j = None) *
-           Finite_Set.fold (\<lambda>i. ( * ) (is_map2 (M i) (the (A i)))) emp (dom A) * \<up> (r = A i)"])
-  subgoal
-    by sep_auto
-  subgoal for mm
-    apply(clarsimp split!: option.split)
-    subgoal
-      using ht_frame
-      using outer_lookup.lookup_rule  
-      by sep_auto 
-    subgoal for m
-      apply(rule ht_cons_prec[where P'=
-       "is_map1 A Mi * \<up> (finite (dom A)) * \<up> (\<forall>i. A i = None \<longrightarrow> (\<forall>j. M i j = None)) *
-          Finite_Set.fold (\<lambda>i. ( * ) (is_map2 (M i) (the (A i)))) emp (dom A - {i}) *
-          \<up> (Some m = A i) * is_map2 (M i) m"
-      and Q = "\<lambda> x. is_map1 A Mi * \<up> (finite (dom A)) * \<up> (\<forall>i. A i = None \<longrightarrow> (\<forall>j. M i j = None)) *
-          Finite_Set.fold (\<lambda>i. ( * ) (is_map2 (M i) (the (A i)))) emp (dom A - {i}) *
-          \<up> (Some m = A i) * is_map2 (M i) m *\<up> (x = M i j)"])
-      subgoal
-        apply sep_auto
-          apply(subst assn_over_finite_extract_one[of "dom A" i])
-            apply simp
-          subgoal
-            apply auto
-            by metis
-             apply sep_auto
-             apply (metis (no_types, lifting) assn_aci(11) ent_refl option.sel)
-          by sep_auto
-      subgoal for r
-        apply sep_auto
-          apply(subst assn_over_finite_extract_one[of "dom A" i])
-            apply simp
-          subgoal
-            apply auto
-            by metis
-          subgoal
-            apply sep_auto
-            by (metis (no_types, lifting) assn_aci(11) ent_refl option.sel)
-          by sep_auto
-      by sep_auto
-    done
-  done*)
-(*
-lemma lookup_2d_rule:
- "<is_2d_map M Mi>
-  lookup_2d Mi i j
-  <\<lambda> r. is_2d_map M Mi * \<up> (r = M i j)>"
-  unfolding lookup_2d_def is_2d_map_def
-  apply(rule ht_bind[where R =
-     "\<lambda> r. is_2d_map M Mi * \<up> (return r = lookup1 i Mi)"])
-  subgoal
-    unfolding is_2d_map_def
-    apply sep_auto
-    subgoal for A a b
-
-
-
-  subgoal for mm
-    apply(clarsimp split!: option.split)
-    subgoal
-      by sep_auto 
-    subgoal for m
-      apply(rule ht_cons_prec[where P'=
-       "\<exists>\<^sub>AA. is_map1 A Mi * \<up> (finite (dom A)) * \<up> (\<forall>i. A i = None \<longrightarrow> (\<forall>j. M i j = None)) *
-          Finite_Set.fold (\<lambda>i. ( * ) (is_map2 (M i) (the (A i)))) emp (dom A - {i}) *
-          \<up> (Some m = A i) * is_map2 (M i) m"
-      and Q = "\<lambda> x. \<exists>\<^sub>AA. is_map1 A Mi * \<up> (finite (dom A)) * \<up> (\<forall>i. A i = None \<longrightarrow> (\<forall>j. M i j = None)) *
-          Finite_Set.fold (\<lambda>i. ( * ) (is_map2 (M i) (the (A i)))) emp (dom A - {i}) *
-          \<up> (Some m = A i) * is_map2 (M i) m *\<up> (x = M i j)"])
-      subgoal
-        apply sep_auto
-        apply(rule ent_ex_preI)
-        subgoal for A
-          apply sep_auto
-          apply(subst assn_over_finite_extract_one[of "dom A" i])
-            apply simp
-          subgoal
-            apply auto
-            by metis
-          apply(rule ent_ex_postI[of _ _ A])
-          apply sep_auto
-          by (metis (no_types, lifting) assn_aci(11) ent_refl option.sel)
-        done
-      subgoal for r
-        apply sep_auto
-        apply(rule ent_ex_preI)
-        subgoal for A
-          apply(rule ent_ex_postI[of _ _ A])
-          apply sep_auto
-          apply(subst assn_over_finite_extract_one[of "dom A" i])
-            apply simp
-          subgoal
-            apply auto
-            by metis
-          subgoal
-            apply sep_auto
-            by (metis (no_types, lifting) assn_aci(11) ent_refl option.sel)
-          by sep_auto
-        done
-      by sep_auto
-    done
-  done
-*)
 
 lemma "<emp> prog' v v' v''<\<lambda> r. \<up> (\<not> r)>"
   using update_2d_rule lookup_2d_rule empty_2d_rule
@@ -717,12 +607,12 @@ and to_dag_nh::"'nh_nv \<Rightarrow> 'nh_ex Heap"
 and lookup_dag_imp::"'ver \<Rightarrow> 'dag \<Rightarrow> 'nh_ex option Heap"
 and is_neighb_nv_emp::"'nh_nv \<Rightarrow> bool Heap"
 and dag_fold_imp::"('ver \<Rightarrow> 'dag \<Rightarrow> 'dag Heap) \<Rightarrow> 'front \<Rightarrow> 'dag \<Rightarrow> 'dag Heap"
-
-and dag_map_fold::"(('ver \<times> 'nh_ex) \<Rightarrow> 'adjmap_imp \<Rightarrow>  'adjmap_imp Heap)
-                 \<Rightarrow> 'dag \<Rightarrow> 'adjmap_imp \<Rightarrow>  'adjmap_imp Heap"
 and imp_adjmap_empty::"'adjmap_imp Heap" 
 and imp_adjmap_upd::"'ver \<Rightarrow> 'nh \<Rightarrow> 'adjmap_imp \<Rightarrow> 'adjmap_imp Heap"
 and to_ordinary_neighb::"'nh_ex \<Rightarrow> 'nh Heap"
+and dag_it_init :: "'dag \<Rightarrow> 'it Heap"
+and dag_it_has_next :: "'it \<Rightarrow> bool Heap"
+and dag_it_next :: "'it \<Rightarrow> (('ver \<times> 'nh_ex) \<times> 'it) Heap"
 begin
 
 definition "neighbourhood_imp Gi v = 
@@ -765,18 +655,25 @@ definition "expand_tree_imp Gi dag front vis = dag_fold_imp (expand_tree_body Gi
 definition "put_graph_neighb Gi v new_nh =
             imp_adjmap_upd v new_nh Gi"
 
-fun change_dag_format_body where
-  "change_dag_format_body (x, y) G =
-  do {nh \<leftarrow> to_ordinary_neighb y;
-      put_graph_neighb G x nh}"
+definition "change_dag_format_body = (\<lambda> (x, y) G.
+    do {nh \<leftarrow> to_ordinary_neighb y;
+      put_graph_neighb G x nh})"
+
+partial_function (heap) change_dag_format_loop where
+  "change_dag_format_loop iter Gr= 
+   do {b \<leftarrow> dag_it_has_next iter;
+       if \<not> b then return Gr
+       else do{ res \<leftarrow> dag_it_next iter;
+          case res of ((v, nh), iter') \<Rightarrow>
+               do {Gr' \<leftarrow> change_dag_format_body (v, nh) Gr;
+                   change_dag_format_loop iter' Gr'}}}"
 
 definition "change_dag_format dag = 
-      do { start \<leftarrow> imp_adjmap_empty;
-            dag_map_fold change_dag_format_body dag start}"
+           do {start \<leftarrow> imp_adjmap_empty;
+            iter \<leftarrow> dag_it_init dag;
+            change_dag_format_loop iter start}"
 
 end
-
-term foldM
 
 lemma ht_exPI:"<P> c <\<lambda> r. Q x r> \<Longrightarrow> <P> c <\<lambda> r. \<exists>\<^sub>A x. Q x r>"
   by sep_auto
@@ -787,6 +684,22 @@ lemma ht_ex_pre_and_post_I:"(\<And> x. <P x> c <\<lambda> r. Q x r>) \<Longright
 lemma ht_ex_with_change_pre_and_post_I: 
   "(\<And> x. <P x> c <\<lambda> r. Q (f x) r>) \<Longrightarrow> <\<exists>\<^sub>A x. P x> c <\<lambda> r. \<exists>\<^sub>A x. Q x r>"
   by sep_auto
+
+context imp_map_iterate
+begin
+
+lemma it_return_rule:
+  "<is_it m p m' it>return x<\<lambda> r. \<up> (r = x) * is_map m p>"
+  apply(rule ht_cons_pre[OF _ ht_frame[OF ], of _ true, 
+                 OF quit_iteration[simplified assn_times_comm[of _ true]]])
+  by sep_auto
+
+lemma it_return_rule_frame:
+  "<is_it m p m' it * F>return x<\<lambda> r. \<up> (r = x) * is_map m p * F>"
+  apply(rule ht_frame)
+  by(rule it_return_rule) 
+
+end
 
 locale BFS_subprocedures_Imperative =
 
@@ -808,7 +721,9 @@ BFS_subprocedures_Imperative_spec where unvisited_neighbs= unvisited_neighbs and
 imp_graph_map: imp_map_lookup is_map lookup_imp +
 imp_dag_map: imp_map_lookup is_dag lookup_dag_imp +
 imp_dag_map_upd: imp_map_update is_dag update_dag_imp +
-adj_map_imp_upd: imp_map_update is_map imp_adjmap_upd
+adj_map_imp_upd: imp_map_update is_map imp_adjmap_upd +
+adj_map_imp_empty: imp_map_empty is_map imp_adjmap_empty +
+imp_map_iterate is_dag is_dag_it dag_it_init dag_it_has_next dag_it_next
 for  fold_vset::"('ver \<Rightarrow> 'vset \<Rightarrow> 'vset) \<Rightarrow> 'vset \<Rightarrow> 'vset \<Rightarrow> 'vset"
 and fold_adjmap::"('ver \<Rightarrow> 'adjmap \<Rightarrow> 'adjmap) \<Rightarrow> 'vset \<Rightarrow> 'adjmap \<Rightarrow> 'adjmap"
 and unvisited_neighbs::"'nh \<Rightarrow> 'vis \<Rightarrow> 'nh_nv Heap"
@@ -826,7 +741,7 @@ and add_to_dag_nh::"'nh_ex \<Rightarrow> 'nh_nv \<Rightarrow> 'nh_ex Heap"
 and to_dag_nh::"'nh_nv \<Rightarrow> 'nh_ex Heap"
 and is_neighb_nv_emp::"'nh_nv \<Rightarrow> bool Heap"
 and dag_fold_imp::"('ver \<Rightarrow> 'dag \<Rightarrow> 'dag Heap) \<Rightarrow> 'front \<Rightarrow> 'dag \<Rightarrow> 'dag Heap"
-and dag_empty+
+and dag_empty is_dag_it+
 fixes is_neighb::"'vset \<Rightarrow> 'nh \<Rightarrow> assn"
 and is_vis::"'vset \<Rightarrow> 'vis \<Rightarrow> assn"
 and is_neighb_nv::"'vset \<Rightarrow> 'nh_nv \<Rightarrow> assn"
@@ -883,101 +798,41 @@ and dag_fold_imp:
 and to_ordinary_neighb_rule:
    "<is_dag_nh dag_nh dag_nhi> to_ordinary_neighb dag_nhi
     <\<lambda> r. is_dag_nh dag_nh dag_nhi * is_neighb dag_nh r>"
-and dag_map_fold_rule:
-   "\<And> dag dagi fi initi init f F dag_assn A graph_assn.
-       (\<And> x nh nhi  G Gi. <F * dag_assn dag dagi * is_dag A dagi * graph_assn G Gi>
-                          fi (x, nhi) Gi
-                      <\<lambda> Gi. F* dag_assn dag dagi* is_dag A dagi * graph_assn (f (x, nh) G) Gi>) \<Longrightarrow>
-       <F * dag_assn dag dagi * is_dag A dagi * graph_assn init initi> dag_map_fold fi dagi initi
-       <\<lambda> Gi. F* dag_assn dag dagi* is_dag A dagi * graph_assn (map_fold f dag init) Gi>"
 begin
 
-find_theorems update_dag_imp
-
-
 definition "graph_assn Gr Gri = 
-  (\<exists>\<^sub>A A. is_map A Gri * \<up> (finite (dom A)) *  \<up> (dom (lookup Gr) = dom A)*
+  (\<exists>\<^sub>A A. is_map A Gri * \<up> (adjmap_inv Gr) * \<up> (finite (dom A)) *  \<up> (dom (lookup Gr) = dom A)*
        Finite_Set.fold (\<lambda> i ass. is_neighb (the (lookup Gr i)) (the (A i)) * ass) emp (dom A))"
-(*
-definition "graph_assn_except Gr Gri v = 
-  (\<exists>\<^sub>A A. is_map A Gri * \<up> (finite (dom A)) *  \<up> (dom (lookup Gr) = dom A)*
-       Finite_Set.fold (\<lambda> i ass. is_neighb (the (lookup Gr i)) (the (A i)) * ass) emp (dom A - {v}))"
 
+lemma graph_assn_invar_extract:
+   "graph_assn Gr Gri = graph_assn Gr Gri *  \<up> (adjmap_inv Gr)"
+  unfolding graph_assn_def
+  apply simp
+  apply(rule ent_iffI)
+  by sep_auto
 
-lemma neighbourhood_imp_rule:
-   "<graph_assn G Gri> 
-      neighbourhood_imp Gri v 
-    <\<lambda> r. graph_assn G Gri * is_neighb (\<N>\<^sub>G v) r>"
-    unfolding neighbourhood_imp_def graph_assn_def
-  apply(rule ht_bind[where R = "\<lambda> r. \<exists>\<^sub>AA. is_map A Gri * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
-           Finite_Set.fold (\<lambda>i. ( * ) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A) * \<up> (r = A v)"])
-  subgoal
-    by sep_auto
-  subgoal for nho
-    apply(clarsimp split!: option.split)
-    subgoal
-      apply(rule ht_ex_pre_and_post_I)
-      subgoal for A
-        apply(clarsimp split: option.split simp add:  Graph.neighbourhood_def)
-        using nd_emp_rule apply sep_auto
-        by force
-      done
-    subgoal for nh
-      apply(rule ht_ex_pre_and_post_I)
-      subgoal for A
-        apply(rule ht_cons_prec[where P' = 
-           "is_map A Gri * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
-    Finite_Set.fold (\<lambda>i. ( * ) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A - {v}) *
-    (is_neighb (the (lookup G v)) (the (A v))) *
-    \<up> (Some nh = A v)" and Q =
-       "\<lambda> x. (is_map A Gri * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
-    Finite_Set.fold (\<lambda>i. ( * ) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A - {v}) *
-    (is_neighb (the (lookup G v)) (the (A v))) *
-    \<up> (Some nh = A v)) * is_neighb (\<N>\<^sub>G v) x"])
-        subgoal
-          apply sep_auto
-          subgoal
-            apply(subst assn_over_finite_extract_one[of "dom A" v])
-            by sep_auto 
-          by sep_auto
-        subgoal for x
-          apply sep_auto
-          subgoal
-            apply(subst assn_over_finite_extract_one[of "dom A" v])
-             by sep_auto
-            by sep_auto 
-        subgoal
-        apply (sep_auto simp: Graph.neighbourhood_def split: option.split)
-         apply (metis domI domIff)
-        
+lemma graph_assn_abstract_transfer:
+  assumes "\<And> x. lookup Gr x = lookup Gr' x" "adjmap_inv Gr'"
+  shows  "graph_assn Gr Gri \<Longrightarrow>\<^sub>A graph_assn Gr' Gri"
+  unfolding graph_assn_def
+  apply(rule ent_ex_preI)
+  subgoal for A
+    apply(rule ent_ex_postI[of _ _ A])
+    apply (sep_auto simp: assms)
+    by (metis domIff assms(1) not_None_eq)
+  done
 
-          find_theorems Finite_Set.fold "( * )"
-
-        
-
-    apply(rule ht_exEI)
-    subgoal for A
-      apply sep_auto
-      apply(rule ht_exPI[of _ _ _ A])
-      using imp_graph_map.lookup_rule[of A Gri]
-      apply sep_auto
-
-
-    find_theorems "<_> _ <\<lambda> _. \<exists>\<^sub>A _ . _ >"
-    apply sep_auto
-    subgoal for a b A
-      using imp_graph_map.lookup_rule[of A Gri]
-      
-    using assn_over_finite_extract_one[ of "dom A" 
-]
-  sorry
-*)
+lemma graph_assn_abstract_cong:
+  assumes "\<And> x. lookup Gr x = lookup Gr' x"  "adjmap_inv Gr"  "adjmap_inv Gr'"
+  shows  "graph_assn Gr Gri = graph_assn Gr' Gri"
+  apply(rule ent_iffI)
+  using assms 
+  by(sep_auto intro: graph_assn_abstract_transfer)
 
 lemma "<emp> do {x \<leftarrow> nh_emp; z \<leftarrow> nh_emp;  y \<leftarrow> if x = x then return y else undefined; return y} 
        <\<lambda> r. \<up> (r = y)>"
   using nd_emp_rule
   by sep_auto
- 
 
 lemma next_frontier_body_rule:
    "<graph_assn G Gi  * is_vis vis visi * is_wfront nf nfi>
@@ -988,7 +843,7 @@ lemma next_frontier_body_rule:
   apply(rule ht_ex_pre_and_post_I)
   subgoal for A
     apply simp
-    apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+    apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
      Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A) *
      is_vis vis visi *
      is_wfront nf nfi * \<up> (r = A u)"])
@@ -997,7 +852,7 @@ lemma next_frontier_body_rule:
     subgoal for nho
       apply(clarsimp split!: option.split)
       subgoal
-        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
      Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A) *
      is_vis vis visi *
      is_wfront nf nfi *
@@ -1006,7 +861,7 @@ lemma next_frontier_body_rule:
           using nd_emp_rule
           by sep_auto
         subgoal for empi
-        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
      Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A) *
      is_vis vis visi *
      is_wfront nf nfi *
@@ -1021,13 +876,13 @@ lemma next_frontier_body_rule:
         done
       subgoal for nho
 
-        apply(rule ht_cons_prec[where P' = "is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+        apply(rule ht_cons_prec[where P' = "is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
      Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A - {u}) *
      is_vis vis visi *
      is_wfront nf nfi *
      \<up> (A u = Some nho) 
      *is_neighb (the (lookup G u)) (the (A u))"
-       and Q = "\<lambda> r. is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+       and Q = "\<lambda> r. is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
          Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A - {u}) *
          is_vis vis visi *is_neighb (the (lookup G u)) (the (A u)) * \<up> (Some nho = A u)*
          is_wfront (nf \<union>\<^sub>G (\<N>\<^sub>G u -\<^sub>G vis)) r "])
@@ -1043,7 +898,7 @@ lemma next_frontier_body_rule:
             apply(subst assn_over_finite_extract_one[of "dom A" u])
             by sep_auto
           by sep_auto
-        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
      Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A - {u}) *
      is_vis vis visi *
      is_wfront nf nfi *
@@ -1211,7 +1066,7 @@ lemma expand_tree_body_rule:
   apply(rule ht_ex_pre_and_post_I)
   subgoal for A
     apply simp
-    apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+    apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
      Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A) *
      is_vis vis visi *
      dag_assn D Di * \<up> (r = A u)"])
@@ -1220,7 +1075,7 @@ lemma expand_tree_body_rule:
     subgoal for nho
       apply(clarsimp split!: option.split)
       subgoal
-        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
      Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A) *
      is_vis vis visi *
      dag_assn D Di *
@@ -1230,7 +1085,7 @@ lemma expand_tree_body_rule:
           using nd_emp_rule
           by sep_auto
         subgoal for empi
-        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
      Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A) *
      is_vis vis visi *
      dag_assn D Di *
@@ -1245,13 +1100,13 @@ lemma expand_tree_body_rule:
         done
       subgoal for nho
 
-        apply(rule ht_cons_prec[where P' = "is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+        apply(rule ht_cons_prec[where P' = "is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
      Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A - {u}) *
      is_vis vis visi *
      dag_assn D Di *
      \<up> (A u = Some nho) 
      *is_neighb (the (lookup G u)) (the (A u))"
-       and Q = "\<lambda> r. is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+       and Q = "\<lambda> r. is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
          Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A - {u}) *
          is_vis vis visi *is_neighb (the (lookup G u)) (the (A u)) * \<up> (Some nho = A u)*
          dag_assn (add_neighbs D u (\<N>\<^sub>G u -\<^sub>G vis)) r "])
@@ -1267,7 +1122,7 @@ lemma expand_tree_body_rule:
             apply(subst assn_over_finite_extract_one[of "dom A" u])
             by sep_auto
           by sep_auto
-        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
+        apply(rule ht_bind[where R = "\<lambda> r. is_map A Gi * \<up> (adjmap_inv G) * \<up> (finite (dom A)) * \<up> (dom (lookup G) = dom A) *
      Finite_Set.fold (\<lambda>i. (*) (is_neighb (the (lookup G i)) (the (A i)))) emp (dom A - {u}) *
      is_vis vis visi *
      dag_assn D Di *
@@ -1303,23 +1158,232 @@ lemma dag_empty_rule:
     (sep_auto simp: Graph.adjmap.invar_empty Graph.adjmap.map_empty)
 
 lemma change_graph_neighb_rule:
-  "<graph_assn Gr Gi * is_neighb new_nh new_nhi> 
+  shows "<graph_assn Gr Gi * is_neighb new_nh new_nhi> 
     put_graph_neighb Gi v new_nhi
    <\<lambda> r. graph_assn (update v new_nh Gr) r>" 
-  sorry
+  unfolding put_graph_neighb_def graph_assn_def ex_distrib_star[symmetric]
+  apply(rule ht_ex_with_change_pre_and_post_I[where f = "\<lambda> A. A(v \<mapsto> new_nhi)"])
+  subgoal for A
+    using adj_map_imp_upd.update_rule[of A Gi v new_nhi]
+    apply sep_auto
+    subgoal
+      apply(cases "v \<in> dom A")
+      subgoal
+        (* Case v \<in> dom A *)
+        (* First simplify: Set.insert v (dom A) = dom A when v \<in> dom A *)
+        apply(simp add: insert_absorb)
+        (* Extract v from LHS fold (assumption) *)
+        apply(subst (asm) assn_over_finite_extract_one[of "dom A" v])
+          apply simp
+         apply simp
+        (* Extract v from RHS fold (conclusion) *)
+        apply(subst assn_over_finite_extract_one[of "dom A" v])
+          apply simp
+         apply simp
+        (* Rewrite the RHS fold to match LHS using map_update simplification *)
+        apply(subst assns_over_set_cong[where S = "dom A - {v}" and assn' = is_neighb 
+            and f' = "\<lambda> i. the (lookup Gr i)" and g' = "\<lambda> i. the (A i)"])
+          apply simp
+        subgoal for y
+          by(auto simp add: Graph.adjmap.map_update split: option.split)
+        by (sep_auto simp: Graph.adjmap.map_update Graph.adjmap.invar_update split: option.split)
+      subgoal
+        (* Case v \<notin> dom A: Need to handle insert *)
+        (* Extract v from RHS fold (conclusion) - it's in insert v (dom A) *)
+        apply(subst assn_over_finite_insert_one[of "dom A" v])
+          apply simp
+         apply simp
+        (* Rewrite the RHS fold over dom A to match LHS by showing the if-then-else simplifies to A i *)
+        apply(subst assns_over_set_cong[where S = "dom A" and assn' = is_neighb 
+            and f' = "\<lambda> i. the (lookup Gr i)" and g' = "\<lambda> i. the (A i)"])
+          apply simp
+        subgoal for i
+          by(auto simp add: Graph.adjmap.map_update split: option.split)
+        (* Simplify the extracted element: lookup (update v new_nh Gr) v = Some new_nh *)
+        apply(simp add: Graph.adjmap.map_update Graph.adjmap.invar_update)
+        by sep_auto
+      done
+    done
+  done
 
 lemma change_dag_format_body_rule:
-  "<graph_assn Gr Gi * is_dag_nh nhd nhdi>
+  shows "<graph_assn Gr Gi * is_dag_nh nhd nhdi>
     change_dag_format_body (v, nhdi) Gi
-   <\<lambda> r. graph_assn (update v new_nh Gr) r * is_dag_nh nhd nhdi>"
-  sorry
+   <\<lambda> r. graph_assn (update v nhd Gr) r * is_dag_nh nhd nhdi>"
+  unfolding change_dag_format_body_def prod.case
+  apply(rule ht_bind[where R = "\<lambda> r. graph_assn Gr Gi * is_dag_nh nhd nhdi * is_neighb nhd r"])
+  subgoal
+    using to_ordinary_neighb_rule by sep_auto
+  subgoal for nhi
+    using change_graph_neighb_rule[of Gr Gi nhd nhi v]
+    by sep_auto
+  done
 
+lemma graph_empty_rule:
+  shows "<emp> imp_adjmap_empty <graph_assn empty>"
+  unfolding graph_assn_def
+  apply(rule ht_exPI[where x = "\<lambda> x. None"])
+  by (sep_auto simp: Graph.adjmap.invar_empty Graph.adjmap.map_empty)
+
+lemma  change_dag_format_loop_induction:
+       "<is_dag_it D dagi D' it * \<up> (adjmap_inv dag) * \<up> (finite (dom D)) * \<up> (dom (lookup dag) = dom D) *
+          Finite_Set.fold (\<lambda>i. (*) (is_dag_nh (the (lookup dag i)) (the (D i)))) emp (dom D) *
+          graph_assn sG sGi * \<up> (dom D' \<subseteq> dom D \<and> (\<forall> x \<in> dom D'. D' x = D x))>
+         change_dag_format_loop it sGi
+         <\<lambda>r. is_dag D dagi * \<up> (adjmap_inv dag) * \<up> (finite (dom D)) * \<up> (dom (lookup dag) = dom D) *
+               Finite_Set.fold (\<lambda>i. (*) (is_dag_nh (the (lookup dag i)) (the (D i)))) emp (dom D) *
+              (\<exists>\<^sub>A xs. graph_assn (foldr (\<lambda> x G. update x (the (lookup dag x)) G) xs sG) r * \<up> (set xs = dom D'))>"
+proof(induction arbitrary: D' it sGi sG rule: change_dag_format_loop.fixp_induct, goal_cases)
+  case 1
+  then show ?case 
+    by simp
+next
+  case 2
+  then show ?case 
+    by simp
+next
+  case (3 f D' it sGi sG)
+  show ?case 
+    apply(rule ht_bind[where R = "\<lambda> r. is_dag_it D dagi D' it * \<up> (adjmap_inv dag) * \<up> (finite (dom D)) * \<up> (dom (lookup dag) = dom D) *
+     Finite_Set.fold (\<lambda>i. (*) (is_dag_nh (the (lookup dag i)) (the (D i)))) emp (dom D) *
+     graph_assn sG sGi * \<up> (r = (D' \<noteq> (\<lambda>x. None))) * \<up> (dom D' \<subseteq> dom D \<and> (\<forall> x \<in> dom D'. D' x = D x))"])
+    subgoal
+      by sep_auto
+    subgoal for b
+      apply (clarsimp split!: if_split )
+      subgoal
+        apply(rule ht_bind[where R = "\<lambda>((k, v), it').
+        \<up> (adjmap_inv dag) * \<up> (finite (dom D)) * \<up> (dom (lookup dag) = dom D) *
+     Finite_Set.fold (\<lambda>i. (*) (is_dag_nh (the (lookup dag i)) (the (D i)))) emp (dom D) *
+     graph_assn sG sGi* is_dag_it D dagi (D' |` (- {k})) it' * \<up> (D' k = Some v)* \<up> (dom D' \<subseteq> dom D \<and> (\<forall> x \<in> dom D'. D' x = D x))"])
+        subgoal
+          by (sep_auto split: prod.split)
+        subgoal for x
+          apply(cases x)
+          subgoal for a it
+            apply(cases a)
+            subgoal for v ex_nh
+              apply (simp)
+              apply(rule ht_cons_pre[where P' = "\<up> (adjmap_inv dag \<and> finite (dom D) \<and> dom (lookup dag) = dom D) *
+     Finite_Set.fold (\<lambda>i. (*) (is_dag_nh (the (lookup dag i)) (the (D i)))) emp (dom D - {v}) *
+     is_dag_nh (the (lookup dag v)) (the (D v)) *
+     graph_assn sG sGi *
+     is_dag_it D dagi (D' |` (- {v})) it *
+     \<up> (D' v = Some ex_nh) *  \<up> (D v = Some ex_nh)  * \<up> (dom D' \<subseteq> dom D \<and> (\<forall> x \<in> dom D'. D' x = D x))"])
+              subgoal
+                apply sep_auto
+                subgoal
+                  apply(subst assn_over_finite_extract_one[of "dom D" v])
+                  by sep_auto
+                       apply sep_auto
+                  apply force
+                using mod_pure_star_dist apply auto[1]
+                using mod_pure_star_dist by fastforce
+              apply(rule ht_bind[where R = "\<lambda> r. \<up> (adjmap_inv dag \<and> finite (dom D) \<and> dom (lookup dag) = dom D) *
+     Finite_Set.fold (\<lambda>i. (*) (is_dag_nh (the (lookup dag i)) (the (D i)))) emp (dom D - {v}) *
+     is_dag_nh (the (lookup dag v)) (the (D v)) *
+     graph_assn (update v (the (lookup dag v)) sG) r *
+     is_dag_it D dagi (D' |` (- {v})) it *
+     \<up> (D' v = Some ex_nh) *
+     \<up> (D v = Some ex_nh) *
+     \<up> (dom D' \<subseteq> dom D \<and> (\<forall>r\<in>dom D'. D' r = D r))"])
+              subgoal
+                using change_dag_format_body_rule[of sG sGi "the (lookup dag v)" ex_nh v]
+                by sep_auto
+              subgoal for sGi'
+                apply(rule ht_cons_prec)
+                  defer
+                  defer
+                apply(rule ht_frame[where R = "\<up> (D' v = Some ex_nh) *
+     \<up> (D v = Some ex_nh) *
+     \<up> (dom D' \<subseteq> dom D \<and> (\<forall>r\<in>dom D'. D' r = D r))"])
+                  apply(rule 3[where D'="D' |` (- {v})" and sG = "update v (the (lookup dag v)) sG"])
+                subgoal
+                  apply sep_auto
+                  subgoal
+                    apply(subst assn_over_finite_extract_one[of "dom D" v])
+                    by sep_auto
+                  by (sep_auto simp: mod_pure_star_dist | force)+
+                subgoal
+                  apply simp
+                  apply(rule ent_ex_preI)
+                  subgoal for xs
+                    apply(rule ent_ex_postI[of _ _ "xs@[v]"])
+                    by sep_auto
+                  done
+                done
+              done
+            done
+          done
+        done
+      subgoal
+        apply(rule ht_exPI[where x = Nil])
+        apply(rule ht_cons_post[where Q ="\<lambda> sGi. is_dag D dagi * \<up> (adjmap_inv dag) * \<up> (finite (dom D)) * \<up> (dom (lookup dag) = dom D) *
+     Finite_Set.fold (\<lambda>i. (*) (is_dag_nh (the (lookup dag i)) (the (D i)))) emp (dom D) *
+     graph_assn sG sGi *
+     \<up> (D' = (\<lambda>x. None)) *
+     \<up> (dom D' \<subseteq> dom D \<and> (\<forall>x\<in>dom D'. D' x = D x))"])
+        subgoal
+          apply(rule ht_frame)+
+          apply(rule ht_cons_prec)
+            defer
+          defer
+          apply(rule it_return_rule_frame[of D dagi D' it "\<up> (adjmap_inv dag) * \<up> (finite (dom D)) * \<up> (dom (lookup dag) = dom D) *
+    Finite_Set.fold (\<lambda>i. (*) (is_dag_nh (the (lookup dag i)) (the (D i)))) emp (dom D) *
+    graph_assn sG sGi"])
+          subgoal
+            by sep_auto
+          subgoal
+            by sep_auto
+          done
+        subgoal
+          by sep_auto
+        done
+      done
+    done
+qed
+ 
 lemma change_dag_format_rule:
-  "<dag_assn dag dagi>
+  shows "<dag_assn dag dagi>
    change_dag_format dagi
-  <\<lambda> r. dag_assn dag dagi * graph_assn (map_fold (\<lambda> (v, nhd) G. update v nhd G) dag empty) r>"
-  sorry
-thm dag_map_fold_rule
+  <\<lambda> r. dag_assn dag dagi * graph_assn dag r>"
+  unfolding change_dag_format_def
+  apply(rule ht_bind[where R = "\<lambda> r. dag_assn dag dagi * graph_assn \<emptyset>\<^sub>G r"])
+  subgoal
+    using graph_empty_rule by sep_auto
+  subgoal for init
+    unfolding dag_assn_def ex_assn_move_out(1)
+    apply(rule ht_ex_pre_and_post_I)
+    subgoal for D
+      apply(rule ht_bind[where R = "\<lambda> r. is_dag_it D dagi D r* \<up> (adjmap_inv dag) * \<up> (finite (dom D)) * \<up> (dom (lookup dag) = dom D) *
+     Finite_Set.fold (\<lambda>i. (*) (is_dag_nh (the (lookup dag i)) (the (D i)))) emp (dom D) * graph_assn \<emptyset>\<^sub>G init"])
+      subgoal
+        by sep_auto
+      subgoal for it
+        apply(rule ht_cons_prec)
+        defer
+        defer
+          apply(rule change_dag_format_loop_induction[of D dagi D it dag empty init])
+        subgoal
+          by sep_auto
+        subgoal for Res
+          apply simp
+          apply(rule ent_ex_preI)
+          subgoal for xs
+            apply(subst graph_assn_invar_extract)
+            apply sep_auto
+            subgoal 
+              apply(subst graph_assn_abstract_cong[of _ dag])
+              subgoal for x
+                apply(cases "lookup dag x")
+                by (auto simp add: Graph.update_by_foldr Graph.adjmap.invar_empty Graph.adjmap.map_empty)
+             by sep_auto
+           by sep_auto
+         done
+       done
+     done
+   done
+  done
 
 end
 
