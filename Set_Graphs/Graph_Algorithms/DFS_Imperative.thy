@@ -315,7 +315,7 @@ definition "rbt_from_list = (from_list::(nat \<times> nat) list \<Rightarrow> ((
 
   find_theorems iam_dfs.DFS_impl
 
-export_code iam_dfs_imp iam_dfs_initial_state iam_graph_from_list 
+(*export_code iam_dfs_imp iam_dfs_initial_state iam_graph_from_list 
 
 hm_dfs_imp hm_dfs_initial_state hm_graph_from_list 
 
@@ -328,7 +328,7 @@ nat_of_integer integer_of_nat
 rbt_dfs_initial_state rbt_neighbourhood rbt_dfs_impl rbt_add_edge
 rbt_from_list
 
-in SML_imp module_name exported file_prefix DFS_imperative
+in SML_imp module_name exported file_prefix DFS_imperative*)
 (* checking SML_imp*)
 
   ML_val \<open>

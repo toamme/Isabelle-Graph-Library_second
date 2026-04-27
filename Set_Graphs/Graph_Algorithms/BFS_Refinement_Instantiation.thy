@@ -404,6 +404,7 @@ interpretation bfs_imp: BFS_Imperative
   and G_imp = Gi
   and srcs = srcs
   and change_dag_format = "subprocedures.change_dag_format"
+  and in_vis = memb2
 for Gi G srcs
 proof(rule BFS_Imperative.intro, goal_cases)
   case 1
@@ -449,6 +450,12 @@ next
     case (8 dag dagi)
     show ?case
       by(rule subprocedures.change_dag_format_rule)
+  next
+    case (9 vis visi s)
+    thus ?case 
+      unfolding is_vis_def
+      by sep_auto
+
   qed
 qed
 
@@ -456,11 +463,13 @@ lemmas BFS_refine = bfs_imp.BFS_refine
 lemmas graph_assn_def = subprocedures.graph_assn_def
 abbreviation "state_assn \<equiv> bfs_imp.state_assn"
 lemmas compute_dag_rule = bfs_imp.compute_dag_rule
+lemmas check_reachable_rule = bfs_imp.check_reachable_rule
 
 abbreviation "BFS_imp \<equiv> bfs_imp.BFS_imp"
 abbreviation "BFS_fun \<equiv> bfs_imp.BFS_impl"
 abbreviation "BFS_dag \<equiv> bfs_imp.compute_dag"
 abbreviation "BFS_init \<equiv> bfs_imp.initial_state"
+abbreviation "check_reachable \<equiv> bfs_imp.check_reachable"
 
 lemma "BFS_fun = 
   (\<lambda> G. BFS.BFS_impl Nil list_union (subprocedures.expand_tree G)
@@ -516,25 +525,30 @@ interpretation top_loop: BFS_Imperative_spec
   and imp_next_frontier = "subprocedures.next_frontier_imperative Gi"
   and imp_cf_is_empty = imp_cf_is_empty
   and imp_src_to_cf = imp_src_to_cf 
-  and change_dag_format = "subprocedures.change_dag_format"for Gi
+  and change_dag_format = "subprocedures.change_dag_format"
+  and in_vis = ias_memb for Gi
   done
 
 interpretation iam_graph: Pair_Graph_Imperative  
     is_iam iam_new iam_lookup iam_update 
-    by unfold_locales
+  by unfold_locales
+
+interpretation iam_iterate: imp_map_iterate is_iam iam_is_it iam_it_init
+  iam_it_has_next iam_it_next
+  by unfold_locales
 
 setup Locale_Code.close_block
 
 definition "BFS_imp = top_loop.BFS_imp"
 definition "initial_state = top_loop.initial_state_imp"
 definition "iam_graph_from_list = iam_graph.from_list_impl"
-definition "BFS_dag = top_loop.compute_dag"
+definition "BFS_dag_iam = top_loop.compute_dag"
+definition "BFS_check_reachable_iam = top_loop.check_reachable"
 
-(*
 export_code BFS_imp imp_src_to_cf iam_new vis_empty
 
 in SML_imp module_name exported file_prefix BFS_imperative
-*)
+
 ML_val \<open>
 val noi = @{code nat_of_integer}
 val graph_from_list = @{code iam_graph_from_list} o map (apply2 noi)
@@ -542,7 +556,9 @@ val G = graph_from_list [(1,2), (2,3), (3,4), (3,5), (10,8), (11,12),
     (1,10), (1,11), (1,12), (4,13), (5,1)] ()
 val initial_state = @{code initial_state} [noi 1] ()
 val bfs = @{code BFS_imp}
+val check_reachable = @{code BFS_check_reachable_iam}
 val final_state = bfs G initial_state ()
+val rchbl = check_reachable G [noi 1] (noi 1030) ()
 \<close>
 
 interpretation proofs: list_array_map_based_bfs
@@ -610,14 +626,20 @@ lemma BFS_imp_def': "BFS_imp = proofs.BFS_imp"
       proofs.nh_emp_def proofs.set_cf_visited_def set_cf_visited_def
   by simp
 
-lemma BFS_dag_def': "BFS_dag = proofs.BFS_dag"
+lemma BFS_dag_def': "BFS_dag_iam = proofs.BFS_dag"
   unfolding BFS_imp_def is_neighb_nv_emp_def nh_emp_def proofs.is_neighb_nv_emp_def
-      proofs.nh_emp_def proofs.set_cf_visited_def set_cf_visited_def BFS_dag_def
+      proofs.nh_emp_def proofs.set_cf_visited_def set_cf_visited_def BFS_dag_iam_def
+      imp_src_to_cf_def proofs.imp_src_to_cf_def proofs.vis_empty_def
+      vis_empty_def
+  by simp
+
+lemma BFS_check_reachable_def': "BFS_check_reachable_iam = proofs.check_reachable"
+  unfolding BFS_check_reachable_iam_def is_neighb_nv_emp_def nh_emp_def proofs.is_neighb_nv_emp_def
+      proofs.nh_emp_def proofs.set_cf_visited_def set_cf_visited_def
       imp_src_to_cf_def proofs.imp_src_to_cf_def proofs.vis_empty_def
       vis_empty_def
   by simp
   
-
 lemma BFS_imp_rule:
 "<bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb G Gi * proofs.state_assn s s_imp>
 BFS_imp Gi s_imp
@@ -629,12 +651,19 @@ BFS_imp Gi s_imp
 
 lemma BFS_dag_imp_rule:
   "<bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb G Gi> 
-     BFS_dag Gi srcs
+     BFS_dag_iam Gi srcs
    <\<lambda> r. bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb G Gi *
         bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb 
               (BFS_state.parents (proofs.BFS_fun G (proofs.BFS_init srcs))) r>"
   using proofs.compute_dag_rule[of srcs srcs G Gi]
   by(sep_auto simp: proofs.imp_src_assn_def BFS_dag_def')
-  
 
+lemma BFS_check_reachable_imp_rule:
+  "<bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb G Gi> 
+     BFS_check_reachable_iam Gi srcs t
+   <\<lambda> b. bfs_graph_assn (\<lambda> x. True) (\<lambda>M. M) is_iam proofs.is_neighb G Gi *
+       \<up> (b \<longleftrightarrow> t \<in> set (BFS_state.visited (proofs.BFS_fun G (proofs.BFS_init srcs)))) >"
+  using proofs.check_reachable_rule[of srcs srcs G Gi]
+  by(sep_auto simp: proofs.imp_src_assn_def BFS_check_reachable_def')
+  
 end

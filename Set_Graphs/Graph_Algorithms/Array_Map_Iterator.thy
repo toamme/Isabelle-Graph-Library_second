@@ -16,6 +16,7 @@ partial_function (heap) iam_it_adjust :: "('v::heap) iam_it \<Rightarrow> ('v ia
                case x of None \<Rightarrow> iam_it_adjust (Suc i, A)
                | Some _ \<Rightarrow> return (i, A) }})"
 
+lemmas [code] = iam_it_adjust.simps
 
 definition iam_it_init 
   :: "('v::heap) array_map \<Rightarrow> ('v iam_it) Heap"

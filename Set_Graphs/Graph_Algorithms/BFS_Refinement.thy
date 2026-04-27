@@ -15,6 +15,7 @@ and imp_expand_tree::"'imp_dag \<Rightarrow> 'imp_cf \<Rightarrow> 'imp_vis \<Ri
 and imp_next_frontier::"'imp_cf \<Rightarrow> 'imp_vis \<Rightarrow> 'imp_cf Heap"
 and imp_cf_is_empty::"'imp_cf \<Rightarrow> bool Heap"
 and change_dag_format::"'imp_dag \<Rightarrow> 'imp_G Heap"
+and in_vis::"'ver \<Rightarrow> 'imp_vis \<Rightarrow> bool Heap"
 begin
 
 partial_function (heap) BFS_imp::
@@ -38,18 +39,24 @@ definition "compute_dag src_imp =
     do {init \<leftarrow> initial_state_imp src_imp;
         final \<leftarrow> BFS_imp init;
         change_dag_format (parents final)}"
+
+definition "check_reachable src_imp t =
+    do {init \<leftarrow> initial_state_imp src_imp;
+        final \<leftarrow> BFS_imp init;
+        in_vis t (visited final)}"
 end
 
 locale BFS_Imperative = 
  BFS  where expand_tree = expand_tree and insert = insert +
  BFS_Imperative_spec where  imp_src_to_cf = imp_src_to_cf and imp_expand_tree = imp_expand_tree
   and change_dag_format = change_dag_format
+  and in_vis = in_vis
  for  imp_src_to_cf :: "'imp_src \<Rightarrow> 'imp_cf Heap"
   and expand_tree::"'adjmap \<Rightarrow> 'vset \<Rightarrow> 'vset \<Rightarrow> 'adjmap"
   and insert :: "'ver \<Rightarrow> 'vset \<Rightarrow> 'vset" 
   and imp_expand_tree::"'imp_dag \<Rightarrow> 'imp_cf \<Rightarrow> 'imp_vis \<Rightarrow> 'imp_dag Heap"
-  and change_dag_format::"'imp_dag \<Rightarrow> 'imp_G Heap"+
-  
+  and change_dag_format::"'imp_dag \<Rightarrow> 'imp_G Heap"
+  and in_vis::"'ver \<Rightarrow> 'imp_vis \<Rightarrow> bool Heap"+
 fixes  G_imp::"'imp_G"
  and graph_assn::"'adjmap \<Rightarrow> 'imp_G \<Rightarrow> assn"
  and imp_src_assn::"'vset \<Rightarrow> 'imp_src \<Rightarrow> assn"
@@ -82,6 +89,8 @@ and change_dag_format_rule:
  "\<And> dag dagi. < imp_dag_assn dag dagi>
       change_dag_format dagi
      <\<lambda> r. imp_dag_assn dag dagi * graph_assn dag r>"
+and in_vis_rule: "\<And>vis visi s. <imp_vis_assn vis visi> in_vis s visi 
+            <\<lambda> r. imp_vis_assn vis visi * \<up> (r \<longleftrightarrow> isin vis s)>"
 begin
 
 definition "state_assn (s::('adjmap, 'vset) BFS_state)
@@ -200,7 +209,15 @@ lemma compute_dag_rule:
   unfolding compute_dag_def
   using initial_refine BFS_refine change_dag_format_rule
   by (sep_auto simp: state_assn_def)
- 
+
+lemma check_reachable_rule:
+ "<imp_src_assn srcs srcs_imp * graph_assn G G_imp> 
+   check_reachable srcs_imp t
+  <\<lambda> b. imp_src_assn srcs srcs_imp * graph_assn G G_imp *
+      \<up> (b \<longleftrightarrow> isin (BFS_state.visited (BFS_impl initial_state)) t)>" 
+  unfolding check_reachable_def
+  using initial_refine BFS_refine change_dag_format_rule in_vis_rule
+  by (sep_auto simp: state_assn_def)
 end
 
 locale imp_2d_array =
