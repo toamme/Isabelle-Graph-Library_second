@@ -158,6 +158,13 @@ and in_odd_tight_subgraphD:
   "e \<in> odd_tight_subgraph E w \<pi> \<Longrightarrow> w e = sum \<pi> (end_sets E e)"
   by(auto simp add: odd_tight_subgraph_def)
 
+lemma odd_tight_subgraph_in_graph: "odd_tight_subgraph G w \<pi> \<subseteq> G"
+  by(auto simp add: odd_tight_subgraph_def)
+
+lemma graph_invar_odd_tight_subgraph:
+  "graph_invar G \<Longrightarrow> graph_invar (odd_tight_subgraph G w \<pi>)"
+  using odd_tight_subgraph_in_graph[of G] graph_invar_subgraph[of G] by force
+
 lemma weak_duality_theorem_nonneg_primal_min_eq_and_ineq: 
   fixes "A\<^sub>e\<^sub>q" :: "'a :: linordered_comm_semiring_strict mat" 
      and "A\<^sub>i\<^sub>e\<^sub>q" :: "'a :: linordered_comm_semiring_strict mat" 

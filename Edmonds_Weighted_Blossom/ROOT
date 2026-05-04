@@ -2,7 +2,9 @@ session "Edmonds_Weighted_Blossom" = "HOL" +
   options [document = pdf]
   sessions
     "Laminar_Family"
-    "Undirected_Set_Graphs"
+    "Jordan_Normal_Form"
+    "Matching_LPs"
   theories
     Blossom_Forest_Spec
     Blossom_Forest
+    Naive_Weighted_Blossom

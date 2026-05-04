@@ -496,12 +496,32 @@ subsection \<open>Subgraphs\<close>
 
 definition "graph_inter_Vs G X = {e | e. e \<in> G \<and> e \<subseteq> X}"
 
+lemma in_graph_inter_VsI:
+  "\<lbrakk>e \<in> G; e \<subseteq> X\<rbrakk> \<Longrightarrow> e \<in> graph_inter_Vs G X"
+  by(auto simp add: graph_inter_Vs_def)
+
+lemma in_graph_inter_VsE:
+  "\<lbrakk> e \<in> graph_inter_Vs G X; \<lbrakk>e \<in> G; e \<subseteq> X\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow>P"
+  by(auto simp add: graph_inter_Vs_def)
+
+lemma in_graph_inter_VsD:
+  "e \<in> graph_inter_Vs G X \<Longrightarrow> e \<in> G"
+  "e \<in> graph_inter_Vs G X \<Longrightarrow> e \<subseteq> X"
+  by(auto simp add: graph_inter_Vs_def)
+
 lemma graph_inter_Vs_subset: "graph_inter_Vs G X \<subseteq> G" "Vs (graph_inter_Vs G X) \<subseteq> X"
   by(auto simp add: graph_inter_Vs_def  vs_member)
 
 lemma graph_inter_subset:
   "G \<subseteq> G' \<Longrightarrow> graph_inter_Vs G X \<subseteq> graph_inter_Vs G' X"
   by(auto simp add: graph_inter_Vs_def)
+
+lemma graph_inter_cong:
+  "(\<And> e.  e \<in> G \<and> e \<subseteq> X \<longleftrightarrow>  e \<in> G' \<and> e \<subseteq> X') \<Longrightarrow> graph_inter_Vs G X = graph_inter_Vs G' X'"
+  by(auto simp add: graph_inter_Vs_def)
+
+lemma graph_inter_vert_minus:"graph_inter_Vs G (X - Y) = graph_inter_Vs G X \<setminus> Y"
+  by(auto simp add: graph_inter_Vs_def remove_vertices_graph_def)
 
 subsection \<open>Bigraphs\<close>
 

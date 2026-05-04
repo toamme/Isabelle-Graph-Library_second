@@ -112,6 +112,10 @@ lemma matchingD:
   "\<lbrakk>matching M; e1 \<in> M; e2 \<in> M; e1 \<noteq> e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}"
   by (auto simp: matching_def)
 
+lemma matching_revD:
+  "\<lbrakk>matching M; e1 \<in> M; e2 \<in> M; e1 \<inter> e2 \<noteq> {}\<rbrakk> \<Longrightarrow> e1 = e2"
+  by (auto simp: matching_def)
+
 lemma matching_def2:
   "matching M \<longleftrightarrow> (\<forall>v \<in> Vs M. \<exists>!e\<in>M. v \<in> e)"
   unfolding matching_def Vs_def by blast
