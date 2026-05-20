@@ -1,14 +1,8 @@
 theory Naive_Weighted_Blossom
   imports Laminar_Family.Laminar_Family Matching_LPs.Edmonds_Matching_LP
-   "HOL-Library.Disjoint_Sets" Directed_Set_Graphs.More_Arith Blossom_Forest
+   "HOL-Library.Disjoint_Sets" Directed_Set_Graphs.More_Arith Partition_Quotient_Graph
 begin
-
-notation graph_inter_Vs ( " _ \<lbrakk>_\<rbrakk>" 101)
-
-lemma graph_inter_Vs_remove_vertices_commute:
-  "graph_inter_Vs (E \<setminus> Y) X = (graph_inter_Vs E X) \<setminus> Y"
-  by(auto simp add: graph_inter_Vs_def remove_vertices_graph_def)
-
+(*
 definition "factor_critical E = 
     (\<forall> v \<in> Vs E. \<exists> M. graph_matching (E \<setminus> {v}) M \<and> Vs M = Vs E - {v})"
 
@@ -43,9 +37,10 @@ proof(elim factor_criticalE, goal_cases)
   ultimately show ?case
     using v by auto
 qed
+*)
 
 lemma near_perfect_matching_odd:
-  assumes "dblton_graph E" "graph_matching (E\<lbrakk>X\<rbrakk>) M" "Vs M = X - {x}" "x \<in> X" "finite X"
+  assumes "dblton_graph M" "matching M" "Vs M = X - {x}" "x \<in> X" "finite X"
   shows "odd (card X)"
 proof-
   have "card X = card (X - {x}) + 1"
@@ -54,214 +49,10 @@ proof-
   also have "card (X - {x}) = card (Vs M)"
     using assms(3) by argo
   also have "card (Vs M) = 2 * card M" 
-    using assms(1,2,3,5) dblton_graph_subset[of E M] graph_inter_Vs_subset(1)
+    using assms(1,2,3,5) graph_inter_Vs_subset(1)
     by(force intro!: graph_abs.matching_card_vs[symmetric] simp add: graph_abs_def)+
   finally show ?thesis
     by simp
-qed
-
-definition "partition_quotient_graph E \<P>= 
-  {{X, Y} | X Y. X \<in> \<P> \<and> Y \<in> \<P> \<and> X \<noteq> Y \<and> (\<exists> e \<in> E. X \<inter> e \<noteq> {} \<and> Y \<inter> e \<noteq> {})}"
-
-lemma in_partition_quotient_graphE:
-"\<lbrakk>e \<in> partition_quotient_graph E \<P>;
-  \<And> ee X Y. \<lbrakk>X \<in> \<P>; Y \<in> \<P>; X \<noteq> Y; ee \<in> E; X \<inter> ee \<noteq> {}; Y \<inter> ee \<noteq> {}; e= {X, Y}\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  by(auto simp add: partition_quotient_graph_def)
-
-notation partition_quotient_graph ("_ \<sslash> _" 100)
-
-lemma partition_quotient_graph_is_dblton:
-  "dblton_graph (partition_quotient_graph E \<P>)"
-  by(auto simp add: partition_quotient_graph_def dblton_graph_def)
-
-lemma finite_dblton_finite_Vs:
-  "finite { {x, y} | x y. P x y} \<Longrightarrow> finite (Vs  { {x, y} | x y. P x y})"
-  by(auto simp add: Vs_def)
-
-lemma finite_unordered_pairs: "finite X \<Longrightarrow> finite {{x,y}| x y. x \<in> X \<and> y \<in> X}"
-  by (simp add: finite_image_set2)
-
-lemma partition_quotient_graph_graph_invar:
-  "finite X \<Longrightarrow> partition_on X \<P> \<Longrightarrow> graph_invar (partition_quotient_graph E \<P>)"
-  by(auto intro!: finite_dblton_finite_Vs  rev_finite_subset[OF finite_unordered_pairs, of \<P>]
-           intro:  finite_elements
-        simp add: partition_quotient_graph_def dblton_graph_def)
-
-lemma Vs_partition_quotient_graph:"Vs (partition_quotient_graph E \<P>) \<subseteq> \<P>"
-  by(auto simp add: partition_quotient_graph_def vs_member)
-
-lemma 
-  partition_quotient_graphI: 
-    "\<lbrakk>X \<in> \<P>; Y \<in> \<P>; X \<noteq> Y; e \<in> E; X \<inter> e \<noteq> {}; Y \<inter> e \<noteq> {}\<rbrakk> \<Longrightarrow> {X, Y} \<in> partition_quotient_graph E \<P>" and
-    
-  partition_quotient_graphE:  
-    "\<lbrakk>e' \<in> partition_quotient_graph E \<P>; 
-      \<And>X Y e. \<lbrakk>e' = {X, Y}; X \<in> \<P>; Y \<in> \<P>; X \<noteq> Y; e \<in> E; X \<inter> e \<noteq> {}; Y \<inter> e \<noteq> {}\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P" and
-      
-  partition_quotient_graphD: 
-    "e' \<in> partition_quotient_graph E \<P>\<Longrightarrow> 
-      \<exists>X Y e. e' = {X, Y} \<and> X \<in> \<P> \<and> Y \<in> \<P> \<and> X \<noteq> Y \<and> e \<in> E \<and> X \<inter> e \<noteq> {} \<and> Y \<inter> e \<noteq> {}" 
-    
-      
-  unfolding partition_quotient_graph_def by auto
-
-definition prepartition_on :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
-where
-  "prepartition_on A P \<longleftrightarrow> \<Union>P \<supseteq> A \<and> disjoint P \<and> {} \<notin> P"
-
-lemma prepartition_onI:
-  "\<Union>P \<supseteq> A \<Longrightarrow> (\<And>p q. p \<in> P \<Longrightarrow> q \<in> P \<Longrightarrow> p \<noteq> q \<Longrightarrow> disjnt p q) \<Longrightarrow> {} \<notin> P \<Longrightarrow> prepartition_on A P"
-  by (auto simp: prepartition_on_def pairwise_def)
-
-lemma prepartition_onD1: "prepartition_on A P \<Longrightarrow> A \<subseteq> \<Union>P"
-  by (auto simp: prepartition_on_def)
-
-lemma prepartition_onD2: "prepartition_on A P \<Longrightarrow> disjoint P"
-  by (auto simp: prepartition_on_def)
-
-lemma prepartition_onD3: "prepartition_on A P \<Longrightarrow> {} \<notin> P"
-  by (auto simp: prepartition_on_def)
-
-lemma prepartition_on_eq_if_inter_nempty:
-  "\<lbrakk>prepartition_on U \<P>; X \<in> \<P>; Y \<in> \<P>; X \<inter> Y \<noteq> {}\<rbrakk> \<Longrightarrow> X = Y"
-  by(auto simp add: prepartition_on_def disjoint_def)
-
-lemma partition_on_implies_prepartition_on:
- "partition_on U \<P> \<Longrightarrow> prepartition_on U \<P>"
-  by(auto simp add: partition_on_def prepartition_on_def)
-
-lemma prepartition_quotient_graph_verts_by_Delta:
-  assumes "prepartition_on (Vs E) \<P>" "dblton_graph E"
-  shows "Vs (partition_quotient_graph E \<P>) = {X | X e. X \<in> \<P> \<and> e \<in> Delta E X}"
-proof(rule, all \<open>rule\<close>, goal_cases)
-  case (1 X)
-  then obtain e Y where eY: "X \<in> \<P>" "Y \<in> \<P>" "X \<noteq> Y" "e \<in> E" "X \<inter> e \<noteq> {}" "Y \<inter> e \<noteq> {}"
-    by(auto simp add: partition_quotient_graph_def vs_member)
-  moreover then obtain u v where uv: "e = {u, v}" "u \<noteq> v"
-    using assms(2) by blast
-  moreover have uXvX:"u \<in> X \<and> v \<notin> X \<or> v \<in> X \<and> u \<notin> X"
-    using assms(1) eY(1,2,3,5,6)  uv(1) by(force simp add: prepartition_on_def disjoint_def)
-  moreover hence "e \<in> Delta E X"
-    using eY(4)
-    by(auto intro: exI[of _ v]simp add: Delta_def uv doubleton_eq_iff insert_commute)
-  ultimately show ?case
-    by auto
-next
-  case (2 X)
-  then obtain e where e: "X \<in> \<P>" "e \<in> Delta E X"
-    by auto
-  moreover then obtain u v where uv: "e = {u, v}" "u \<noteq> v" "e \<in> E"
-    by (auto elim!: in_DeltaE)
-  moreover then obtain u v where "e = {u, v}" "u \<noteq> v" "e \<in> E" "u \<in> X" "v \<notin> X"
-    using e by(auto simp add: Delta_def)
-  moreover then obtain Y where "Y \<in> \<P>" "v \<in> Y" 
-    using assms(1)
-    by(auto simp add: insert_commute prepartition_on_def vs_member) blast
-  ultimately have "{X, Y} \<in> partition_quotient_graph E \<P>"
-    by(auto intro!: partition_quotient_graphI[of X _ Y e])
-  then show ?case 
-    by auto
-qed
-
-lemmas partition_quotient_graph_verts_by_Delta=
-  prepartition_quotient_graph_verts_by_Delta[OF partition_on_implies_prepartition_on]
-
-lemma partition_of_prepartition_is_prepartition:
-  assumes "prepartition_on U \<P>" "X \<in> \<P>" "partition_on X \<P>'"
-  shows "prepartition_on U (\<P> - {X} \<union> \<P>')"
-proof(rule prepartition_onI, goal_cases)
-  case 1
-  then show ?case 
-    using assms(1,2,3) by(auto simp add:  prepartition_on_def partition_on_def) 
-next
-  case (2 A B)
-  then show ?case 
-  proof(elim UnE, goal_cases)
-    case 1
-    then show ?case 
-      using assms(1) 
-      by(auto simp add: prepartition_on_def disjnt_def disjoint_def)
-  next
-    case 2
-    show ?case
-    proof(rule ccontr, goal_cases)
-      case 1
-      hence "\<not> disjnt A X"
-        using "2"(3) assms(3) partition_onD1 by fastforce
-      then show ?case
-        using 2(2) assms(1,2) 
-        by(auto simp add: prepartition_on_def disjoint_def disjnt_def)
-    qed
-  next
-    case 3
-    show ?case
-    proof(rule ccontr, goal_cases)
-      case 1
-      hence " \<not> disjnt B X"
-        using "3"(2) assms(3) disjnt_sym partition_onD1 by fastforce
-      then show ?case
-        using 3(3) assms(1,2) 
-        by(auto simp add: partition_on_def disjoint_def disjnt_def prepartition_on_def)
-    qed
-  next
-    case 4
-    then show ?case 
-      using assms(3) 
-      by(auto simp add: partition_on_def disjnt_def disjoint_def)
-  qed
-next
-  case 3
-  then show ?case
-   using assms(1,3) by(auto simp add:  partition_on_def prepartition_on_def)
-qed
-
-lemma partition_of_partition_is_partition:
-  assumes "partition_on U \<P>" "X \<in> \<P>" "partition_on X \<P>'"
-  shows "partition_on U (\<P> - {X} \<union> \<P>')"
-proof(rule partition_onI, goal_cases)
-  case 1
-  then show ?case 
-    using assms(1,2,3) by(auto simp add:  partition_on_def)
-next
-  case (2 A B)
-  then show ?case 
-  proof(elim UnE, goal_cases)
-    case 1
-    then show ?case 
-      using assms(1) 
-      by(auto simp add: partition_on_def disjnt_def disjoint_def)
-  next
-    case 2
-    show ?case
-    proof(rule ccontr, goal_cases)
-      case 1
-      hence " \<not> disjnt A X"
-        using "2"(3) assms(3) partition_onD1 by fastforce
-      then show ?case
-        using 2(2) assms(1,2) 
-        by(auto simp add: partition_on_def disjoint_def disjnt_def)
-    qed
-  next
-    case 3
-    show ?case
-    proof(rule ccontr, goal_cases)
-      case 1
-      hence " \<not> disjnt B X"
-        using "3"(2) assms(3) disjnt_sym partition_onD1 by fastforce
-      then show ?case
-        using 3(3) assms(1,2) 
-        by(auto simp add: partition_on_def disjoint_def disjnt_def)
-    qed
-  next
-    case 4
-    then show ?case 
-      using assms(3) 
-      by(auto simp add: partition_on_def disjnt_def disjoint_def)
-  qed
-next
-  case 3
-  then show ?case
-   using assms(1,3) by(auto simp add:  partition_on_def)
 qed
 
 lemma maximal_sets_in_laminar_family_are_global_partition:
@@ -287,391 +78,38 @@ proof-
   qed
 qed
 
-lemma partition_on_eq_if_inter_nempty:
-  "\<lbrakk>partition_on U \<P>; X \<in> \<P>; Y \<in> \<P>; X \<inter> Y \<noteq> {}\<rbrakk> \<Longrightarrow> X = Y"
-  by(auto simp add: partition_on_def disjoint_def)
-
-lemma partition_quotient_matching_expand:
-  assumes "dblton_graph E" "prepartition_on (Vs E) \<P>" "partition_on X \<P>\<^sub>X"
-          "perfect_matching (partition_quotient_graph E \<P>) M"
-          "{Y, X} \<in> M"  "X' \<in> \<P>\<^sub>X"
-          "x \<in> X'" "y \<in> Y" "{x, y} \<in> E"
-          "graph_matching (partition_quotient_graph (graph_inter_Vs E X) \<P>\<^sub>X  \<setminus> {X'}) M'"
-          "Vs  M' = \<P>\<^sub>X - {X'}"
-    shows "perfect_matching (partition_quotient_graph E (\<P> - {X} \<union> \<P>\<^sub>X)) 
-                   (M - {{Y, X}} \<union> {{Y, X'}} \<union> M')"
-proof-
-  obtain e where e_def:"e = {x, y}"
-    by auto
-   have e: "e\<in>E" "X \<inter> e \<noteq> {}" "Y \<inter> e \<noteq> {}" "X \<in> \<P>" "Y \<in> \<P>" "X \<noteq> Y"
-     using assms(3,4,5,6,7,8) Vs_partition_quotient_graph[of E \<P>]
-            partition_quotient_graphD[of "{X, Y}" E \<P>]
-     by (auto elim!: perfect_matchingE 
-           simp add: assms(9) e_def partition_on_def edges_are_Vs_2  edges_are_Vs subsetD
-              dest!: perfect_matching_subgraphD) 
-   
-  hence XY: "X \<inter> Y = {}" "X \<noteq> {}" "Y \<noteq> {}"
-    using assms(2) by(auto simp add: prepartition_on_def disjoint_def)
-  hence xy: "x \<in> X" "y\<in> Y" "{x, y} = e" "x \<noteq> y"
-    using assms(1,3,6,7) partition_onD1 e(1) by (fastforce simp add: e_def assms(8))+
-  have X': "X' \<in> \<P>\<^sub>X" "x \<in> X'" 
-    by (auto simp add: assms(7,6))
-  have y_not_in_X': "y \<notin> X'" 
-    using X'(1) XY(1) assms(3) xy(2) by(auto simp add: partition_on_def)
-
-  show ?thesis
-    proof(rule perfect_matchingI, goal_cases)
-      case 1
-      then show ?case
-      proof(rule, elim UnE, goal_cases)
-        case (1 ee)
-        hence "ee \<in> partition_quotient_graph E \<P>"
-          using assms(4) by(auto elim!: perfect_matchingE)
-        then show ?case 
-          using 1
-        proof(elim partition_quotient_graphE, goal_cases)
-          case (1 XX YY ea)
-          have "ee \<inter> {X, Y} = {}"
-            using assms(4,5) 1(1)
-            by (fastforce elim!: perfect_matchingE matchingE)
-          then show ?case 
-            using 1 unfolding 1
-            by(intro partition_quotient_graphI) auto
-        qed
-      next
-        case (2)
-        then show ?case 
-          using  e(1,3,5,6) X'(1,2) XY(1) xy 
-          by(auto intro!: partition_quotient_graphI[where e = e])
-      next
-        case (3 ee)
-        hence "ee \<in> partition_quotient_graph (graph_inter_Vs E X) \<P>\<^sub>X"
-          using assms(10) remove_vertices_subgraph by blast
-        then show ?case 
-        proof(elim partition_quotient_graphE, goal_cases)
-          case (1 XX YY ea)
-          then show ?case 
-            using e(1) graph_inter_Vs_subset(1)
-            by(auto intro!: partition_quotient_graphI[where e = ea])
-        qed
-      qed
-    next
-      case 2
-      then show ?case
-      proof(rule matching_vertex_disj_union, goal_cases)
-        case 1
-        then show ?case
-      proof(rule matching_vertex_disj_union, goal_cases)
-        case 1
-        then show ?case
-          using assms(4) matching_delete perfect_matchingE by blast
-      next
-        case 2
-        then show ?case
-          using matching_singleton by auto
-      next
-        case 3
-        then show ?case 
-        proof(rule ccontr, goal_cases)
-          case 1
-          hence "Y \<in> Vs (M - {{Y, X}}) \<or> X' \<in> Vs (M - {{Y, X}})"
-            by (auto simp add: Vs_of_edge)
-          then show ?case 
-          proof(elim disjE, goal_cases)
-            case 1
-            then show ?case 
-              using  assms(3,4,5) X'(1)
-             by (auto elim!: perfect_matchingE
-                simp add: remove_matching_edge_Vs Vs_of_edge)
-         next
-           case 2
-           then obtain eee where eee:"eee \<in> M" "eee \<in> M - {{Y, X}}" "X' \<in> eee"
-             by (auto simp: vs_member)
-           then obtain YY where YY:"eee = {X', YY}" "YY \<noteq> X'"
-             by(elim dblton_graphE[OF partition_quotient_graph_is_dblton[of E],
-                        OF  perfect_matching_subgraphD[OF assms(4), of eee]]) blast
-           hence "X' = X"
-             using X'(2) eee(1) assms(2,5) xy(1) e(4)
-             by(elim partition_quotient_graphE[OF perfect_matching_subgraphD[OF assms(4)], of eee])
-               (auto simp add: doubleton_eq_iff prepartition_on_def disjoint_def)
-           hence "{X, Y} = {X', YY}" 
-             using assms(4) YY(1) eee(1)
-             by(intro matching_unique_match[of M X' "{X, Y}" "{X', YY}"])
-               (auto elim!:  perfect_matchingE simp add: assms(5) edge_commute)
-           thus False 
-             using YY(1) eee(2) by auto
-         qed
-       qed
-     qed
-      next
-        case 2
-        then show ?case
-          by (simp add: assms(10))
-      next
-        case 3
-        then show ?case
-        proof(rule ccontr, goal_cases)
-          case 1
-          then obtain Z where "Z \<in> Vs M'" "Z \<in> Vs M - {X} \<or> (Z = X' \<and> \<not> Z \<in> Vs M - {X})" 
-            using assms(5,4) e(6) edges_are_Vs
-            by (auto elim!: perfect_matchingE  simp add: vs_insert remove_matching_edge_Vs) (auto, blast+)
-          then show ?case
-          proof(elim disjE, goal_cases)
-            case 1
-            hence "Z \<in> \<P>\<^sub>X" 
-              using  Vs_partition_quotient_graph[of \<P>\<^sub>X "graph_inter_Vs E X"] 
-                    remove_vertices_subgraph_Vs[of Z "partition_quotient_graph \<P>\<^sub>X (graph_inter_Vs E X)" "{X'}"]
-              by(auto elim!: perfect_matchingE simp add: assms(11))
-            moreover have "Z \<in> \<P>"
-             using assms(4) Vs_partition_quotient_graph[of E \<P>] 1
-             by(auto elim!: perfect_matchingE)
-           moreover have "Z \<subseteq> X" 
-             using assms(3) calculation(1) partition_onD1 by blast
-           ultimately have "Z = X"
-             using assms(2,3) e(4)
-             by(intro prepartition_on_eq_if_inter_nempty)
-               (auto simp add: inf.absorb_iff1 partition_onD3)
-           thus ?case
-             using "1"(2) by fastforce
-          next
-            case 2
-            then show ?case
-              using assms(11)
-              by(auto elim!: perfect_matchingE)
-          qed
-        qed
-      qed
-    next
-      case 3
-      then show ?case
-      proof(subst prepartition_quotient_graph_verts_by_Delta, goal_cases)
-        case 1
-        then show ?case 
-          by (simp add: assms(2,3) e(4) partition_of_prepartition_is_prepartition)
-      next
-        case 2
-        then show ?case 
-          using assms(1) by auto
-      next
-        case 3
-        have rw1:"{Xa | Xa e. Xa \<in> \<P> - {X} \<union> \<P>\<^sub>X \<and> e \<in> Delta E Xa} =
-              {Xa | Xa e. Xa \<in> \<P> - {X} \<and> e \<in> Delta E Xa} \<union>
-              {Xa | Xa e. Xa \<in> \<P>\<^sub>X \<and> e \<in> Delta E Xa}"
-          by auto
-        have rw2:"Vs M - {Y, X} \<union> Vs {{Y, X'}} = Vs M - {X} \<union> {X'}"
-          using  e(6) edges_are_Vs_2[of Y X M] edges_are_Vs_2[of X Y M] assms(5)
-          by(auto simp add: Vs_of_edge insert_commute) 
-        have rw3:"Vs (M - {{Y, X}} \<union> {{Y, X'}} \<union> M') = 
-               Vs (M) - {X} \<union> ({X'} \<union> Vs M')"
-          unfolding vs_union using assms(4)
-          by (subst remove_matching_edge_Vs)(auto elim!: perfect_matchingE simp add: assms(5) rw2)
-        show ?case
-          unfolding rw1 rw3
-          proof(rule arg_cong2[where f = Set.union], goal_cases)
-            case 1
-            have rw1:"{Xa | Xa e. Xa \<in> \<P> - {X} \<and> e \<in> Delta E Xa} = 
-                 {Xa | Xa e. Xa \<in> \<P> \<and> e \<in> Delta E Xa} - {X}"
-              by auto
-            show ?case 
-              unfolding rw1
-            proof(rule arg_cong2[where f = minus, OF _ refl], 
-                  subst prepartition_quotient_graph_verts_by_Delta[symmetric], goal_cases)
-              case 1
-              then show ?case 
-                by (simp add: assms(2))
-            next
-              case 2
-              then show ?case 
-                by (simp add: assms(1))
-            next
-              case 3
-              then show ?case
-                by (simp add: assms(4) perfect_matchingD(3))
-            qed
-          next
-            case 2
-            have rw1:"{Xa | Xa e. Xa \<in> \<P>\<^sub>X \<and> e \<in> Delta E Xa} =
-                    {X'} \<union> {Xa | Xa e. Xa \<in> \<P>\<^sub>X - {X'} \<and> e \<in> Delta E Xa}"
-              using xy e(1) X'(1,2) y_not_in_X' 
-              by(auto intro: exI[of _ e] in_DeltaI[of "{x, y}" x y E X'])
-            show ?case
-              unfolding rw1
-            proof(rule arg_cong2[where f = Set.union, OF refl], goal_cases)
-              case 1
-              have rw1:"Vs M' = \<P>\<^sub>X - {X'}"
-                using assms(11) by auto
-              show ?case 
-              proof(rule, all \<open>rule\<close>, goal_cases)
-                case (1 x)
-                then show ?case 
-                 unfolding rw1 by auto
-              next
-                case (2 XX) 
-                then obtain ee where ee: "ee \<in> M'" "XX \<in> ee"
-                  by(auto simp add: vs_member)
-                hence "ee \<in> partition_quotient_graph (graph_inter_Vs E X) \<P>\<^sub>X \<setminus> {X'}"
-                  using assms(10) by blast
-                hence ee_in_quot: "ee \<in> partition_quotient_graph (graph_inter_Vs E X) \<P>\<^sub>X"
-                          "X' \<notin> ee"
-                  using remove_vertices_subgraph'  ee(1) rw1 by auto
-                obtain YY ea where YY_ea:" ee = {XX, YY}"
-                     "XX \<in> \<P>\<^sub>X" "YY \<in> \<P>\<^sub>X" "XX \<noteq> YY" "ea \<in> graph_inter_Vs E X" "XX \<inter> ea \<noteq> {}" "YY \<inter> ea \<noteq> {}"
-                  using ee(2) partition_quotient_graphD[OF ee_in_quot(1)] by auto
-                obtain a b where "ea = {a, b}" "a \<noteq> b" "ea \<in> E"
-                  using YY_ea(5) assms(1) 
-                  by(auto dest: set_mp[OF graph_inter_Vs_subset(1)] elim!: dblton_graphE)
-                then obtain a b where "ea = {a, b}" "a \<noteq> b" "a \<in> XX" "b \<notin> XX" "ea \<in> E"
-                  using YY_ea(2,3,4,6,7) assms(3)
-                  by(auto simp add:  partition_on_def doubleton_eq_iff disjoint_def)blast+
-                hence "ea \<in> Delta E XX"
-                  by(auto simp add: Delta_def)
-                thus ?case using ee_in_quot(2) 
-                 by (auto simp add: YY_ea )
-              qed
-            qed
-          qed
-        qed
-      qed
-    qed
-
-lemma partition_quotient_matching_expand_selection:
-  assumes "dblton_graph E" "partition_on (Vs E) \<P>" "partition_on X \<P>\<^sub>X"
-          "perfect_matching (partition_quotient_graph E \<P>) M"
-          "{Y, X} \<in> M"
-          "\<P>' = \<P> - {X} \<union> \<P>\<^sub>X"
-          "\<And> X'. X' \<in> \<P>\<^sub>X \<Longrightarrow> 
-            graph_matching (partition_quotient_graph (graph_inter_Vs E X) \<P>\<^sub>X  \<setminus> {X'}) (f X') \<and>
-            Vs  (f X') = \<P>\<^sub>X - {X'}"
-    shows "\<exists> X' \<in>  \<P>\<^sub>X. perfect_matching (partition_quotient_graph E (\<P> - {X} \<union> \<P>\<^sub>X)) 
-                   (M - {{Y, X}} \<union> {{Y, X'}} \<union> f X')"
-proof-
-  obtain e where e: "e\<in>E" "X \<inter> e \<noteq> {}" "Y \<inter> e \<noteq> {}" "X \<in> \<P>" "Y \<in> \<P>" "X \<noteq> Y"
-    using assms(4,5) 
-    by (auto elim!: perfect_matchingE dest!: set_mp 
-          simp add: partition_quotient_graph_def doubleton_eq_iff)+
-  hence XY: "X \<inter> Y = {}" "X \<noteq> {}" "Y \<noteq> {}" "X \<subseteq> Vs E" "Y \<subseteq> Vs E"
-    using assms(2) by(auto simp add: partition_on_def disjoint_def)
-  then obtain x y where xy: "x \<in> X" "y\<in> Y" "{x, y} = e" "x \<noteq> y"
-    using assms(1) e by(auto elim!: dblton_graphE simp add:  doubleton_eq_iff)
-  then obtain X' where X': "X' \<in> \<P>\<^sub>X" "x \<in> X'"
-    using assms(3) by(auto simp add: partition_on_def)
-  have y_not_in_X': "y \<notin> X'" 
-    using X'(1) XY(1) assms(3) xy(2) by(auto simp add: partition_on_def)
-  note match = assms(7)[OF X'(1)]
-
-  show ?thesis
-  proof(rule bexI[OF _ X'(1)], goal_cases)
-    case 1
-    then show ?case
-      find_theorems prepartition_on partition_on
-    proof(rule partition_quotient_matching_expand[OF assms(1) 
-           partition_on_implies_prepartition_on[OF assms(2)]
-                 assms(3,4,5) X' xy(2)], goal_cases)
-      case 1
-      then show ?case 
-        by (simp add: e(1) xy(3))
-    next
-      case 2
-      then show ?case 
-        using match by blast
-    next
-      case 3
-      then show ?case 
-        using match by auto
-    qed
-  qed
-qed
-
-lemma partition_quotient_graph_inter_Vs_commute:
-  assumes "X \<subseteq> \<P>" "dblton_graph G" "disjoint \<P>"
-  shows"(G \<sslash> \<P>) \<lbrakk>X\<rbrakk> = G \<lbrakk>\<Union> X\<rbrakk> \<sslash> X"
-proof(rule, all \<open>rule\<close>, goal_cases)
-  case (1 e)
-  then obtain X1 X2 where X1X2:"{X1, X2} \<in> G \<sslash> \<P>" "e = {X1, X2}" "X1 \<in> X" "X2 \<in> X"
-    using partition_quotient_graphD[of e G \<P>]
-    by(auto  simp add: graph_inter_Vs_def)
-  then obtain ee where ee: "X1 \<in> \<P>" "X2 \<in> \<P>" "X1 \<noteq> X2 " "ee \<in> G" "X1 \<inter> ee \<noteq> {}" "X2 \<inter> ee \<noteq> {}"
-    by(auto simp add: partition_quotient_graph_def doubleton_eq_iff)
-  then obtain x1 x2 where x1x2: "ee = {x1, x2}" "x1 \<noteq> x2"
-    using assms(2) by(auto elim!: dblton_graphE)
-  have "x1 \<in> X1 \<and> x2 \<in> X2 \<or> x1 \<in> X2 \<and> x2 \<in> X1"
-    using ee(1,2,3,5,6) assms(3) x1x2(1)
-    by(auto dest:  disjointD)
-  hence "ee \<in> G \<lbrakk>\<Union> X\<rbrakk>"
-    using ee(4-) X1X2(3-) x1x2
-    by(auto simp add: graph_inter_Vs_def)
-  then show ?case 
-    using X1X2(2,3,4) ee(3,5,6)
-    by(auto intro!: exI[of _ X1, OF exI[of _ X2]] bexI[of _ ee]
-          simp add: partition_quotient_graph_def)
-next
-  case (2 x)
-  then show ?case 
-    using assms(1)
-    by(auto simp add: partition_quotient_graph_def graph_inter_Vs_def)
-qed
-
-lemma edge_in_quot_remove_irrelevant_areas:
-  assumes "\<And> YY. YY \<in> Y \<Longrightarrow> e \<inter> Y = {}"
-  shows "e \<in> G \<sslash> (X -Y) \<longleftrightarrow> e \<in> G \<sslash> X"
-  using assms
-  by(auto simp add: partition_quotient_graph_def) blast+
-
-lemma partition_quotient_graph_Vs_inter_intersection:
-  "(G \<sslash> X) \<lbrakk>Y\<rbrakk> = G \<sslash> (X \<inter> Y)"
-proof(rule, all \<open>rule\<close>, goal_cases)
-  case (1 e)
-  then show ?case
-  proof(elim in_graph_inter_VsE in_partition_quotient_graphE, goal_cases)
-    case (1 ee x y)
-    then show ?case 
-      by(auto intro!: exI[of _ x, OF exI[of _ y]] simp add: partition_quotient_graph_def)
-  qed
-next
-  case (2 e)
-  then show ?case
-  proof(rule in_partition_quotient_graphE, goal_cases)
-    case (1 ee X Y)
-    note one = this
-    then show ?case
-      by(auto intro!:  in_graph_inter_VsI exI[of _ X, OF exI[of _ Y]] 
-              simp add: partition_quotient_graph_def)
-  qed
-qed
-
-
 datatype 'a MOD = match "'a set set" | decomp "'a set set"
 
-locale find_matchings_or_decomposition_spec =
-fixes find_matchings_or_decomposition::"'v set set \<Rightarrow> 'v MOD"
-assumes find_matchings_or_decomposition_correct:
+locale find_matching_or_decomposition_spec =
+fixes find_matching_or_decomposition::"'v set set \<Rightarrow> 'v MOD"
+assumes find_matching_or_decomposition_correct:
   "\<And> E. \<lbrakk>graph_invar E; \<exists> M. perfect_matching E M\<rbrakk> 
-         \<Longrightarrow> \<exists> M. find_matchings_or_decomposition E = match M"
+         \<Longrightarrow> \<exists> M. find_matching_or_decomposition E = match M"
   "\<And> E. \<lbrakk>graph_invar E; \<nexists> M. perfect_matching E M\<rbrakk> 
-         \<Longrightarrow> \<exists> D. find_matchings_or_decomposition E = decomp D"
-  "\<And> E M. \<lbrakk>graph_invar E; find_matchings_or_decomposition E = match M\<rbrakk> \<Longrightarrow>
+         \<Longrightarrow> \<exists> D. find_matching_or_decomposition E = decomp D"
+  "\<And> E M. \<lbrakk>graph_invar E; find_matching_or_decomposition E = match M\<rbrakk> \<Longrightarrow>
            perfect_matching E M"  
-  "\<And> E D.  \<lbrakk>graph_invar E; find_matchings_or_decomposition E = decomp D\<rbrakk> \<Longrightarrow>
+  "\<And> E D.  \<lbrakk>graph_invar E; find_matching_or_decomposition E = decomp D\<rbrakk> \<Longrightarrow>
           disjoint D"
-  "\<And> E D.  \<lbrakk>graph_invar E; find_matchings_or_decomposition E = decomp D\<rbrakk> \<Longrightarrow>
+  "\<And> E D.  \<lbrakk>graph_invar E; find_matching_or_decomposition E = decomp D\<rbrakk> \<Longrightarrow>
           \<Union> D \<subseteq> Vs E"
-  "\<And> E D X Y.  \<lbrakk>graph_invar E; find_matchings_or_decomposition E = decomp D; X \<in> D; Y \<in> D; X \<noteq> Y\<rbrakk> \<Longrightarrow>
+  "\<And> E D X Y.  \<lbrakk>graph_invar E; find_matching_or_decomposition E = decomp D; X \<in> D; Y \<in> D; X \<noteq> Y\<rbrakk> \<Longrightarrow>
           \<nexists> u v. {u, v} \<in> E \<and> u \<in> X \<and> v \<in> Y"
-  "\<And> E D.  \<lbrakk>graph_invar E; find_matchings_or_decomposition E = decomp D\<rbrakk> \<Longrightarrow>
+  "\<And> E D.  \<lbrakk>graph_invar E; find_matching_or_decomposition E = decomp D\<rbrakk> \<Longrightarrow>
           card D > card (Neighbourhood E (\<Union> D))"  
-  "\<And> E D X x.  \<lbrakk>graph_invar E; find_matchings_or_decomposition E = decomp D; X \<in> D; x \<in> X\<rbrakk> \<Longrightarrow>
+  "\<And> E D X x.  \<lbrakk>graph_invar E; find_matching_or_decomposition E = decomp D; X \<in> D; x \<in> X\<rbrakk> \<Longrightarrow>
           \<exists> M. graph_matching (E\<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"   
-  "\<And> E D X.  \<lbrakk>graph_invar E; find_matchings_or_decomposition E = decomp D; X \<in> D\<rbrakk> \<Longrightarrow> X\<noteq>{}" 
+  "\<And> E D X.  \<lbrakk>graph_invar E; find_matching_or_decomposition E = decomp D; X \<in> D\<rbrakk> \<Longrightarrow> X\<noteq>{}" 
 
 locale naive_weighted_blossom_main_loop =
   graph_abs where G = G +
-find_matchings_or_decomposition_spec where 
-find_matchings_or_decomposition = find_matchings_or_decomposition
-for G::"'v set set" and find_matchings_or_decomposition::"'v set set set \<Rightarrow> 'v set MOD" + 
+find_matching_or_decomposition_spec where 
+find_matching_or_decomposition = find_matching_or_decomposition
+for G::"'v set set" and find_matching_or_decomposition::"'v set set set \<Rightarrow> 'v set MOD" + 
 fixes w::"'v set \<Rightarrow> real"
 and sel::"('v set \<Rightarrow> bool) \<Rightarrow> 'v set set \<Rightarrow> 'v set"
-assumes sel_correct: "\<And> P X. \<exists> x \<in> X. P x \<Longrightarrow> sel P X \<in> X"
-  "\<And> P X. \<exists> x \<in> X. P x \<Longrightarrow> P (sel P X)"
+assumes sel_correct: "\<And> P X. \<lbrakk>\<exists> x \<in> X. P x;finite X\<rbrakk> \<Longrightarrow> sel P X \<in> X"
+  "\<And> P X. \<lbrakk>\<exists> x \<in> X. P x;finite X\<rbrakk> \<Longrightarrow> P (sel P X)"
 begin
 
 definition "\<w> \<pi> = (\<lambda> e. w e - sum \<pi> (end_sets G e))"
@@ -688,7 +126,7 @@ function (domintros) top_loop::"(('v set \<Rightarrow> real) \<times> 'v set set
                  else let \<epsilon> = Min ((if card Blos > 1 then {\<pi> Blos} else {}) \<union> {\<w> \<pi> e | e. e \<in> Delta G Blos});
                           \<pi>' = (\<lambda> X. if X = Blos then \<pi> Blos + \<epsilon> else \<pi> X)
                       in top_loop (\<pi>', \<OO>)))
-         else (case find_matchings_or_decomposition (Gt \<sslash> maxes) of 
+         else (case find_matching_or_decomposition (Gt \<sslash> maxes) of 
                     match M \<Rightarrow> Some (\<pi>, M, \<OO>)
                    | decomp D \<Rightarrow> 
                      if (\<forall> X \<in> D. Neighbourhood G (\<Union> X) \<subseteq> \<Union> (Neighbourhood (Gt \<sslash> maxes) (\<Union> D)))
@@ -739,14 +177,14 @@ definition top_loop_call1 :: "('v set \<Rightarrow> real) \<Rightarrow> 'v set s
   let Gt = odd_tight_subgraph G w \<pi>;
       maxes = maximal_sets \<OO>
   in \<not> (\<exists> Blos. Blos \<in> maxes \<and> \<not> (\<exists> e. e \<in> Gt \<and> e \<in> Delta G Blos)) \<and> 
-     (\<exists> M. find_matchings_or_decomposition (Gt \<sslash> maxes) = match M)"
+     (\<exists> M. find_matching_or_decomposition (Gt \<sslash> maxes) = match M)"
 
 definition to_loop_ret_Some :: "('v set \<Rightarrow> real) \<Rightarrow> 'v set set
  \<Rightarrow> (('v set \<Rightarrow> real) \<times> 'v set set set \<times> 'v set set)" where
 "to_loop_ret_Some \<pi> \<OO> \<equiv> 
   let Gt = odd_tight_subgraph G w \<pi>;
       maxes = maximal_sets \<OO>
-  in case find_matchings_or_decomposition (Gt \<sslash> maxes) of 
+  in case find_matching_or_decomposition (Gt \<sslash> maxes) of 
        match M \<Rightarrow> (\<pi>, M, \<OO>)"
 
 definition top_loop_ret_None_2_cond :: "('v set \<Rightarrow> real) \<Rightarrow> 'v set set \<Rightarrow> bool" where
@@ -754,7 +192,7 @@ definition top_loop_ret_None_2_cond :: "('v set \<Rightarrow> real) \<Rightarrow
   let Gt = odd_tight_subgraph G w \<pi>;
       maxes = maximal_sets \<OO>
   in \<not> (\<exists> Blos. Blos \<in> maxes \<and> \<not> (\<exists> e. e \<in> Gt \<and> e \<in> Delta G Blos)) \<and> 
-     (\<exists> D. find_matchings_or_decomposition (Gt \<sslash> maxes) = decomp D \<and>
+     (\<exists> D. find_matching_or_decomposition (Gt \<sslash> maxes) = decomp D \<and>
        (\<forall> X \<in> D. Neighbourhood G (\<Union> X) \<subseteq> \<Union> (Neighbourhood (Gt \<sslash> maxes) (\<Union> D)))
        \<and> \<not> (\<exists> X \<in> Neighbourhood (Gt \<sslash> maxes) (\<Union> D). 1 < card X))"
 
@@ -763,7 +201,7 @@ definition top_loop_call2_cond :: "('v set \<Rightarrow> real) \<Rightarrow> 'v 
   let Gt = odd_tight_subgraph G w \<pi>;
       maxes = maximal_sets \<OO>
   in \<not> (\<exists> Blos. Blos \<in> maxes \<and> \<not> (\<exists> e. e \<in> Gt \<and> e \<in> Delta G Blos)) \<and> 
-     (\<exists> D. find_matchings_or_decomposition (Gt \<sslash> maxes) = decomp D \<and>
+     (\<exists> D. find_matching_or_decomposition (Gt \<sslash> maxes) = decomp D \<and>
        (\<not> (\<forall> X \<in> D. Neighbourhood G (\<Union> X) \<subseteq> \<Union> (Neighbourhood (Gt \<sslash> maxes) (\<Union> D)))
         \<or> (\<exists> X \<in> Neighbourhood (Gt \<sslash> maxes) (\<Union> D). 1 < card X)))"
 
@@ -771,7 +209,7 @@ definition top_loop_call2 :: "('v set \<Rightarrow> real) \<Rightarrow> 'v set s
 "top_loop_call2 \<pi> \<OO> \<equiv> 
   let Gt = odd_tight_subgraph G w \<pi>;
       maxes = maximal_sets \<OO>;
-      D = (case find_matchings_or_decomposition (Gt \<sslash> maxes) of decomp D \<Rightarrow> D);
+      D = (case find_matching_or_decomposition (Gt \<sslash> maxes) of decomp D \<Rightarrow> D);
       \<epsilon> = Min ({\<pi> X | X. X \<in> Neighbourhood (Gt \<sslash> maxes) (\<Union> D) \<and> card X > 1}
              \<union> {1/2 * \<w> \<pi> {u, v} | u v X Y. X \<in> D \<and> Y \<in> D \<and> X \<noteq> Y \<and> u \<in> \<Union> X \<and> v \<in> \<Union> Y\<and> {u, v} \<in> G}
              \<union> {\<w> \<pi> {u, v} | u v. u \<in>(\<Union> (\<Union> D)) 
@@ -801,7 +239,7 @@ proof(goal_cases)
   case 5
   define Gt where "Gt = odd_tight_subgraph G w \<pi>"
   define maxes where "maxes = maximal_sets \<OO>"
-  obtain D where D_def: "find_matchings_or_decomposition (Gt \<sslash> maxes) = decomp D"
+  obtain D where D_def: "find_matching_or_decomposition (Gt \<sslash> maxes) = decomp D"
     using 5 by(force simp add: Gt_def maxes_def top_loop_call2_cond_def Let_def)
   show ?case 
       unfolding top_loop.psimps[OF assms] Gt_def[symmetric] maxes_def[symmetric]
@@ -896,11 +334,11 @@ proof (induction "(\<pi>, \<OO>)" arbitrary: \<pi> \<OO> rule: top_loop.pinduct)
           unfolding top_loop_ret_None_1_cond_def top_loop_call1_cond_def 
                     top_loop_ret_Some_cond_def top_loop_call2_cond_def Let_def
                     top_loop_ret_None_2_cond_def
-          by (cases "find_matchings_or_decomposition (odd_tight_subgraph G w \<pi> \<sslash> maximal_sets \<OO>)") auto
+          by (cases "find_matching_or_decomposition (odd_tight_subgraph G w \<pi> \<sslash> maximal_sets \<OO>)") auto
 
         have forw_subst2: "\<lbrakk>a = b ; c = d; P a c\<rbrakk> \<Longrightarrow> P b d" for a b c d by auto
 
-        obtain D where D: "find_matchings_or_decomposition (odd_tight_subgraph G w \<pi> \<sslash> maximal_sets \<OO>) = decomp D"
+        obtain D where D: "find_matching_or_decomposition (odd_tight_subgraph G w \<pi> \<sslash> maximal_sets \<OO>) = decomp D"
           using cond by(auto simp add: top_loop_call2_cond_def Let_def)
 
         show ?thesis
@@ -1043,13 +481,15 @@ proof-
     by(auto simp add: top_loop_call1_def Let_def \<pi>'_def Blos_def Gt_def maxes_def \<epsilon>_def)
 
   have Blos_in_maxes: "Blos \<in> maxes"
-    using assms(1)
+    using assms(1,2) finite_Vs union_split_with_maximal_sets[of \<OO>] finite_UnionD[of "maximal_sets \<OO>"]
+      finite_UnionD[of \<OO>] odds_invarD(4)[of \<pi> \<OO>]
     unfolding Blos_def
     by(intro sel_correct(1))
       (auto simp add:  top_loop_call1_cond_def Gt_def maxes_def Let_def)
- 
+
   have  Blos_props:"\<nexists>e. e \<in> Gt \<and> e \<in> Delta G Blos" 
-    using assms(1)
+    using assms(1,2) finite_Vs union_split_with_maximal_sets[of \<OO>] finite_UnionD[of "maximal_sets \<OO>"]
+      finite_UnionD[of \<OO>] odds_invarD(4)[of \<pi> \<OO>]
     unfolding Blos_def
     by(intro sel_correct(2))
       (auto simp add:  top_loop_call1_cond_def Gt_def maxes_def Let_def)
@@ -1231,15 +671,16 @@ proof-
   define \<epsilon> where "\<epsilon> = \<bar>B\<bar> + 1 + \<bar> sum \<pi> (\<Omega> Vs G) \<bar>"
   define \<pi>' where "\<pi>' = (\<lambda>X. if X = Blos then \<pi> Blos + \<epsilon> else \<pi> X)"
 
- 
   have Blos_in_maxes: "Blos \<in> maxes"
-    using assms(1)
+    using assms(1,2) finite_Vs union_split_with_maximal_sets[of \<OO>] finite_UnionD[of "maximal_sets \<OO>"]
+      finite_UnionD[of \<OO>] odds_invarD(4)[of \<pi> \<OO>]
     unfolding Blos_def
     by(intro sel_correct(1))
       (auto simp add:  top_loop_ret_None_1_cond_def Gt_def maxes_def Let_def)
  
   have  Blos_props:"\<nexists>e. e \<in> Delta G Blos" 
-    using assms(1)
+    using assms(1,2) finite_Vs union_split_with_maximal_sets[of \<OO>] finite_UnionD[of "maximal_sets \<OO>"]
+      finite_UnionD[of \<OO>] odds_invarD(4)[of \<pi> \<OO>]
     unfolding Blos_def
     by(intro sel_correct(2))
       (auto simp add:  top_loop_ret_None_1_cond_def Gt_def maxes_def Let_def)
@@ -1324,7 +765,7 @@ proof-
   define Gt where "Gt = odd_tight_subgraph G w \<pi>"
   define maxes where "maxes = maximal_sets \<OO>"
 
-  obtain D where D_def: "find_matchings_or_decomposition (Gt \<sslash> maxes) = decomp D"
+  obtain D where D_def: "find_matching_or_decomposition (Gt \<sslash> maxes) = decomp D"
     using assms(1) by(auto simp add: top_loop_ret_None_2_cond_def Gt_def maxes_def Let_def)
 
   have graph_invar_tight: "graph_invar Gt"
@@ -1346,7 +787,7 @@ proof-
     using part finite_Vs
     by(auto intro!: partition_quotient_graph_graph_invar[of "Vs G"])
   
-  note D_props = find_matchings_or_decomposition_correct(4-)[OF graph_invar_quot D_def]
+  note D_props = find_matching_or_decomposition_correct(4-)[OF graph_invar_quot D_def]
 
   hence card_neighb_D_leq_card_D: "card (Neighbourhood (Gt \<sslash> maxes) (\<Union> D)) \<le> card D"
     by auto
@@ -1485,9 +926,13 @@ proof-
       using "1" D_props(6) by auto
     obtain M where M: "graph_matching ( Gt \<sslash> maxes \<lbrakk>X\<rbrakk>) M" "Vs M = X - {x}"
       using D_props(5)[OF 1 x] by auto
-    show ?case
-      using graph_invar_quot finite_maxes D_in_maxes[OF 1 ]
-      by (intro near_perfect_matching_odd[OF _ M x])(auto simp add: finite_subset)
+    hence "dblton_graph M"
+      using graph_invar_quot dblton_graph_subset[of " Gt \<sslash> maxes \<lbrakk>X\<rbrakk>" M]
+        graph_invar_graph_inter_Vs[of "Gt \<sslash> maxes" X] 
+      by simp
+    thus ?case
+      using graph_invar_quot finite_maxes D_in_maxes[OF 1 ] M x
+      by(intro near_perfect_matching_odd[of M X x]) (auto simp add: finite_subset)
   qed
 
   have odd_Union_in_D: "odd (card (\<Union> X'))"  if X': "X' \<in> D" for X'
@@ -1780,7 +1225,7 @@ proof-
   define Gt where "Gt = odd_tight_subgraph G w \<pi>"
   define maxes where "maxes = maximal_sets \<OO>"
 
-  obtain D where D_def: "find_matchings_or_decomposition (Gt \<sslash> maxes) = decomp D"
+  obtain D where D_def: "find_matching_or_decomposition (Gt \<sslash> maxes) = decomp D"
     using assms(1) by(auto simp add: top_loop_call2_cond_def Gt_def maxes_def Let_def)
 
   have graph_invar_tight: "graph_invar Gt"
@@ -1802,7 +1247,7 @@ proof-
     using part finite_Vs
     by(auto intro!: partition_quotient_graph_graph_invar[of "Vs G"])
   
-  note D_props = find_matchings_or_decomposition_correct(4-)[OF graph_invar_quot D_def]
+  note D_props = find_matching_or_decomposition_correct(4-)[OF graph_invar_quot D_def]
 
   have D_nempty:"D \<noteq> {}"
   proof(rule ccontr, goal_cases)
@@ -1902,9 +1347,6 @@ proof-
       by blast
     obtain XX where "XX \<in> X'" 
       using D_props(6) X'(1) by auto
-     (* using X'(2) X part subset_eq[of "Neighbourhood (G \<sslash> maxes) (\<Union> D)" maxes]
-        partition_on_def[of "Vs G" maxes] Sup_bot_conv(1)[of X'] nbhd_in_maxes[of "\<Union> D"] 
-      by fastforce*)
     moreover hence "XX \<in> Neighbourhood (Gt \<sslash> maxes) (\<Union> D)"
      using X'(1,2) X part inf.order_iff[of X' maxes] inf.order_iff[of XX X]
         nbhd_in_maxes_tight[of "\<Union> D"] D_in_maxes[of X'] maxes_disjoint[of XX X] Union_upper[of XX X']
@@ -1928,9 +1370,13 @@ proof-
       using "1" D_props(6) by auto
     obtain M where M: "graph_matching ( Gt \<sslash> maxes \<lbrakk>X\<rbrakk>) M" "Vs M = X - {x}"
       using D_props(5)[OF 1 x] by auto
-    show ?case
-      using graph_invar_quot finite_maxes D_in_maxes[OF 1 ]
-      by (intro near_perfect_matching_odd[OF _ M x])(auto simp add: finite_subset)
+    hence "dblton_graph M"
+      using graph_invar_quot dblton_graph_subset[of " Gt \<sslash> maxes \<lbrakk>X\<rbrakk>" M]
+        graph_invar_graph_inter_Vs[of "Gt \<sslash> maxes" X] 
+      by simp
+    thus ?case
+      using graph_invar_quot finite_maxes D_in_maxes[OF 1 ] M x
+      by(intro near_perfect_matching_odd[of M X x]) (auto simp add: finite_subset)
   qed
 
   have odd_Union_in_D: "odd (card (\<Union> X'))"  if X': "X' \<in> D" for X'
@@ -2916,7 +2362,7 @@ proof-
   define Gt where "Gt = odd_tight_subgraph G w \<pi>"
   define maxes where "maxes = maximal_sets \<OO>"
 
-  obtain M where M_def: "find_matchings_or_decomposition (Gt \<sslash> maxes) = match M"
+  obtain M where M_def: "find_matching_or_decomposition (Gt \<sslash> maxes) = match M"
     using assms(1) by(auto simp add: top_loop_ret_Some_cond_def Gt_def maxes_def Let_def)
 
   have graph_invar_tight: "graph_invar Gt"
@@ -2936,7 +2382,7 @@ proof-
     using part finite_Vs
     by(auto intro!: partition_quotient_graph_graph_invar[of "Vs G"])
   
-  note M_perfect = find_matchings_or_decomposition_correct(3)[OF graph_invar_quot M_def]
+  note M_perfect = find_matching_or_decomposition_correct(3)[OF graph_invar_quot M_def]
 
   have to_loop_ret_Some_def: "to_loop_ret_Some \<pi> \<OO> = (\<pi>, M, \<OO>)"
     using M_def by(auto simp add: to_loop_ret_Some_def Gt_def maxes_def)
@@ -3081,7 +2527,7 @@ lemma top_loop_Some_result:
 
 end
 
-locale naive_weighted_blossom_cleanup =
+locale naive_weighted_blossom_with_cleanup =
  naive_weighted_blossom_main_loop where G = G 
 for G :: "'v set set"+
 fixes remove_set::"'v set \<Rightarrow> 'v"
@@ -3123,7 +2569,7 @@ function (domintros) cleanup_loop::"(('v set \<Rightarrow> real) \<times> 'v set
               Blses = immediate_subsets \<OO> Bls;
               \<OO>' = \<OO> - {Bls};
               bls = sel (\<lambda> bls. {bls, Bls'} \<in> Gt \<sslash> maximal_sets \<OO>') Blses;
-              M' = (case find_matchings_or_decomposition ((Gt \<sslash> maximal_sets \<OO>') \<lbrakk>Blses - {bls}\<rbrakk>)
+              M' = (case find_matching_or_decomposition ((Gt \<sslash> maximal_sets \<OO>') \<lbrakk>Blses - {bls}\<rbrakk>)
                      of match M \<Rightarrow> M);
               M'' = M - {{Bls, Bls'}} \<union> {{bls, Bls'}} \<union> M'
            in cleanup_loop (\<pi>, M'', \<OO>')
@@ -3149,7 +2595,7 @@ where
           Blses = immediate_subsets \<OO> Bls;
           \<OO>' = \<OO> - {Bls};
           bls = sel (\<lambda> bls. {bls, Bls'} \<in> Gt \<sslash> maximal_sets \<OO>') Blses;
-          M' = (case find_matchings_or_decomposition ((Gt \<sslash> maximal_sets \<OO>') \<lbrakk>Blses - {bls}\<rbrakk>)
+          M' = (case find_matching_or_decomposition ((Gt \<sslash> maximal_sets \<OO>') \<lbrakk>Blses - {bls}\<rbrakk>)
                  of match M \<Rightarrow> M);
           M'' = M - {{Bls, Bls'}} \<union> {{bls, Bls'}} \<union> M'
        in (\<pi>, M'', \<OO>')"
@@ -3250,11 +2696,12 @@ proof-
     ultimately show ?thesis 
       by(auto intro!: bexI[of _ Blss])
   qed
-
+  have finite_maxes: "finite maxes" 
+    using finite_Vs odds_invar_cleanupD(4) union_split_with_maximal_sets[of \<OO>]
+    by (fastforce intro!: finite_UnionD simp add: maxes_def)
   have Bls_prop: "Bls \<in> maxes" "card Bls > 1"
-    using sel_correct[OF there_is_max_gtr_1]
+    using sel_correct[OF there_is_max_gtr_1] finite_maxes
     by(auto simp add: Bls_def)
-
   have dblton_graph_Gt: "dblton_graph (Gt \<sslash> maximal_sets \<OO>)"
     by (simp add: partition_quotient_graph_is_dblton)
   have M_in_tight_quot:"M \<subseteq> (Gt \<sslash> maximal_sets \<OO>)"
@@ -3276,9 +2723,8 @@ proof-
     by(auto intro: bexI[of _ Bls'] 
          simp add: edges_are_Vs_2 maxes_def invar_tight_matching_cleanupD(2)[symmetric])
 qed
-
   have Bls'_props: "Bls' \<in> maxes" "{Bls, Bls'} \<in> M"
-    using sel_correct[OF Bls_partner] by(auto simp add: Bls'_def)
+    using sel_correct[OF Bls_partner] finite_maxes by(auto simp add: Bls'_def)
   hence Bls_Bls'_in_Gt_quot:"{Bls, Bls'} \<in> (Gt \<sslash> maximal_sets \<OO>)"
     using M_in_tight_quot by blast
 
@@ -3322,12 +2768,15 @@ qed
   qed
 
   define bls where "bls = sel (\<lambda> bls. {bls, Bls'} \<in> Gt \<sslash> maximal_sets \<OO>') Blses"
-
+  have finite_Blses: "finite Blses" 
+    using finite_Vs Bls_prop(1) Bls_Union_of_immediate_subsets  finite_UnionD[of Blses]
+      set_in_maxes_in_G[of Bls] finite_subset[of Bls "Vs G"]
+    by (auto simp add: Blses_def)
   have bls_prop:"{bls, Bls'} \<in> Gt \<sslash> maximal_sets \<OO>'" "bls \<in> Blses"
-    using sel_correct[OF bls_in_Gt]
+    using sel_correct[OF bls_in_Gt finite_Blses] 
     by(auto simp add: bls_def)
 
-  define M' where "M' = (case find_matchings_or_decomposition ((Gt \<sslash> maximal_sets \<OO>') \<lbrakk>Blses - {bls}\<rbrakk>)
+  define M' where "M' = (case find_matching_or_decomposition ((Gt \<sslash> maximal_sets \<OO>') \<lbrakk>Blses - {bls}\<rbrakk>)
                  of match M \<Rightarrow> M)"
 
   have graph_invar_Gt: "graph_invar (Gt \<sslash> maximal_sets \<OO>')"
@@ -3420,11 +2869,11 @@ have hlper: "\<lbrakk>M \<subseteq> (Gt \<lbrakk>\<Union> Blses\<rbrakk> \<sslas
       using Blses_def M(2) th1 perfect_matchingD(3)
       by force
   qed
-  have M'_def: "find_matchings_or_decomposition ((Gt \<sslash> maximal_sets \<OO>') \<lbrakk>Blses - {bls}\<rbrakk>) = match M'"
-    using find_matchings_or_decomposition_correct(1)[OF graph_invar_Gt_on_Bls matching_inter_Blses]
+  have M'_def: "find_matching_or_decomposition ((Gt \<sslash> maximal_sets \<OO>') \<lbrakk>Blses - {bls}\<rbrakk>) = match M'"
+    using find_matching_or_decomposition_correct(1)[OF graph_invar_Gt_on_Bls matching_inter_Blses]
     by(auto simp add: M'_def) 
 
-  note M_perfect = find_matchings_or_decomposition_correct(3)[OF graph_invar_Gt_on_Bls M'_def]
+  note M_perfect = find_matching_or_decomposition_correct(3)[OF graph_invar_Gt_on_Bls M'_def]
 
   hence Vs_M'_is:"Vs M' = Blses - {bls}" 
     using Vs_Blses_minus_bls
@@ -3817,7 +3266,7 @@ qed
     then show ?case 
       unfolding M''_def maximal_sets_after_are insert_commute[of Bls Bls' Set.empty]
            insert_commute[of bls Bls' Set.empty]
-    proof(rule partition_quotient_matching_expand[where x = x and y = y], goal_cases)
+    proof(rule partition_quotient_matching_refine_factor_critical[where x = x and y = y], goal_cases)
       case 1
       then show ?case
         by (simp add: graph graph_invar_odd_tight_subgraph)

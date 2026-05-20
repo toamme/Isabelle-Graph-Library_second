@@ -97,8 +97,6 @@ definition matching where
   "matching M \<longleftrightarrow> 
      (\<forall>e1 \<in> M. \<forall>e2 \<in> M. e1 \<noteq> e2 \<longrightarrow> e1 \<inter> e2 = {})"
 
-abbreviation "graph_matching G M \<equiv> matching M \<and> M \<subseteq> G"
-
 lemma matchingE:
   "matching M \<Longrightarrow> 
     ((\<And>e1 e2. \<lbrakk>e1 \<in> M; e2 \<in> M; e1 \<noteq> e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}) \<Longrightarrow> P) \<Longrightarrow> P"
@@ -111,6 +109,17 @@ lemma matchingI:
 lemma matchingD:
   "\<lbrakk>matching M; e1 \<in> M; e2 \<in> M; e1 \<noteq> e2\<rbrakk> \<Longrightarrow> e1 \<inter> e2 = {}"
   by (auto simp: matching_def)
+
+abbreviation "graph_matching G M \<equiv> matching M \<and> M \<subseteq> G"
+
+lemma graph_matchingE:
+  "graph_matching G M \<Longrightarrow> ( \<lbrakk>matching M; M \<subseteq> G\<rbrakk> \<Longrightarrow> P ) \<Longrightarrow> P"
+and graph_matchingI:
+  "\<lbrakk>matching M; M \<subseteq> G\<rbrakk> \<Longrightarrow> graph_matching G M"
+and graph_matchingD:
+  "graph_matching G M \<Longrightarrow> matching M"
+  "graph_matching G M \<Longrightarrow> M \<subseteq> G"
+  by auto
 
 lemma matching_revD:
   "\<lbrakk>matching M; e1 \<in> M; e2 \<in> M; e1 \<inter> e2 \<noteq> {}\<rbrakk> \<Longrightarrow> e1 = e2"
@@ -279,6 +288,20 @@ proof(rule matchingI, goal_cases)
     using 1 by fast
 qed
 
+lemma matching_image_rev:
+  assumes "matching ((image f) ` M)" "inj_on f (Vs M)"
+  shows   "matching M"
+proof(rule matchingI, rule ccontr, goal_cases)
+  case (1 e1 e2)
+  hence "f ` e1 \<inter> f ` e2 \<noteq> {}" "f ` e1 \<in> (image f) ` M" "f ` e2 \<in> (image f) ` M"
+        "f ` e1 \<noteq> f ` e2"
+    using "1"(1,2,3) assms(2) Vs_def[of M] Union_upper[of e2 M]
+      Union_upper[of e1 M] inj_on_image_eq_iff[of f "Vs M" e1 e2]
+    by auto
+  thus ?case
+    using assms(1) matchingD by blast
+qed
+
 lemma matching_image:
   assumes "matching M" "inj_on f (Vs M)"
   shows   "matching ((image f) ` M)"
@@ -305,6 +328,21 @@ proof(rule matchingI, rule ccontr, goal_cases)
   then show ?case
     using e1'_inter_e2'_empty x1(1) x2(1) by blast
 qed
+
+lemma matching_image_iff:
+  assumes "inj_on f (Vs M)"
+  shows   "matching ((image f) ` M) \<longleftrightarrow> matching M"
+  using assms matching_image matching_image_rev by blast
+
+lemma graph_matching_union:
+ assumes "graph_matching G M"  "graph_matching G M'"
+         "Vs M \<inter> Vs M' = {}"
+   shows "graph_matching G (M \<union> M')"
+  using matching_vertex_disj_union assms by auto
+
+lemma graph_matching_remove:
+  "\<lbrakk>graph_matching G M; M \<inter> Del = {}\<rbrakk> \<Longrightarrow> graph_matching (G - Del) M" 
+  by blast
 
 lemma remove_matching_edges_Vs:
   assumes "matching M" "M' \<subseteq> M"
@@ -805,9 +843,10 @@ qed
 abbreviation "alt_path M p \<equiv> alt_list (\<lambda>e. e \<notin> M) (\<lambda>e. e \<in> M) (edges_of_path p)"
 abbreviation "rev_alt_path M p \<equiv> alt_list (\<lambda>e. e \<in> M) (\<lambda>e. e \<notin> M) (edges_of_path p)"
 
-(*TODO MOVE*)
-lemma alt_list_tl: "alt_list P Q xs \<Longrightarrow> alt_list Q P (tl xs)"
-  by(cases rule: alt_list.cases[of P Q xs]) (auto simp add: alt_list.intros)
+lemma alt_path_prefix: "alt_path M (p@q) \<Longrightarrow> alt_path M p"
+  by(cases p)
+    (auto dest: alt_list_append_1 
+      simp add: alt_list_empty edges_of_path_append_3[of "_ # _", simplified append.append_Cons])
 
 lemma alt_path_tl_rev_alt_path:
  "alt_path M p \<Longrightarrow> rev_alt_path M (tl p)"
@@ -834,6 +873,10 @@ proof-
     using length_rev matching_augmenting_path_feats[OF assms] 
     by(auto simp: matching_augmenting_path_def split: if_splits)
 qed
+
+lemma matching_augmenting_path_rev_iff:
+ "matching_augmenting_path M (rev p) \<longleftrightarrow> matching_augmenting_path M p"
+  using matching_augmenting_path_rev by force
 
 lemma aug_paths_are_even:
   assumes "matching_augmenting_path M p"
@@ -1129,7 +1172,7 @@ proof-
     by(cases p rule: list_cases3) auto
 qed
 
-lemma verts_of_even_eges:
+lemma verts_of_even_edges:
       "Vs {edges_of_path p ! i | i. i < length p - 1 \<and> even i} = 
        (if even (length p) then set p else set (butlast p))" (is ?ths1)
   and verts_of_odd_edges:
@@ -1848,9 +1891,10 @@ lemma max_card_matchingD:
   by blast
 
 lemma max_card_matchingE:
-  assumes "max_card_matching G M"
-          "\<lbrakk> M \<subseteq> G; matching M; \<And> M'. \<lbrakk>M' \<subseteq> G; matching M'\<rbrakk> \<Longrightarrow> card M' \<le> card M\<rbrakk> \<Longrightarrow> P"
-        shows P
+  assumes 
+   "max_card_matching G M"
+   "\<lbrakk> M \<subseteq> G; matching M; \<And> M'. \<lbrakk>M' \<subseteq> G; matching M'\<rbrakk> \<Longrightarrow> card M' \<le> card M\<rbrakk> \<Longrightarrow> P"
+  shows P
   using assms
   by(auto simp add: max_card_matching_def)
 

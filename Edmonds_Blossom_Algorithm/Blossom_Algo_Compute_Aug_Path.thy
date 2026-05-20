@@ -171,6 +171,14 @@ lemma match_blossom_path_rev_stem:
     done
   done
 
+lemma flower_reverse_blossom:
+  assumes  "blossom E M stem C" 
+  shows   "blossom E M stem (rev C)"  
+proof-
+  show ?thesis
+    using assms rev_path_is_path_iff[of E "stem @ rev C"] match_blossom_path_rev_stem[of E stem C M]
+    by(auto intro: match_flower_reverse_blossom)
+qed
 
 context compute_match_blossom'
 begin
@@ -207,6 +215,31 @@ lemma sel_unmatched_spec': assumes "e \<in> unmatched_edges"
   obtains v1 v2 where "(sel_unmatched) = [v1, v2]" "{v1,v2} \<in> unmatched_edges"
   using assms sel_unmatched_spec
   by meson
+
+lemma blossom_None_alt_path_None: "compute_match_blossom = None \<Longrightarrow> compute_alt_path = None"
+  unfolding  compute_match_blossom_def 
+proof(cases "\<exists>e. e \<in> unmatched_edges", goal_cases)
+  case 1
+  then show ?case
+    by auto
+next
+  case 2
+  show ?case 
+    using 2(1) unfolding if_not_P[OF 2(2)]
+  proof(cases compute_alt_path, goal_cases)
+    case 1
+    then show ?case 
+      by simp
+  next
+    case (2 p1p2)
+    then show ?case
+    proof(cases p1p2, goal_cases)
+      case (1 p1 p2)
+      then show ?case
+        by(cases "set p1 \<inter> set p2 = {}", all \<open>cases "longest_disj_pfx p1 p2"\<close>) auto
+    qed
+  qed
+qed
 
 end
 
@@ -363,7 +396,8 @@ next
 qed
 
 lemmas find_max_matching_works = find_aug_path_use_intrp.find_max_matching_works 
-
+abbreviation "find_max_matching \<equiv> find_aug_path_use_intrp.find_max_matching"
+lemmas find_aug_path_use_satisfied = find_aug_path_use_intrp.find_aug_path_use_axioms
 end
 
 end

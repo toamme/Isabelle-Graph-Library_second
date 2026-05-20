@@ -800,6 +800,12 @@ interpretation forest: forest_manipulation
   by(auto intro!: forest_manipulation.intro forest_manipulation_spec.intro Map.intro Set.intro 
                   forest_manipulation_axioms.intro set_interate_correct)
 
+abbreviation "get_path \<equiv> forest.get_path"
+abbreviation "extend_forest_even_unclassified \<equiv> forest.extend_forest_even_unclassified"
+abbreviation "abstract_forest \<equiv> forest.abstract_forest"
+abbreviation "empty_forest \<equiv> forest.empty_forest"
+abbreviation "forest_invar \<equiv> forest.forest_invar"
+
 definition "compute_paths G M = 
   compute_alt_path.compute_alt_path id 
      forest.get_path forest.extend_forest_even_unclassified
@@ -834,6 +840,8 @@ interpretation path_compute: compute_alt_path
 lemmas compute_alt_path_props = 
   path_compute.compute_alt_path_from_tree_sound'
   path_compute.compute_alt_path_from_tree_complete
+
+lemmas forest_satisfied = forest.satisfied
 
 end
 

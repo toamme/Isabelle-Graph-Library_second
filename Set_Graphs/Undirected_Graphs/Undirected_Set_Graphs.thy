@@ -33,6 +33,13 @@ lemma vs_transport:
   "\<lbrakk>u \<in> Vs G; \<And>e. \<lbrakk>u \<in> e; e \<in> G\<rbrakk> \<Longrightarrow> \<exists>g \<in> F. u \<in> g\<rbrakk> \<Longrightarrow>u \<in> Vs F"
   by (auto simp: vs_member)
 
+lemma not_in_Vs_no_edge: "(x \<notin> Vs G) = (\<nexists>e. e \<in> G \<and> x \<in> e)"
+  by(auto simp add: Vs_def)
+
+lemma not_in_VsE: 
+  "\<lbrakk>x \<notin> Vs G; (\<And> e. \<lbrakk>e \<in> G; x \<in> e\<rbrakk> \<Longrightarrow> False) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by(auto simp add: Vs_def)
+
 lemma edges_are_Vs:
   assumes "{v, v'} \<in> G"
   shows "v \<in> Vs G"
@@ -48,6 +55,10 @@ lemma finite_Vs_then_finite:
   shows "finite G"
   using assms
   by (metis Vs_def finite_UnionD)
+
+lemma finite_dblton_finite_Vs:
+  "finite {{x, y} | x y. P x y} \<Longrightarrow> finite (Vs  { {x, y} | x y. P x y})"
+  by(auto simp add: Vs_def)
 
 lemma edge_commute: "{u,v} \<in> G \<Longrightarrow> {v,u} \<in> G"
   by (simp add: insert_commute)
@@ -342,6 +353,10 @@ lemma self_not_in_Neighbourhood:
   "x \<in> V \<Longrightarrow> x \<notin> Neighbourhood G V"
   by(auto simp add: Neighbourhood_def)
 
+lemma Neighbourhood_of_one_more_same_if_nin_Vs:
+  "x \<notin> Vs G \<Longrightarrow> Neighbourhood G (insert x X) = Neighbourhood G X"
+  by(auto simp add: Neighbourhood_def)
+
 lemma Neighbourhood_neighbourhood_union_inter:
   "Neighbourhood G V = \<Union> (neighbourhood G ` V) - V"
   by(auto simp add: Neighbourhood_def neighbourhood_def insert_commute)
@@ -496,6 +511,8 @@ subsection \<open>Subgraphs\<close>
 
 definition "graph_inter_Vs G X = {e | e. e \<in> G \<and> e \<subseteq> X}"
 
+notation graph_inter_Vs ( " _ \<lbrakk>_\<rbrakk>" 101)
+
 lemma in_graph_inter_VsI:
   "\<lbrakk>e \<in> G; e \<subseteq> X\<rbrakk> \<Longrightarrow> e \<in> graph_inter_Vs G X"
   by(auto simp add: graph_inter_Vs_def)
@@ -522,6 +539,19 @@ lemma graph_inter_cong:
 
 lemma graph_inter_vert_minus:"graph_inter_Vs G (X - Y) = graph_inter_Vs G X \<setminus> Y"
   by(auto simp add: graph_inter_Vs_def remove_vertices_graph_def)
+
+lemma graph_inter_Vs_remove_vertices_commute:
+  "graph_inter_Vs (E \<setminus> Y) X = (graph_inter_Vs E X) \<setminus> Y"
+  by(auto simp add: graph_inter_Vs_def remove_vertices_graph_def)
+
+lemma Vs_of_graph_inter_Vs: "Vs (G\<lbrakk>Vs G\<rbrakk>) = Vs G"
+  by(auto intro!: in_graph_inter_VsI bexI 
+           elim!: in_graph_inter_VsE 
+        simp add: vs_member)
+
+lemma is_part_of_graph_inter_Vs:
+  "\<lbrakk>G \<subseteq> G'; Vs G \<subseteq> X\<rbrakk> \<Longrightarrow> G \<subseteq> G' \<lbrakk>X\<rbrakk>"
+  by(auto simp add: graph_inter_Vs_def)
 
 subsection \<open>Bigraphs\<close>
 
@@ -568,6 +598,10 @@ proof(rule dblton_graphI, goal_cases)
   ultimately show ?case 
     by auto
 qed
+
+lemma dblton_graph_diff: "dblton_graph G \<Longrightarrow> dblton_graph (G - X)"
+  using Vs_subset[of "G - X" G]
+  by (auto intro!: finite_subset[of "Vs (G - X)" "Vs G"])
 
 abbreviation "graph_invar G \<equiv> dblton_graph G \<and> finite (Vs G)"
 
@@ -802,5 +836,11 @@ next
     unfolding enat_1
     by(rule ordered_comm_monoid_add_class.sum_mono degree_Vs)+
 qed
+
+lemma Vs_inter_single_empty: "dblton_graph G \<Longrightarrow> G \<lbrakk>{x}\<rbrakk> = {}"
+  by(auto elim!: in_graph_inter_VsE)
+
+lemma dblton_graph_Vs_inter: "dblton_graph G \<Longrightarrow> dblton_graph (G \<lbrakk>X\<rbrakk>)"
+  using graph_inter_Vs_subset(1) by fastforce
 
 end

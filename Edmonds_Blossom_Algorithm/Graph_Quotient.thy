@@ -291,6 +291,22 @@ lemma blossomD: assumes "blossom G M stem C"
   using assms
   by auto
 
+lemma match_blossom_stem_even:
+  assumes  "match_blossom M stem C"
+  shows "even (length stem)"
+proof(rule ccontr, goal_cases)
+  case 1
+  hence  "odd (length (edges_of_path (stem @ [hd C])))"
+    by(simp add: edges_of_path_length)
+  then show ?case
+    using assms match_blossomD(5) by blast
+qed
+
+lemma stem_even:
+  assumes  "blossom E M stem C"
+  shows "even (length stem)"
+  using assms match_blossom_stem_even by auto
+
 subsection \<open>Quotient graph\<close>
 
 definition quot_graph where
@@ -306,6 +322,11 @@ lemma quot_graph_gen_comp:
 
 lemma quot_id: "quot_graph (image id) G = G"  "quot_graph id G = G"
   by(auto simp add: quot_graph_def)
+
+lemma quot_graph_cong:
+  "(\<And> e. e \<in> G \<Longrightarrow> P `e = P' ` e) \<Longrightarrow> quot_graph P G = quot_graph P' G" 
+  by(auto simp add: quot_graph_def)
+
 
 lemma dblton_graph_contract_into_one_vert:
   assumes "dblton_graph G"
@@ -512,6 +533,10 @@ qed
 text\<open>Quoteint graph w/o self-loops\<close>
 
 abbreviation "quotG G \<equiv> (quot_graph P G) - {{u}}" 
+
+lemma quotG_mono:
+  "G \<subseteq> G' \<Longrightarrow> quotG G \<subseteq> quotG G'"
+  by(auto simp add: quot_graph_def)
 
 lemma edge_in_quotG_2'_doubleton:
   assumes edge: "{u, v} \<in> (quotG M)" "v \<in> s" "M \<subseteq> E"
@@ -3564,7 +3589,7 @@ proof
     then show ?case
       unfolding M_inter_p
       using assms(4,7)  M_inter_p
-      by (subst remove_matching_edges_Vs[OF matchingM])(auto simp add: verts_of_even_eges[of "v#p", simplified] Vs_of_edge)
+      by (subst remove_matching_edges_Vs[OF matchingM])(auto simp add: verts_of_even_edges[of "v#p", simplified] Vs_of_edge)
   qed (auto simp add: matching_singleton matchingM matching_delete)
   show "quot_graph contr M - {{new_vert}} \<subseteq> quot_graph contr G - {{new_vert}}"
     by(intro Diff_mono quot_graph_subset)(auto simp add: assms(1))
@@ -3606,11 +3631,17 @@ qed
 
 lemma edge_in_graph_edge_in_quot:
   assumes "v \<in> s" "w \<notin> s" "{v, w} \<in> E" 
-  shows "{v, u} \<in> quotG E "
+  shows "{v, u} \<in> quotG E"
   using assms good_quot_map
   apply(simp add: image_def quot_graph_def)
   by (smt (verit, best) Collect_cong Int_insert_left_if0 Un_Int_eq(3) insertCI insert_commute 
                         insert_def mk_disjoint_insert singleton_conv)
+
+lemma edge_in_graph_edge_in_quot':
+  assumes "v \<in> s" "w \<notin> s" "{w, v} \<in> E" 
+  shows "{u, v} \<in> quotG E "
+  using edge_in_graph_edge_in_quot[of v w] assms 
+  by(auto simp add: insert_commute)
 
 text\<open>Constructing an absrtact aumenting path from a concrete path, given that the blossom's base is
      not matched.\<close>
@@ -5234,6 +5265,63 @@ next
     by (auto simp add: doubleton_eq_iff; metis)
 qed
 
+lemma graph_invar_quotG: 
+  "graph_invar (quotG E)"
+  by (simp add: Vs_quotG_finite doubleton_quot finite_Vs)
+
+theorem max_card_matching_equiv_blossom_contraction:
+  assumes match_blossom: "blossom E M stem C"
+    and graph_matching: "graph_matching E M"
+    and quot: "s = (Vs E) - set C" "u \<notin>  Vs E"
+  shows "max_card_matching (quotG E) (quotG M) \<longleftrightarrow> max_card_matching E M"
+proof-
+  have matching: "finite M " "matching M" "M \<subseteq> E"
+    using graph_matching 
+    by (auto simp add: finite_E finite_subset)
+  show ?thesis
+proof(rule, goal_cases)
+  case 1
+  note one = this
+  show ?case 
+  proof(rule ccontr, goal_cases)
+    case 1
+    then obtain p where p: "graph_augmenting_path E M p"
+      using Berge[OF matching dblton_E finite_Vs] graph_matching
+      by(auto simp add: max_card_matching_def)
+    then obtain p' where "graph_augmenting_path (quotG E) (quotG M) p'"
+      using aug_path_works_in_contraction[OF assms(1) p matching(2,3,1) quot] 
+      by auto
+    moreover have "graph_matching (quotG E) (quotG M)"
+      using max_card_matchingDs(1,2) one by blast
+    ultimately have "\<not> max_card_matching (quotG E) (quotG M)" 
+      using  Berge[of "quotG M" "quotG E", OF finite_quot] graph_invar_quotG matching(1) leD
+      by(auto simp add: max_card_matching_def)
+    thus False
+      using one
+      by simp
+  qed
+next
+  case 2
+  note two = this
+  have graph_match: "graph_matching (quotG E) (quotG M)" 
+    using  graph_matching matching_quotM[of M stem C]  match_blossom quot(1)
+            quot_graph_subset[of M E]
+    by auto
+  show ?case
+  proof(rule ccontr, goal_cases)
+    case 1
+    then obtain p where p: "graph_augmenting_path (quotG E) (quotG M) p" 
+      using  Berge[of "quotG M" "quotG E", OF finite_quot] graph_invar_quotG matching(1) graph_match
+      by (auto simp add: linorder_not_le max_card_matching_def)
+    note augpath_M = refine_works[OF match_blossom p matching(2,3) quot(1)]
+    hence "\<not> max_card_matching E M"
+      using Berge[OF matching dblton_E finite_Vs] graph_matching
+      by(auto simp add: max_card_matching_def)
+    then show ?case
+      using two by auto
+  qed
+qed
+qed
 
 end
 

@@ -482,6 +482,13 @@ next
            simp add: alt_list_step 2(2))
  qed
 
+lemma alt_list_split_last_off:
+  "alt_list P Q (xs@[x]) \<Longrightarrow> alt_list P Q xs"
+  using alt_list_append_1 by auto
+
+lemma alt_list_tl: "alt_list P Q xs \<Longrightarrow> alt_list Q P (tl xs)"
+  by(cases rule: alt_list.cases[of P Q xs]) (auto simp add: alt_list.intros)
+
 fun take_evens where
  "take_evens Nil = Nil"|
  "take_evens [x] = [x]" |

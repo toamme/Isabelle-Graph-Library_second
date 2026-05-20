@@ -47,6 +47,7 @@ and higher_forest_properties:
           {u, v} \<inter> (Vs (abstract_forest F) \<union> vset_to_set (roots F)) = {}"
     "\<And> F M u v. \<lbrakk>forest_invar M F; {u, v} \<in> abstract_forest F\<rbrakk>\<Longrightarrow>
                u \<in> vset_to_set (evens F) \<longleftrightarrow> v \<in> vset_to_set (odds F)"
+and dblton: "\<And> M F. forest_invar M F \<Longrightarrow> dblton_graph (abstract_forest F)"
 begin
 definition "forest_extension_precond F M x y z =
       (forest_invar M F \<and> x \<in> vset_to_set (evens F) \<and>

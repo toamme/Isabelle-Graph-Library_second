@@ -575,7 +575,7 @@ proof-
 
   have Vs_of_M'_are:"Vs \<M>' = Vs \<M> - {u} \<union> set p"
     using mu_not_u assms(4,5)
-    by (auto simp add: M'_def vs_union verts_of_even_eges[of "_ @[_]", simplified] 
+    by (auto simp add: M'_def vs_union verts_of_even_edges[of "_ @[_]", simplified] 
         remove_matching_edges_Vs[OF assms(2)] Vs_of_edge)
 
   have dom_parent_lookup_after_is:
@@ -759,6 +759,12 @@ proof-
     then show ?case 
       using invar_basic_F(17)
       by(auto simp add: new_AF_is)
+  next
+    case 14
+    thus ?case
+      using effect_pc1 assms(7) effect_pc2
+      by(auto intro!: dblton_graph_diff dblton_graph_union distinc_p_dblton_edges
+            simp add: new_AF_is invar_basic_F(18) effect_pc3 the_other_neighb_of_odd_def)
   qed
 
   have Vs_of_inserted_path:
@@ -1448,7 +1454,7 @@ proof-
     case 3
     then show ?case 
       using assms(2,6,7)  mu_props(2)
-      by(auto simp add: verts_of_even_eges[of "p@[mu]", simplified] remove_matching_edge_Vs)
+      by(auto simp add: verts_of_even_edges[of "p@[mu]", simplified] remove_matching_edge_Vs)
   qed
 qed
 

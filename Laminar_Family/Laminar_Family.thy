@@ -1,11 +1,37 @@
 section \<open>Laminar Families\<close>
 
 theory Laminar_Family
-  imports Main "HOL-Eisbach.Eisbach"
+  imports Main "HOL-Eisbach.Eisbach" 
 begin
+
+lemma card_one_iff: "card X = 1 \<longleftrightarrow> (\<exists> x. X = {x})"
+  by (simp add: card_1_singleton_iff) 
+
+lemma inter_nemptyI: "\<lbrakk>A \<subseteq> B; A \<subseteq> C; A \<noteq> {}\<rbrakk> \<Longrightarrow> B \<inter> C \<noteq> {}"
+  by auto
 
 lemma card_geq_1_iff: "card X \<ge> Suc 0 \<longleftrightarrow> (finite X \<and> X \<noteq> {})"
   using  card_gt_0_iff[of X] by auto
+
+lemma odd_disjoint_Union:
+ "\<lbrakk>odd (card \<X>);\<And> X. X \<in> \<X> \<Longrightarrow> odd (card X);
+   \<And> X Y. \<lbrakk> X \<in> \<X>; Y \<in> \<X>; X \<noteq> Y\<rbrakk> \<Longrightarrow> X \<inter> Y = {}\<rbrakk> \<Longrightarrow> odd (card (\<Union> \<X>))"
+proof(subst card_Union_disjoint, goal_cases)
+  case 3
+  then show ?case 
+  proof(subst semiring_parity_class.even_sum_iff, goal_cases)
+    case 1
+    then show ?case 
+      using card.infinite[of \<X>] 
+      by fastforce
+  next
+    case 2
+    moreover hence "{a \<in> \<X>. odd (card a)} = \<X>" 
+      by blast
+    ultimately show ?case 
+      by auto
+  qed
+qed (fastforce simp add: pairwise_def disjnt_def)+
 
 definition "laminar U \<X> = 
             ((\<forall> X Y. X \<in> \<X> \<longrightarrow> Y \<in> \<X> \<longrightarrow> (X \<subseteq> Y \<or> Y \<subseteq> X \<or> X \<inter> Y = {}))

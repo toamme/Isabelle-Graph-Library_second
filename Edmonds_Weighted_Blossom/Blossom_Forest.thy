@@ -3,51 +3,8 @@ theory Blossom_Forest
           Blossom_Forest_Spec
 begin
 
-lemma odd_disjoint_Union:
- "\<lbrakk>odd (card \<X>);\<And> X. X \<in> \<X> \<Longrightarrow> odd (card X);
-   \<And> X Y. \<lbrakk> X \<in> \<X>; Y \<in> \<X>; X \<noteq> Y\<rbrakk> \<Longrightarrow> X \<inter> Y = {}\<rbrakk> \<Longrightarrow> odd (card (\<Union> \<X>))"
-proof(subst card_Union_disjoint, goal_cases)
-  case 3
-  then show ?case 
-  proof(subst semiring_parity_class.even_sum_iff, goal_cases)
-    case 1
-    then show ?case 
-      using card.infinite[of \<X>] 
-      by fastforce
-  next
-    case 2
-    moreover hence "{a \<in> \<X>. odd (card a)} = \<X>" 
-      by blast
-    ultimately show ?case 
-      by auto
-  qed
-qed (fastforce simp add: disjointI)+
-
 context laminar_tree
 begin
-(*
-context 
-  fixes M::'map
-begin
-
-function (domintros) blossom_edges_of_id where 
- "blossom_edges_of_id  i =
-          (case lookup M i of None \<Rightarrow> {} 
-           | Some B \<Rightarrow> 
-             (case B of elem_vert _ \<Rightarrow> {} |
-                        subverts vs \<Rightarrow> set (edges_of_path (vs@[hd vs]))
-               \<union> \<Union> (blossom_edges_of_id `  set vs)))"
-  by pat_completeness auto
-
-lemma blossom_edges_of_id_rel_def[simp]:
-  "blossom_edges_of_id_rel = laminar_forest_rel M"
-  unfolding blossom_edges_of_id_rel.simps laminar_forest_rel_def
-  by (auto intro!: ext)
-
-lemmas blossom_edges_of_id_simps = blossom_edges_of_id.psimps
-     [simplified blossom_edges_of_id_rel_def]
-end
-*)
 
 fun blossom_edges where
   "blossom_edges (maxids, L) = 

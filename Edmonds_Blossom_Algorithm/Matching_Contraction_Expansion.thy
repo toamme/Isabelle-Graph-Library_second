@@ -636,7 +636,7 @@ proof-
         by (simp add: less_diff_conv)
       show ?case 
         using   assms(5,6) effect_precond3
-        by (auto elim!: vs_member_elim simp add: verts_of_even_eges[of p, simplified i_smp])
+        by (auto elim!: vs_member_elim simp add: verts_of_even_edges[of p, simplified i_smp])
     qed
   next
     case 2
@@ -762,7 +762,7 @@ proof-
         by (simp add: less_diff_conv)
       show ?case 
         using  assms(2,3) 
-        by (auto elim!: vs_member_elim simp add: verts_of_even_eges[of p, simplified i_smp])
+        by (auto elim!: vs_member_elim simp add: verts_of_even_edges[of p, simplified i_smp])
     qed
   next
     case 2

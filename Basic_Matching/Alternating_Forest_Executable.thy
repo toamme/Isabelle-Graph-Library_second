@@ -98,7 +98,8 @@ definition "invar_basic \<M>=
          origin_lookup (origins F) ` ( vset_to_set (roots F) \<union> Vs (abstract_forest F)) =
          Some ` (vset_to_set (roots F)) \<and>
          Vs (abstract_forest F) - Vs \<M> \<subseteq> vset_to_set (roots F) \<and>
-         finite (abstract_forest F))" 
+         finite (abstract_forest F) \<and>
+         dblton_graph (abstract_forest F))" 
 
 lemma invar_basicE:
   "invar_basic \<M> F \<Longrightarrow>
@@ -116,7 +117,7 @@ lemma invar_basicE:
          origin_lookup (origins F) ` ( vset_to_set (roots F) \<union> Vs (abstract_forest F)) =
          Some ` (vset_to_set (roots F));
          Vs (abstract_forest F) - Vs \<M>  \<subseteq> vset_to_set (roots F);
-         finite (abstract_forest F)\<rbrakk> 
+         finite (abstract_forest F);  dblton_graph (abstract_forest F)\<rbrakk> 
      \<Longrightarrow> P)
 \<Longrightarrow> P"
   and invar_basicI:
@@ -134,7 +135,7 @@ lemma invar_basicE:
          origin_lookup (origins F) ` ( vset_to_set (roots F) \<union> Vs (abstract_forest F)) =
          Some ` (vset_to_set (roots F));
          Vs (abstract_forest F) - Vs \<M>  \<subseteq> vset_to_set (roots F);
-         finite (abstract_forest F)\<rbrakk> 
+         finite (abstract_forest F); dblton_graph (abstract_forest F)\<rbrakk> 
      \<Longrightarrow> invar_basic \<M> F"
   and invar_basicD:
   "invar_basic \<M> F \<Longrightarrow>  vset_invar (roots F)"
@@ -159,6 +160,7 @@ lemma invar_basicE:
          Some ` (vset_to_set (roots F))"
   "invar_basic \<M> F \<Longrightarrow> Vs (abstract_forest F) - Vs \<M>  \<subseteq> vset_to_set (roots F)"
   "invar_basic \<M> F \<Longrightarrow> finite (abstract_forest F)"
+  "invar_basic \<M> F \<Longrightarrow> dblton_graph (abstract_forest F)"
   by(force simp add: invar_basic_def)+
 (*similar to blossom*)
 definition "invar_matching_both_or_none \<M> F =
@@ -574,6 +576,11 @@ proof-
     case 17
     show ?case 
       by (simp add: invar_basic_old(17) new_abstract_is)
+  next
+    case 18
+    show ?case
+      by(auto simp add: new_abstract_is extension_precond(7,8) 
+                        finite_dbl_finite_verts invar_basic_old(17,18))
   qed
   have invar_matching_both_or_none_new:
     "invar_matching_both_or_none \<M> (extend_forest_even_unclassified F x y z)"
@@ -1015,6 +1022,7 @@ lemma simple_invariant_consequences:
     "vset_to_set (roots F) \<subseteq> vset_to_set (evens F)"
     "vset_to_set (roots F) \<inter> Vs M = {}"
     "card (vset_to_set (evens F)) = card (vset_to_set (odds F)) + card (vset_to_set (roots F))"
+    "dblton_graph (abstract_forest F)"
   using  invar_basicD[OF forest_invarD(1)[OF assms]]
   by simp_all
 

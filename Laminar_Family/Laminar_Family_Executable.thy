@@ -4,12 +4,6 @@ theory Laminar_Family_Executable
           Laminar_Spec
 begin
 
-lemma card_one_iff: "card X = 1 \<longleftrightarrow> (\<exists> x. X = {x})"
-  by (simp add: card_1_singleton_iff) 
-
-lemma inter_nemptyI: "\<lbrakk>A \<subseteq> B; A \<subseteq> C; A \<noteq> {}\<rbrakk> \<Longrightarrow> B \<inter> C \<noteq> {}"
-  by auto
-
 datatype ('v, 'id) contracted_laminar = elem_vert (the_vert: 'v) 
   | subverts (the_children :"'id list")
 term foldl

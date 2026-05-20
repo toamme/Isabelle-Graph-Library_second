@@ -741,6 +741,10 @@ lemma list_cases_betw:
 "\<lbrakk>length xs \<ge> 2; \<And> x y. xs = [x,y] \<Longrightarrow> P; \<And> ys x y. xs = [x]@ys@[y] \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by(auto intro: list_cases_both_sides[of xs]) 
 
+lemma list_cases2_both_sides:
+  "\<lbrakk>length xs \<ge> 2; \<And> x y zs. xs = x#zs@[y] \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P" for P
+  by(cases xs rule: list_cases_betw) auto
+
 lemma get_longest_common_tail:
 assumes "length p \<ge> 1" "length q \<ge> 1" "last p = last q"
 obtains ys p' q' where "p = p'@ys" "q =q'@ys" 
@@ -833,6 +837,12 @@ qed simp
 lemma rev_cases3: 
   "\<lbrakk>xs = Nil \<Longrightarrow> P; \<And> x. xs = [x] \<Longrightarrow> P; \<And> ys y x. xs=ys@[y,x] \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P" 
   by (metis More_Lists.append_butlast_last_cancel append_Nil neq_Nil_conv_snoc)
+
+
+lemma list_split_off_last_two:
+  assumes "length xs \<ge> 2"
+  obtains ys x y where "xs = ys@[x,y]"
+  using assms by(cases xs rule: rev_cases3) auto
 
 fun itrev_aux :: "'a list \<Rightarrow> 'a list \<Rightarrow> 'a list" where
 "itrev_aux  [] ys = ys" |

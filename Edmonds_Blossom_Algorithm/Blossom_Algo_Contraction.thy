@@ -1423,6 +1423,55 @@ lemma odd_cycle_set_butlast_tl:
   using odd_cycleD[OF assms] odd_cycle_nempty[OF assms]
   by (simp add: set_butlast_tl)
 
+lemma match_flower_reverse_blossom:
+  assumes "match_blossom M stem C"
+  shows  "match_blossom M stem (rev C)"
+proof-
+  note match_blossomD = match_blossomD[OF assms(1)]
+  have C_nempty: "C \<noteq> []"
+    using local.match_blossomD(3) odd_cycle_nempty by blast
+  have "alt_path M (stem @ rev C)"
+  proof(subst edges_of_path_append_2, goal_cases)
+    case 1
+    then show ?case 
+      by (simp add: local.match_blossomD(3) odd_cycle_nempty)
+  next
+    case 2
+    then show ?case
+    proof(rule alt_list_append_3, goal_cases)
+      case 1
+      then show ?case 
+        using match_blossomD(1)
+        by(auto simp add: edges_of_path_append_2[OF C_nempty] hd_rev match_blossomD(3) odd_cycleD(3)
+                    dest: alt_list_append_1)
+    next
+      case 2
+      then show ?case
+       using match_blossomD(3) assms  
+       by (auto intro!: even_alt_path_rev 
+                 intro: match_blossom_alt_cycle 
+                  dest: odd_cycleD(1) 
+              simp add: odd_cycle_even_verts)
+    next
+      case 3
+      then show ?case
+        using match_blossomD(5) odd_cycleD[OF match_blossomD(3)] 
+        by(cases C rule: rev_cases) auto
+    qed
+  qed
+  moreover have "distinct (stem @ butlast (rev C))"
+    using assms match_blossomD(2,3) match_blossom_distinct_tl odd_cycle_set_butlast_tl by fastforce
+  moreover have "odd_cycle (rev C)"
+    by (simp add: local.match_blossomD(3) odd_cycle_rev)
+  moreover have "hd (stem @ rev C) \<notin> Vs M"
+    using match_blossomD(3,4) hd_rev[of C] odd_cycleD(3)[of "stem @ C"]
+    by(cases stem) auto
+  moreover have "even (length (edges_of_path (stem @ [hd (rev C)])))"
+    by (simp add: calculation(3) last_rev match_blossomD(5) odd_cycleD(3))
+  ultimately show ?thesis
+    by(auto simp add: match_blossom_def)
+qed
+
 locale match = graph_abs G for G+ 
   fixes M
   assumes matching: "matching M" "M \<subseteq> G"

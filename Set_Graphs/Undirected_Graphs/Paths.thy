@@ -994,6 +994,34 @@ lemma Vs_of_edges_of_path:
   by(induction rule: list_induct_longer_2[OF assms])
     (simp_all add: vs_insert insert_commute)
 
+lemma Vs_of_graph_inter_path:
+  "\<lbrakk>length p \<ge> 2; path G p\<rbrakk> \<Longrightarrow> Vs (G \<lbrakk>set p\<rbrakk>) = set p"
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 x)
+  then show ?case 
+    by (auto simp add: vs_member elim!: in_graph_inter_VsE)
+next
+  case (2 x)
+  then obtain e where "e \<in> set (edges_of_path p)" "x \<in> e"
+    by(auto elim!: Paths.path_vertex_has_edge)
+  then show ?case
+    using 2
+    by(auto intro!: bexI[of _ e]  in_graph_inter_VsI
+             intro: path_ball_edges  v_in_edge_in_path_gen 
+          simp add: vs_member)
+qed
+
+lemma edges_of_path_subset_path:
+  assumes "e \<in> set (edges_of_path p)"
+  shows "e \<subseteq> set p"
+  using assms
+  by (induction p rule: edges_of_path.induct) auto
+
+lemma path_is_path_in_graph_on_path: 
+  "path G p \<Longrightarrow> set (edges_of_path p) \<subseteq> G \<lbrakk>set p\<rbrakk>"
+  using edges_of_path_subset_path
+  by(auto intro!: in_graph_inter_VsI simp add: path_ball_edges)
+
 lemma edges_of_path_symmetric_split:
   "edges_of_path (xs@[x,y]@ys) = edges_of_path (xs@[x]) @[{x,y}] @ edges_of_path (y#ys)"
   using edges_of_path_append_3[of "[x, y]" ys] edges_of_path_append_2[of "[x, y] @ ys" xs]
@@ -1041,6 +1069,18 @@ qed simp_all
 
 lemma edges_of_path_Vs: "Vs (set (edges_of_path p)) \<subseteq> set p"
   by (auto elim: vs_member_elim intro: v_in_edge_in_path_gen)
+
+lemma path_mono:
+"\<lbrakk>path E p; length p \<ge> 2; set (edges_of_path p) \<subseteq> E'\<rbrakk> \<Longrightarrow> path E' p"
+proof(induction  rule: path.induct)
+  case (path2 v v' vs)
+  then show ?case 
+    by(cases vs) auto
+qed auto
+
+lemma path_on_graph_inter_path:
+  "\<lbrakk>length p \<ge> 2; path G p\<rbrakk> \<Longrightarrow> path (G \<lbrakk>set p\<rbrakk>) p"
+  by(auto intro!: path_subset[OF _ path_is_path_in_graph_on_path] path_edges_of_path_refl)
 
 lemma graph_abs_edges_of_distinct_path:
   "distinct p \<Longrightarrow> graph_invar (set (edges_of_path p))"
@@ -1559,6 +1599,16 @@ lemma reachability_split:
 lemma edges_reachable:
   "{v, w} \<in> G \<Longrightarrow> reachable G v w"
   by (auto intro: edges_are_walks reachableI)
+
+lemma empty_Neighbourhood_path_contained:
+  assumes "p\<noteq> []"
+  shows "\<lbrakk>path G p; hd p \<in> X; Neighbourhood G X = {}\<rbrakk> \<Longrightarrow> set p \<subseteq> X"
+proof(induction rule: list_nempty_induct[OF assms])
+  case (2 x y xs)
+  then show ?case 
+    using path_2[of G x y xs] in_NeighbourhoodI[of x y G X]
+    by auto
+qed auto
 
 subsection \<open>Paths and Degrees\<close>
 

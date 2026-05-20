@@ -5,9 +5,6 @@ begin
 
 subsection \<open>Misc\<close>
 
-text\<open>Since one of the matchings is bigger, there must be one edge equivalence class
-  that has more edges from the bigger matching.\<close>
-
 lemma lt_sum:
   "(\<Sum>x\<in>s. g x) < (\<Sum>x\<in>s. f x) \<Longrightarrow> \<exists>(x::'a ) \<in> s. ((g::'a \<Rightarrow> nat) x < f x)"
   by (auto simp add: not_le[symmetric] intro: sum_mono)
@@ -281,6 +278,9 @@ proof(induction n)
     using Suc by auto
 qed simp
 
+lemma card_replace: "\<lbrakk>x \<in> X; y \<notin> X - {x}\<rbrakk> \<Longrightarrow> card (X - {x} \<union> {y}) = card X"
+  using card.remove[of X] by (cases "finite X") auto
+
 lemma domIff': "(m a = None) \<longleftrightarrow> (a \<notin> dom m)"
   by auto
 
@@ -317,4 +317,6 @@ lemma sum_nat_some_index_shift:
               symmetric])
     (auto intro!: sum.cong rev_image_eqI[of _ "{0..<b} \<inter> {uu. uu + a \<in> A}" _ "\<lambda>x. x + a", of "x - a" x for x])
 
+lemma finite_unordered_pairs: "finite X \<Longrightarrow> finite {{x,y}| x y. x \<in> X \<and> y \<in> X}"
+  by (simp add: finite_image_set2)
 end

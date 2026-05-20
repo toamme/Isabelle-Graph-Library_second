@@ -4,7 +4,10 @@ session "Edmonds_Weighted_Blossom" = "HOL" +
     "Laminar_Family"
     "Jordan_Normal_Form"
     "Matching_LPs"
+    Blossom
   theories
     Blossom_Forest_Spec
     Blossom_Forest
     Naive_Weighted_Blossom
+    Pre_Edmonds_Gallai
+    Naive_Weighted_Blossom_Instantiation

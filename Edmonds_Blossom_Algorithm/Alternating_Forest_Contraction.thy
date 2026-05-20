@@ -1730,6 +1730,11 @@ using invar_basic_F(7) by auto
                       finite_subset[of "Vs (abstract_forest new_forest)"
                         "Vs (abstract_forest new_forest) \<union> {new_vert}",
                         simplified Vs_contracted])
+  next
+    case 13
+    thus ?case
+      by(auto intro!: dblton_graph_contract_into_one_vert[where S = "set (p1 @ [u])"]
+            simp add: invar_basic_F(18) contr_def  quot_is_AF[symmetric])
   qed
 
   have invar_matching_both_or_none_after:
