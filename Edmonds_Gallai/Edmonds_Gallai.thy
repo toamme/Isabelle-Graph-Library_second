@@ -2,6 +2,8 @@ theory Edmonds_Gallai
   imports Edmonds_Gallai_Computation Berge_Formula.Berge_Formula
 begin
 
+section \<open>The Main Properties of the Edmonds Gallai Decomposition\<close>
+
 hide_const evens
 hide_const reachable
 hide_const reachable
@@ -9,542 +11,11 @@ hide_fact reachableE
 hide_fact reachableE
 hide_fact reachableE
 
-lemma inj_image_dblton_graph:
-  "\<lbrakk>inj f; dblton_graph G\<rbrakk> \<Longrightarrow> dblton_graph ((image f) ` G)"
-  using inj_eq[of f]
-  by (intro dblton_graphI)(auto elim!: dblton_graphE)
+subsection \<open>Instantiating the Algorithm\<close>
 
-lemma inj_image_graph_invar:
-  "\<lbrakk>inj f; graph_invar G\<rbrakk> \<Longrightarrow> graph_invar ((image f) ` G)"
-  by (auto intro: inj_image_dblton_graph finite_UnionD  finite_Union finite_imageI 
-      simp add: Vs_def)
-
-lemma graph_matching_image:
-  assumes "graph_matching G M" "inj_on f (Vs M)"
-  shows   "graph_matching ((image f) ` G) ((image f) ` M)"
-  using assms
-  by(auto intro!: graph_matchingI simp add: matching_image)
-
-lemma inj_on_image_subset_iff: "\<lbrakk>inj_on f (A \<union> B)\<rbrakk> \<Longrightarrow> f ` A \<subseteq> f ` B \<longleftrightarrow> A \<subseteq> B"
-  by (metis image_Un inj_on_Un_image_eq_iff sup.absorb_iff2 sup.right_idem)
-
-lemma inj_on_lifted_graph_subset:
-  "\<lbrakk>inj_on f (Vs (G \<union> G'))\<rbrakk> \<Longrightarrow> (`) f ` G' \<subseteq> (`) f ` G \<longleftrightarrow> G' \<subseteq> G"
-  by (simp add: Vs_def inj_on_image inj_on_image_subset_iff sup.commute)
-
-lemma inj_on_lifted_graph_same:
-  "\<lbrakk>inj_on f (Vs (G \<union> G'))\<rbrakk> \<Longrightarrow> (`) f ` G' = (`) f ` G \<longleftrightarrow> G' = G"
-  by (metis Vs_def inj_on_Un_image_eq_iff inj_on_image)
-
-lemma graph_matching_image_rev:
-  assumes  "graph_matching ((image f) ` G) ((image f) ` M)"  "inj_on f (Vs (G \<union> M))"
-  shows  "graph_matching G M"
-proof-
-  have  "inj_on f (Vs G)"  "inj_on f (Vs M)"
-    using assms(2) by(auto simp add: inj_on_Un vs_union)
-  thus ?thesis
-    using assms
-    by(auto intro!: graph_matchingI matching_image_rev[of f M] simp add: inj_on_lifted_graph_subset)
-qed
-
-lemma graph_matching_image_iff:
-  assumes  "inj_on f (Vs (G \<union> M))"
-  shows  "graph_matching ((image f) ` G) ((image f) ` M) \<longleftrightarrow> graph_matching G M"
-  by (meson Vs_subset assms inj_on_lifted_graph_subset le_supI1 matching_image_iff subset_inj_on)
-
-lemma inj_on_card_of_image_leq_iff:
-  "inj_on f (X \<union> Y) \<Longrightarrow> card (f ` X) \<le> card (f ` Y) \<longleftrightarrow> card X \<le> card Y"
-  by (simp add: card_image inj_on_Un)
-
-lemma inj_on_card_of_image_leqI:
-  "\<lbrakk>inj_on f (X \<union> Y); card X \<le> card Y\<rbrakk> \<Longrightarrow> card (f ` X) \<le> card (f ` Y)"
-  by (simp add: card_image inj_on_Un)
-
-lemma max_card_matching_image_iff:
-  assumes "inj_on f (Vs (G \<union> M))"
-  shows   "max_card_matching ((image f) ` G) ((image f) ` M) \<longleftrightarrow> max_card_matching G M"
-proof-
-  have  inj_M: "inj_on f (Vs M)" and inj_G: "inj_on f (Vs G)"
-    using assms by(auto simp add: inj_on_Un vs_union)
-  have inj_on_G: "G' \<subseteq> G \<Longrightarrow> inj_on ((`) f) G'" for G'
-    by (metis Vs_def inj_G inj_on_image subset_inj_on)
-  have in_G_matching:"C \<subseteq> G \<Longrightarrow> matching ((`) f ` C) \<longleftrightarrow> matching C" for C 
-    by (metis Vs_subset inj_G inj_on_subset matching_image_iff)
-  show ?thesis
-  proof(rule, goal_cases)
-    case 2
-    then show ?case 
-      using inj_M
-      by(auto intro!: max_card_matchingI inj_on_card_of_image_leqI inj_on_G
-          elim!: max_card_matchingE subset_imageE
-          simp add: max_card_matching_subgraphD matching_image max_card_matchingDs(2)
-          bij_betw_imp_inj_on in_G_matching)
-  next
-    case 1
-    then show ?case
-      using assms max_card_matchingDs(1)[OF 1] graph_matching_image_rev[of f M G]
-      by(auto intro!: max_card_matchingI inj_on_card_of_image_leqI inj_on_G
-          elim!: max_card_matchingE subset_imageE
-          simp add: max_card_matching_subgraphD matching_image max_card_matchingDs(2)
-          bij_betw_imp_inj_on inj_on_lifted_graph_same inj_on_G 
-          image_mono[of _ G "(`) f"] card_image_subst[of "(`) f" _ "(`) f ` _"] 
-          in_G_matching)
-  qed
-qed
-
-lemma Vs_of_imaged_graph: "Vs ((`) f ` G) = f` (Vs G)"
-  by(auto simp add: Vs_def)
-
-lemma Union_of_imaged: "\<Union> ((`) f ` \<D>) = f ` \<Union> \<D>"
-  by auto
-
-lemma Neighbourhood_image:
-  assumes "inj_on f (Vs G \<union> X)" "dblton_graph G"
-  shows "Neighbourhood ((image f) ` G) (f ` X) = f ` Neighbourhood G X"
-proof(rule, all \<open>rule, (elim imageE in_NeighbourhoodE)\<close>, goal_cases)
-  case (1 x y e yy)
-  then obtain u v where "e = {u, v}" "u \<noteq> v" "x = f u" "y = f v"
-    by (metis (no_types, lifting) assms(2) dblton_graphE doubleton_eq_iff image_empty image_insert)
-  moreover then have "yy = v"
-    using 1 assms(1) edges_are_Vs_2[of u v G] 
-    by (auto simp add:  doubleton_eq_iff inj_on_def)
-  ultimately show ?case
-    using 1 
-    by (auto intro!: rev_image_eqI[of u "Neighbourhood G X" _ f] in_NeighbourhoodI[of v u G X]
-        simp add: doubleton_eq_iff insert_commute)
-next
-  case (2 x xx yy)
-  then show ?case
-    using assms(1) inj_on_contraD[of f "Vs G \<union> X" _ xx] edges_are_Vs[of xx yy G]
-    by (force intro!: in_NeighbourhoodI[of "f yy" "f xx" "(image f) ` G" "f ` X"]
-        rev_image_eqI[of "{xx, yy}" G "{f yy, f xx}" "image f"]
-        simp add: insert_commute)
-qed
-
-lemma connected_sets_of_vertices_image:
-  assumes "inj_on f (Vs G \<union> X \<union> Y)" "dblton_graph G"
-  shows "f ` X \<longleftrightarrow>\<^bsub>(`) f ` G\<^esub> f ` Y \<longleftrightarrow> X \<longleftrightarrow>\<^bsub>G\<^esub> Y"
-proof(rule, goal_cases)
-  case 1
-  then obtain e x y where "{f x, f y} = f ` e" "e \<in> G" "x \<in> X" "y \<in> Y"
-    by(auto simp add: connected_set_of_vertices_def)
-  moreover hence "e = {x, y}" 
-    using assms inj_on_eq_iff[of f "Vs G \<union> X \<union> Y" ] edges_are_Vs[of _ _ G]
-    by(auto elim!: dblton_graphE simp add: doubleton_eq_iff insert_commute)
-  ultimately show ?case 
-    by(auto simp add: connected_set_of_vertices_def)
-next
-  case 2
-  then obtain u v where "{u, v} \<in> G" "u \<in> X" "v \<in> Y"
-    by(auto simp add: connected_set_of_vertices_def)
-  then show ?case 
-    using not_in_imageD
-    by(fastforce intro!: exI[of _ "f u", OF exI[of _ "f v"]] 
-        simp add: connected_set_of_vertices_def)
-qed
-
-lemma graph_inter_Vs_image:
-  assumes "inj_on f (Vs G \<union> X)"
-  shows "((`) f ` G) \<lbrakk>f ` X\<rbrakk> = (image f) ` (G \<lbrakk>X\<rbrakk>)"
-proof(rule, all \<open>rule\<close>, goal_cases)
-  case (1 e)
-  then obtain ee where "f ` ee \<subseteq> f ` X" "ee \<in> G" "e = f ` ee"
-    by(auto simp add: graph_inter_Vs_def)
-  moreover hence "ee \<subseteq> X" 
-    using assms(1) not_in_VsE[of _ G] inj_on_subset[of f "Vs G \<union> X" "ee \<union> X"] 
-      inj_on_image_subset_iff[of f ee X]
-    by auto
-  ultimately show ?case 
-    by(auto intro!: in_graph_inter_VsI rev_image_eqI[of ee "G\<lbrakk>X\<rbrakk>" "f ` ee" "image f"])
-qed (auto simp add: graph_inter_Vs_def)
-
-lemma edges_of_path_image:
-  "edges_of_path (map f p) = map (image f) (edges_of_path p)"
-  by(induction p rule: edges_of_path.induct) auto
-
-lemma alt_list_image:
-  assumes "\<And> x. x \<in> set xs \<Longrightarrow> P' (f x) \<longleftrightarrow> P x"
-    "\<And> x. x \<in> set xs \<Longrightarrow> Q' (f x) \<longleftrightarrow> Q x"
-  shows "alt_list P' Q' (map f xs) \<longleftrightarrow> alt_list P Q xs"
-  using assms
-proof(induction xs arbitrary: P Q P' Q')
-  case Nil
-  then show ?case
-    by (simp add: alt_list.intros(1))
-next
-  case (Cons a xs)
-  show ?case 
-    using Cons(2,3)
-    unfolding alt_list_step list.map(2)
-    by(subst Cons(1)[of Q' Q P' P]) auto
-qed
-
-lemma alt_path_image:
-  assumes "inj_on f (Vs M \<union> set p)"
-  shows "alt_path ((`) f ` M) (map f p) \<longleftrightarrow> alt_path M p"
-  unfolding edges_of_path_image
-proof(goal_cases)
-  case 1
-  have "e \<in> set (edges_of_path p) \<Longrightarrow> (f ` e \<notin> (`) f ` M) = (e \<notin> M)" for e
-  proof(goal_cases)
-    case 1
-    hence e_in_p:"e \<subseteq> set p"
-      by (simp add: edges_of_path_subset_path)
-    moreover have "\<lbrakk>f ` e = f ` e'; e' \<in> M\<rbrakk> \<Longrightarrow> e \<in> M" for e'
-    proof(goal_cases)
-      case 1
-      hence "e = e'"
-        using e_in_p assms Vs_def[of M] inj_on_image_eq_iff[of f "Vs M \<union> set p" e e']
-        by auto
-      thus ?thesis
-        using 1 by auto
-    qed
-    ultimately show ?thesis
-      by auto
-  qed
-  thus ?case
-    by(intro alt_list_image) auto
-qed
-
-lemma path_image:
-  assumes "inj_on f (Vs G \<union> set p)"
-  shows "path ((`) f ` G) (map f p) \<longleftrightarrow> path G p"
-  using assms
-proof(induction p rule: edges_of_path.induct, goal_cases)
-  case 1
-  then show ?case 
-    by auto
-next
-  case (2 v)
-  then show ?case 
-    by (auto simp add: Vs_of_imaged_graph)
-next
-  case (3 v v' l)
-  hence path_iff:"path ((`) f ` G) (f v' # map f l) = path G (v' # l)"
-    by auto
-  have edge_iff: "{f v, f v'} \<in> (`) f ` G \<longleftrightarrow> {v, v'} \<in> G"
-  proof(rule, elim imageE, goal_cases)
-    case (1 e)
-    hence "f  ` {v, v'} = f ` e"
-      by auto
-    hence "{v,v'} = e" 
-      apply(intro inj_onD[of "image f" "G"])
-         apply auto
-        apply (metis "3"(2) Vs_def inj_on_Un inj_on_image)
-      subgoal
-        using "1"(2) "3"(2) Sup_upper Un_empty_right Vs_def \<open>f ` {v, v'} = f ` e\<close> inf_sup_ord(4)
-          inj_on_image_eq_iff insert_subset le_supI2 le_sup_iff list.simps(15) sup.commute sup_ge1
-        by (smt (verit, del_insts))
-      subgoal
-        by (simp add: "1"(2))
-      done
-    then show ?case
-      using "1"(2) by fastforce
-  next
-    case 2
-    thus ?case
-      using not_in_imageD by fastforce
-  qed
-
-  then show ?case 
-    unfolding list.map(2) path_2 path_iff
-    by auto
-qed
-
-lemma path_in_image_to_original_path:
-  assumes "dblton_graph G" "inj_on f (Vs G)"
-  shows "path ((`) f ` G) p \<Longrightarrow> \<exists> q. path G q \<and> map f q = p"
-proof(induction p rule: path.induct)
-  case path0
-  then show ?case 
-    by auto
-next
-  case (path1 v)
-  then show ?case 
-    by(auto simp add: Vs_of_imaged_graph intro: path.path1)
-next
-  case (path2 v v' vs)
-  then obtain q where "path G q" "map f q = v' # vs"
-    by auto
-  then obtain q vv'' where "path G (vv''# q)" "map f (vv''#q) = v' # vs"
-    by(cases q) auto
-  moreover obtain vv vv' where "f vv = v" "f vv' = v'" "{vv, vv'} \<in> G"
-    using path2(1) assms
-    by (auto elim!: dblton_graphE simp add: doubleton_eq_iff insert_commute)
-  moreover have "vv'' = vv'" 
-    using assms(2) calculation(1,2,4,5) mem_path_Vs[of G "vv'' # q" vv'']  edges_are_Vs_2[of vv vv' G]
-    by (auto simp add: inj_on_def)
-  ultimately show ?case 
-    by(intro exI[of _ "vv #vv'#q"]) auto
-qed
-
-
-lemma even_vert_image:
-  assumes "inj_on f (Vs G \<union> Vs M \<union> {v})" "dblton_graph G"
-  shows "even_vert ((`) f ` G) ((`) f ` M) (f v) \<longleftrightarrow> even_vert G M v"
-proof-
-  have assms:  "inj_on f (Vs G \<union> Vs M)" "dblton_graph G"
-    using assms  by (auto simp add: inj_on_Un)
-  note big_inj = assms(1)
-  show ?thesis
-  proof(rule, goal_cases)
-    case 1
-    then obtain p where p: "odd (length p)" "alt_path ((`) f ` M) p"
-      "hd p \<notin> Vs ((`) f ` M)" "last p = (f v)" "distinct p"
-      "((path ((`) f ` G) p \<and> length p \<noteq> 1) \<or> length p = 1)"
-      by(auto simp add:  even_vert_def)
-    thus ?case 
-    proof(cases "v \<in> Vs (G \<union> M)", goal_cases)
-      case 1
-      thus ?case
-      proof(elim disjE, goal_cases)
-        case 1
-        then obtain q where q: "path G q" "p = map f q "
-          using path_in_image_to_original_path[of G f p]
-            assms(1,2) inj_on_subset[of f "Vs G \<union> Vs M" "Vs G"] 
-          by blast
-        moreover have "inj_on f (Vs M \<union> set q)" 
-          by (meson Un_upper2 assms(1) inj_on_subset le_supI1 le_sup_iff q(1) subset_path_Vs)
-        moreover have "hd (map f q) = f (hd q)" 
-          using 1 q by(cases q rule: list_cases3) auto
-        moreover have "last (map f q) = f (last q)"
-          using 1 q by(cases q rule: rev_cases) auto
-        moreover have "f (last q) = f v \<Longrightarrow> last q = v"
-          using 1 q assms(1) sup_ge1[of G M] vs_union[of G M] inj_on_contraD[of f "Vs (G \<union> M)" _ v]
-            path_subset[of G "_ @ [_]" "G \<union> M"] v_in_apath_in_Vs_append[of "G \<union> M" _ _ "[]"]
-          by(cases q rule: rev_cases) fastforce+
-        moreover have "distinct q" 
-          using 1(5) by(auto simp add: distinct_map q)
-        ultimately show ?case
-          using 1 
-          by(auto intro!: exI[of _ q] simp add: even_vert_def alt_path_image Vs_of_imaged_graph)
-      next
-        case 2
-        then show ?case 
-          by(auto intro!: exI[of _ "[v]"] simp add: even_vert_def alt_list.intros(1) Vs_of_imaged_graph hd_last_same)
-      qed
-    next
-      case 2
-      show ?case
-        using 2(7)
-        by(auto intro!: exI[of _ "[v]"] simp add: even_vert_def alt_list.intros(1) vs_union)
-    qed
-  next
-    case 2
-    then obtain p where "odd (length p)" "alt_path M p" "hd p \<notin> Vs M" "last p = v" "distinct p" 
-      "path G p \<or> length p = 1"
-      by(auto simp add:  even_vert_def)
-    then show ?case
-    proof(cases "f v \<in> Vs ((`) f ` M)",goal_cases)
-      case 1
-      thus ?case
-      proof(elim disjE, goal_cases)
-        case 1
-        moreover have "inj_on f (Vs M \<union> set p)" 
-          by (metis Un_mono Un_upper2 assms(1) calculation(7) inj_on_subset subset_path_Vs sup.commute
-              sup.idem)
-        moreover have "hd (map f p) = f (hd p)"
-          using 1 by(cases p) auto
-        moreover have "\<lbrakk>f x = f (hd p); x \<in> Vs M\<rbrakk> \<Longrightarrow> x = hd p" for x 
-          by (metis "1"(1) UnCI calculation(8) even_zero inj_on_eq_iff list.set_sel(1) list.size(3))
-        moreover have "last (map f p) = f (last p)"
-          using 1 by(cases p rule: rev_cases) auto
-        moreover have "distinct (map f p)"
-          using 1 calculation(8) inj_on_Un
-          by(auto simp add: distinct_map)
-        moreover have "path ((`) f ` G) (map f p)"
-          using 1
-          apply(subst path_image)
-           apply auto 
-          by (metis assms(1) inj_on_Un subset_path_Vs sup.orderE)
-        ultimately show ?case 
-          by(auto intro!: exI[of _ "map f p"] 
-              simp add: even_vert_def alt_path_image Vs_of_imaged_graph) auto
-      next
-        case 2
-        thus ?case 
-          by (metis UnI2 Union_of_imaged Vs_def \<open>inj_on f (Vs G \<union> Vs M \<union> {v})\<close> hd_last_same inj_on_image_mem_iff
-              insertI1 sup.coboundedI1 sup_ge2)
-      qed
-    next
-      case 2
-      thus ?case
-        using assms(1) Vs_of_imaged_graph[of f M] Un_iff[of v "Vs G" "Vs M"]
-          inj_on_image_mem_iff[of f "Vs G \<union> Vs M" v "Vs M"]
-        by(cases p)(auto intro!: exI[of _ "[f v]"] simp add: even_vert_def alt_list.intros(1))
-    qed
-  qed
-qed
-
-lemma Delta_image:
-  assumes "dblton_graph G" "inj_on f (Vs G \<union> X)"
-  shows  "Delta ((`) f ` G) (f ` X) = (image f) ` (Delta G X)"
-proof(rule, all \<open>rule, (elim in_DeltaE | elim imageE in_DeltaE)\<close>, goal_cases)
-  case (1 e u v)
-  then obtain uu vv where "{uu, vv} \<in> G"  "e= f ` {uu, vv}"
-    using assms(1) by auto
-  then obtain uu vv where "{uu, vv} \<in> G"  "u = f uu" "v = f vv" "e = f ` {uu, vv}"
-    by (metis "1"(1) doubleton_eq_iff image_empty image_insert)
-  moreover have "uu \<in> X"
-    by (metis "1"(3) UnI1 assms(2) calculation(1,2) edges_are_Vs inj_on_image_mem_iff sup.cobounded2)
-  moreover have "vv \<notin> X" 
-    using "1"(4) calculation(3) by blast
-  ultimately show ?case
-    by (auto intro!: rev_image_eqI[of "{uu, vv}" _ _ "image f"] in_DeltaI[of "{uu, vv}" uu vv G X])
-next
-  case (2 e ee u v)
-  moreover hence "f ` {u, v} \<in> ((`) f ` G)" 
-    by(intro imageI) auto
-  ultimately show ?case
-    apply (auto intro!: in_DeltaI[of "{f u, f v}" "f u" "f v" ])
-    using assms(2) Un_iff[of v "Vs G" X] Un_iff[of _ "Vs G" X] inj_on_contraD[of f "Vs G \<union> X" _ v]
-      edges_are_Vs_2[of u v G]
-    by force
-qed
-
-lemma inj_on_inter:"inj_on f (X \<union> Y) \<Longrightarrow> f ` X \<inter> f ` Y = f ` (X \<inter> Y)"
-  by (simp add: inj_on_image_Int)
-
-lemma edmonds_gallai_inj_carry_over:
-  assumes "inj_on f (Vs (G \<union> M))"  "edmonds_gallai G M \<D> A" "graph_invar G" "dblton_graph M"
-  shows "edmonds_gallai ((image f) ` G) ((image f) ` M) ((image f) ` \<D>) (f ` A)"
-proof-
-  note edmonds_gallaiD = edmonds_gallaiD[OF assms(2)]
-  have goal1:"disjoint ((`) f ` \<D>)" 
-    using edmonds_gallaiD(1,2) assms(1) vs_union[of G M]
-      inj_on_subset[of f "Vs (G \<union> M)" "\<Union> \<D>"] disjoint_image[of f \<D>]
-    by auto
-  have goal2: "\<Union> ((`) f ` \<D>) \<subseteq> Vs ((`) f ` G)"
-    unfolding Vs_of_imaged_graph Union_of_imaged 
-    by (simp add: image_mono local.edmonds_gallaiD(2))
-  have goal3: "X \<in> (`) f ` \<D> \<Longrightarrow> X \<noteq> {}" for X
-    using local.edmonds_gallaiD(3) by fastforce
-  have inj_on2:"inj_on f (Vs G \<union> \<Union> \<D>)"
-    using assms(1) edmonds_gallaiD(2) vs_union[of G M] inj_on_Un[of f "Vs G" "Vs M"]
-      Un_absorb2[of "\<Union> \<D>" "Vs G"]
-    by auto
-  have goal4: "f ` A = Neighbourhood ((`) f ` G) (\<Union> ((`) f ` \<D>))"
-    using inj_on2 assms(3)
-    unfolding Union_of_imaged 
-    by(subst Neighbourhood_image)
-      (simp_all add: local.edmonds_gallaiD(4))
-  have goal5: "\<lbrakk>X \<in> (`) f ` \<D>; Y \<in> (`) f ` \<D>; X \<noteq> Y\<rbrakk> \<Longrightarrow> X \<leftarrow>|\<rightarrow>\<^bsub>(`) f ` G\<^esub> Y" for X Y
-  proof(goal_cases)
-    case 1
-    then obtain XX YY where XX_YY:"XX \<in> \<D>" "X = f ` XX" "YY \<in> \<D>" "Y = f ` YY"
-      by blast
-    moreover hence "XX \<noteq> YY"
-      using "1"(3) by fastforce
-    moreover have "inj_on f (Vs G \<union> XX \<union> YY)"
-      using calculation(1,3) inj_on2 edmonds_gallaiD(2) Union_upper[of XX \<D>]
-        Union_upper[of YY \<D>] Un_absorb2[of XX "Vs G"] Un_absorb2[of YY "Vs G"]
-        Un_absorb2[of "\<Union> \<D>" "Vs G"]
-      by auto
-    ultimately show ?case
-      using assms(3) edmonds_gallaiD(5)
-      by(simp add: connected_sets_of_vertices_image)
-  qed
-  have goal6: "\<lbrakk>X \<in> (`) f ` \<D>; x \<in> X\<rbrakk> \<Longrightarrow> \<exists>M. graph_matching ( (`) f ` G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-    for X x
-  proof(goal_cases)
-    case 1
-    then obtain XX xx where XX_xx: "XX \<in> \<D>" "X = f ` XX" "x = f xx" "xx \<in> XX"
-      by auto
-    obtain M where M: "matching M" "M \<subseteq> G \<lbrakk>XX\<rbrakk>" "Vs M = XX - {xx}"
-      using XX_xx(1,4) local.edmonds_gallaiD(6) by force
-    have inj_on3: "inj_on f (Vs M)" 
-      using XX_xx(1) inj_on2 M(3) inj_on_Un[of f "Vs G" "\<Union> \<D>"]
-        inj_on_subset[of f "\<Union> \<D>" XX] inj_on_subset[of f XX "Vs M"]
-      by auto
-    have inj_on4: "inj_on f (Vs G \<union> XX)"
-      using edmonds_gallaiD(2) XX_xx(1)
-      by(auto intro!: inj_on_subset[OF inj_on2])
-    have " graph_matching ( ((`) f ` G) \<lbrakk>f ` XX\<rbrakk>) ((`) f ` M)"
-      using inj_on3 unfolding graph_inter_Vs_image[OF inj_on4]
-      by(intro graph_matching_image)(auto simp add: M(1,2)) 
-    moreover have "Vs ((`) f ` M) = f ` XX - {f xx}" 
-      unfolding Vs_of_imaged_graph M(3)
-      using inj_on4 XX_xx edmonds_gallaiD(2) 
-      by (subst inj_on_image_set_diff[of _ "Vs G"])(auto simp add: inj_on_Un)
-    ultimately show ?case 
-      unfolding XX_xx
-      by(intro exI[of _ "(image f) ` M"]) auto
-  qed
-  have goal7: "X \<in> (`) f ` \<D> \<Longrightarrow> \<exists>x. x \<in> X \<and> Vs ( (`) f ` M \<lbrakk>X\<rbrakk>) = X - {x}" for X
-  proof(goal_cases)
-    case 1
-    then obtain XX where XX_xx: "XX \<in> \<D>" "X = f ` XX" 
-      by auto
-    obtain x where x: "x \<in> XX" "Vs (M \<lbrakk>XX\<rbrakk>) = XX - {x}" 
-      using XX_xx(1) edmonds_gallaiD(7) by force
-    have inj_on5: "inj_on f (Vs M \<union> XX)" 
-      using edmonds_gallaiD(2) XX_xx(1)
-      by(auto intro!: inj_on_subset[OF assms(1)] simp add: vs_union)
-    have "Vs ( (`) f ` M \<lbrakk>X\<rbrakk>) = X - {f x}"
-      using inj_on2 XX_xx(1) edmonds_gallaiD(2) x(1)
-      unfolding  XX_xx graph_inter_Vs_image[OF inj_on5] Vs_of_imaged_graph x(2)
-      by(subst inj_on_image_set_diff[of _ "Vs G"])(auto simp add:  inj_on_Un)
-    then show ?case 
-      by(intro exI[of _ "f x"])(simp add: XX_xx(2) x(1))
-  qed
-  have goal8: 
-    "v \<in> Vs ((`) f ` G) \<Longrightarrow> even_vert ((`) f ` G) ((`) f ` M) v = (v \<in> \<Union> ((`) f ` \<D>))" for v
-  proof(goal_cases)
-    case 1
-    then obtain vv where vv: "vv \<in>Vs G" "v = f vv"
-      by (metis Vs_of_imaged_graph image_iff)
-    moreover hence "inj_on f (Vs G \<union> Vs M \<union> {vv})"
-      using assms(1) vs_union[of G M] sup.absorb_iff1[of "{vv}" "Vs (G \<union> M)"] 
-      by auto
-    moreover have "f vv \<in> f ` \<Union> \<D> \<longleftrightarrow> vv \<in> \<Union> \<D>"
-      by (metis inj_on2 inj_on_image_mem_iff local.edmonds_gallaiD(2) sup.absorb1 vv(1))
-    ultimately show ?case
-      using 1 assms(3)
-      by(simp add: vv even_vert_image[of f G M ]  edmonds_gallaiD(8)[of vv] image_Union)
-  qed
-
-  have f_union:"f ` X \<union> f ` Y = f ` (X \<union> Y)" for X Y
-    by auto
-  have "inj_on f (Vs M \<union> (\<Union> \<D> \<union> A))"
-    by (smt (verit, best) Neighbourhood_in_G Un_iff Union_Un_distrib Vs_def assms(1) inj_on_def
-        local.edmonds_gallaiD(2,4) sup.orderE)
-  hence goal9: "Delta ((`) f ` M) (\<Union> ((`) f ` \<D>) \<union> f ` A) = {}"
-    using assms(4) edmonds_gallaiD(9)
-    unfolding Union_of_imaged f_union
-    by(simp add: Delta_image)
-  have goal10: "D \<in> (`) f ` \<D> \<Longrightarrow> card (Delta ((`) f ` M) D) \<le> 1" for D
-  proof(goal_cases)
-    case 1
-    then obtain X where X: "X \<in> \<D>" "D = f ` X" 
-      by auto
-    moreover have "inj_on f (Vs M \<union> X)"
-      by (meson Sup_le_iff \<open>inj_on f (Vs M \<union> (\<Union> \<D> \<union> A))\<close> calculation(1) set_eq_subset subset_inj_on
-          sup.coboundedI1 sup_mono)
-    moreover have "inj_on ((`) f) (Delta M X)"
-      by (metis Vs_def assms(1) in_DeltaD(2) inj_on_Un inj_on_image inj_on_subset subsetI)
-    ultimately show ?case
-      using assms(4) edmonds_gallaiD(10)
-      unfolding Union_of_imaged f_union X
-      by(simp add: Delta_image card_image)
-  qed
-  have goal11: "Vs ((`) f ` G) - \<Union> ((`) f ` \<D>) \<subseteq> Vs ((`) f ` M)"
-    unfolding Vs_of_imaged_graph Union_of_imaged
-    by (meson image_diff_subset image_mono local.edmonds_gallaiD(11) subset_trans)
-  have inj_on6: "inj_on f (Vs G \<union> A)"
-    by (metis Neighbourhood_in_G inj_on2 local.edmonds_gallaiD(2,4) sup.absorb1)
-  have inj_on7: "inj_on ((`) f) (M \<union> (G \<lbrakk>A\<rbrakk>))"
-    by (metis (no_types, lifting) Vs_def assms(1) graph_inter_Vs_subset(1) inf_sup_aci(5,8) inf_sup_ord(4)
-        inj_on_image inj_on_subset sup.mono)
-  have goal12: "(`) f ` M \<inter> (((`) f ` G) \<lbrakk>f ` A\<rbrakk>) = {}"
-    using  inj_on6 inj_on7
-    by(simp add: graph_inter_Vs_image inj_on_inter edmonds_gallaiD(12))
-
-
-  show ?thesis
-    by(intro edmonds_gallaiI goal1 goal2 goal3 goal4 goal5 goal6 goal7 goal8 goal9 goal10
-        goal11 goal12|
-        assumption)+
-qed
+text \<open>Because of the functions assume by the locales, we need to lift the graph to a different type,
+      and lift the result back to the original graph.
+     This is because of the functions that are assumed to select a new vertex.\<close>
 
 locale obtain_edmonds_gallai =
   fixes G
@@ -655,16 +126,23 @@ proof-
   have "dblton_graph ((`) act ` M)" 
     using G'_absorb_M' graph_invar' by auto
   hence "edmonds_gallai G M Odds evens"
-    apply(subst G_vertex_image, subst M'_def)
-   unfolding Odds_def evens_def
-   by(intro edmonds_gallai_inj_carry_over)
-     (simp_all add: G'_absorb_M' vertex_inj_on_G' graph_invar'
+    unfolding Odds_def evens_def
+    by(subst G_vertex_image, subst M'_def, intro edmonds_gallai_inj_carry_over)
+      (simp_all add: G'_absorb_M' vertex_inj_on_G' graph_invar'
         M'(1) compute.g.graph_abs_subset graph_abs.dblton_E max_card_matchingDs(1))
   thus ?thesis
     by auto
 qed
 end
 end
+
+subsection \<open>Inessential Vertices\<close>
+
+text \<open>Recall that we generalised the notion of evenness from alternating forests to matchings.
+      Now we look at 'evenness' w.r.t. all matchings.
+      We call that \textit{inessentiallity}.
+      A vertex is inessential if there is a maximum cardinality matching that does
+      not cover that vertex.\<close>
 
 definition "inessential G v = (\<exists> M. max_card_matching G M \<and> v \<notin> Vs M)"
 
@@ -683,6 +161,19 @@ lemma in_inessentialsE:
   and in_inessentialsI:
   "\<lbrakk>inessential G v; v \<in> Vs G\<rbrakk> \<Longrightarrow> v \<in> inessentials G"
   by(auto simp add: inessentials_def)
+
+text \<open>We two maximum cardinality matchings. 
+      If a vertex $v$ is not covered w.r.t. one matching $M$, it is even w.r.t. the other $M'$.
+      We consider two cases:
+       If the vertex is not covered by the other matching, we have an even length path 
+       (just the vertex itself).
+      Otherwise, if we take the union of the matchings, $v$ is part of a component
+       where all vertices have degree $\leq2$.
+      This is a path-shaped component.
+      From earlier theory it follows that this path is alternating.
+      The last edge is in $M'$, otherwise the path would have odd edge length 
+      which would be an augmenting path.
+      The argument is very similar to the proof of Berge's Lemma.\<close>
 
 lemma uncovered_by_a_max_matching_even_in_other_max_matching:
   assumes "max_card_matching G M" "max_card_matching G M'" "v \<notin> Vs M" "graph_invar G"
@@ -717,8 +208,8 @@ next
   proof(rule ccontr, goal_cases)
     case 1
     then obtain p1 p2 y z where p_split: "p = p1@[y,v,z]@p2" 
-      by (metis element_of_list_cases last_ConsL last_appendR list.sel(1) not_Cons_self2 p_props(2)
-          x_in_C)
+      using x_in_C p_props(2) element_of_list_cases[of v p]
+      by force
     have "{y, v} \<in> set (edges_of_path p)"  "{v, z} \<in> set (edges_of_path p)"
       using edges_of_path_append_subset p_split by fastforce+
     moreover have "set (edges_of_path p) \<subseteq> M \<union> M'"
@@ -832,6 +323,10 @@ next
     by(intro exI[of _ "rev p"]) auto
 qed
 
+text \<open>If a vertex is even, it is uncovered by one maximum cardinality matching:
+      Take the even-length alternating path and augment.
+      Maximum cardinality of the matching is preserved but the selected even vertex is uncovered.\<close>
+
 lemma even_uncovered_by_other_max_matching:
   assumes "graph_invar G" "max_card_matching G M" "even_vert G M v" "v \<in> Vs G"
   shows "\<exists> M'. max_card_matching G M' \<and> v \<notin> Vs M'"
@@ -872,88 +367,18 @@ next
     by auto
 qed
 
+text \<open>Inessentiallity is the same as being even w.r.t. a specific maximum cardinality matching.\<close>
+
 lemma inessentials_are_evens_of_max_matching:
   assumes "graph_invar G" "max_card_matching G M" 
   shows "inessentials G = {v | v. v \<in> Vs G \<and> even_vert G M v}"
   using assms
   by(auto elim!: in_inessentialsE inessentialE
-          intro: uncovered_by_a_max_matching_even_in_other_max_matching
-                 in_inessentialsI inessentialI
-          dest!: even_uncovered_by_other_max_matching[OF assms])
+      intro: uncovered_by_a_max_matching_even_in_other_max_matching
+      in_inessentialsI inessentialI
+      dest!: even_uncovered_by_other_max_matching[OF assms])
 
-lemma two_unconnected_sets_connected_component_not_inter_both:
-  assumes "(connected_component G z) \<inter> X \<noteq> {}"
-          "(connected_component G z) \<inter> Y \<noteq> {}"
-          "Vs G \<subseteq> X \<union> Y" "X \<inter> Y  = {}" "X \<leftarrow>|\<rightarrow>\<^bsub>G\<^esub> Y"
-    shows False
-proof-
-  obtain x y where xy: "x \<in> X" "x \<in> connected_component G z"
-     "y \<in> Y" "y \<in> connected_component G z"
-    using assms by auto
-  then obtain p where p: "walk_betw G x p y" 
-    using assms(4) connected_components_member_eq[of x G z] in_con_comp_has_walk[of y G x] 
-    by auto
-  have p_in_G: "set p \<subseteq> Vs G" 
-    using p walk_in_Vs by force
-  have xy_in_p: "x \<in> set p" "y \<in> set p" 
-    using hd_in_set p by(auto simp add: walk_betw_def)
-  have in_p_not_in_rw:"z \<in> set p \<Longrightarrow> z \<notin> X \<longleftrightarrow> z \<in> Y"  "z \<in> set p \<Longrightarrow> z \<notin> Y \<longleftrightarrow> z \<in> X" for z
-    using assms(3,4) p_in_G by auto
-  obtain p1 p2 x' y' where p_split: "p = p1@[x', y']@p2"
-    "x' \<in> X \<and> y' \<in> Y \<or> x' \<in> Y \<and> y' \<in> X" 
-    using list_P_switch[of x p "\<lambda> x. x \<in> X" y]  xy_in_p xy(1,3)
-    by(auto simp add: in_p_not_in_rw)
-  hence "{x', y'} \<in> G" 
-    using edge_mid_path p by(auto simp add: walk_betw_def)
-  hence "X \<longleftrightarrow>\<^bsub>G\<^esub> Y" 
-    using p_split(2) 
-    by(auto intro: exI[of _ y', OF exI[of _ x']] 
-         simp add: connected_set_of_vertices_def doubleton_eq_iff insert_commute)
-  thus False
-    by (simp add: assms(5))
-qed
-
-lemma connected_sets_of_certices_mono:
-  "\<lbrakk>connected_set_of_vertices X G Y;G\<subseteq> G'; X \<subseteq> X'; Y \<subseteq> Y'\<rbrakk> \<Longrightarrow> connected_set_of_vertices X' G' Y'"
-and un_connected_sets_of_certices_anti_mono:
-  "\<lbrakk>\<not>connected_set_of_vertices X' G' Y';G\<subseteq> G'; X \<subseteq> X'; Y \<subseteq> Y'\<rbrakk> \<Longrightarrow> \<not>connected_set_of_vertices X G Y"
-  by(force simp add: connected_set_of_vertices_def)+
-
-lemma whole_edge_in_comp:
- "\<lbrakk>dblton_graph G; x \<in> e; x \<in> connected_component G y; e \<in> G\<rbrakk> 
-   \<Longrightarrow> e \<subseteq> connected_component G y" 
-proof(goal_cases)
-  case 1
-  hence reach1: "reachable G y x" 
-    using vs_member_intro[of x e G] Paths.reachable_refl[of x G] in_connected_componentE[of x G y]
-    by auto
-  moreover obtain z where z: "e = {x, z}"
-    using "1"(1,2,4) by blast
-  ultimately have "reachable G y z"
-    using "1"(4) edges_reachable[of x z G] Paths.reachable_trans[of G y x z] 
-    by auto
-  thus ?case
-    by (simp add: "1"(3) in_connected_componentI z)
-qed
-
-lemma Vs_of_graph_inter_component_is_component:
-  "\<lbrakk>y \<in> Vs G; dblton_graph G\<rbrakk> \<Longrightarrow> Vs (G\<lbrakk>connected_component G y\<rbrakk>) = connected_component G y"
-proof(rule, all \<open>rule\<close>, goal_cases)
-  case (1 x)
-  then show ?case 
- using graph_inter_Vs_subset(2) by force
-next
-  case (2 x)
-  then obtain e where e: "e \<in> G" "x \<in> e" 
-    using vs_member[of x G] in_connected_component_in_edges[of x G y]
-    by auto
-  hence "e \<subseteq> connected_component G y"
-    by (simp add: "2"(2,3) whole_edge_in_comp)
-  hence "e \<in> G \<lbrakk>connected_component G y\<rbrakk>"
-    by (simp add: e(1) in_graph_inter_VsI)
-  then show ?case
-    using e(2) by blast
-qed
+subsection \<open>Matchings Constrained by Components\<close>
 
 lemma perfect_matching_perfect_matching_of_component:
   assumes "perfect_matching G M" "y \<in> Vs G" "dblton_graph G"
@@ -961,17 +386,17 @@ lemma perfect_matching_perfect_matching_of_component:
 proof(rule perfect_matchingI, goal_cases)
   case 1
   then show ?case
-  using assms 
-  by(auto elim!: perfect_matchingE 
-       simp add: graph_matching_inter_Vs 
-           dest: graph_inter_subset)
+    using assms 
+    by(auto elim!: perfect_matchingE 
+        simp add: graph_matching_inter_Vs 
+        dest: graph_inter_subset)
 next
   case 2
   then show ?case 
-  using assms 
-  by(auto elim!: perfect_matchingE
-       simp add: graph_matching_inter_Vs 
-           dest: graph_inter_subset)
+    using assms 
+    by(auto elim!: perfect_matchingE
+        simp add: graph_matching_inter_Vs 
+        dest: graph_inter_subset)
 next
   case 3
   then show ?case 
@@ -982,8 +407,8 @@ next
       by(auto elim!:  perfect_matching_edgeE dest!: in_graph_inter_VsD(1))
     hence "e' \<in>  M \<lbrakk>connected_component G y\<rbrakk>" 
       using 1(1) assms(1,3) 1(2)
-       perfect_matching_member[of G M] whole_edge_in_comp[OF assms(3)e'(2), of y]
-       in_graph_inter_VsI[of e' M "connected_component G y"]
+        perfect_matching_member[of G M] whole_edge_in_comp[OF assms(3)e'(2), of y]
+        in_graph_inter_VsI[of e' M "connected_component G y"]
       by (auto elim: in_graph_inter_VsE)
     then show ?case 
       using e'(2) by blast
@@ -994,12 +419,6 @@ next
       by force
   qed
 qed
-
-lemma perfect_matching_even_graph:
-  assumes "perfect_matching G M" "dblton_graph G"
-  shows "even (card (Vs G))"
-  using assms(1,2) dvd_triv_left[of "2" "card M"] perfect_matching_card[of G M]
-  by (fastforce simp add: graph_abs_def)
 
 lemma perfect_matching_component_even:
   assumes "perfect_matching G M" "y \<in> Vs G" "dblton_graph G"
@@ -1016,36 +435,10 @@ proof(cases "finite (connected_component G y)")
     by simp
 qed simp
 
-lemma empty_delta_component_confined:
-  assumes "dblton_graph G" "Delta G X = {}" "x \<in> X"
-  shows "connected_component G x \<subseteq> X"
-proof(rule ccontr, goal_cases)
-  case 1
-  obtain y where xy: "y \<in> connected_component G x" "y \<notin> X"
-   using "1" by blast
-  then obtain p where p: "walk_betw G x p y"
-    using assms(3) in_con_comp_has_walk[of y G x]
-    by auto
-  have p_in_G: "set p \<subseteq> Vs G" 
-    using p walk_in_Vs by force
-  have xy_in_p: "x \<in> set p" "y \<in> set p" 
-    using hd_in_set p by(auto simp add: walk_betw_def)
-  obtain p1 p2 x' y' where p_split: "p = p1@[x', y']@p2"
-    "x' \<in> X \<and> y' \<notin> X \<or> x' \<notin> X  \<and> y' \<in> X" 
-    using list_P_switch[of x p "\<lambda> x. x \<in> X" y]  xy_in_p xy(2) assms(3)
-    by auto
-  hence "{x', y'} \<in> G" 
-    using edge_mid_path p by(auto simp add: walk_betw_def)
-  hence "{x', y'} \<in> Delta G X"
-    using  p_split(2) by(auto intro: in_DeltaI)
-  thus False
-    using assms(2) by auto
-qed
-
 lemma component_of_factor_critical_odd:
   assumes "\<And> x. x \<in> X \<Longrightarrow> \<exists> M. graph_matching (G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-          "connected_component G y \<subseteq> X" "graph_invar G"
-    shows "odd (card (connected_component G y))" 
+    "connected_component G y \<subseteq> X" "graph_invar G"
+  shows "odd (card (connected_component G y))" 
 proof-
   obtain M where M: "graph_matching (G \<lbrakk>X\<rbrakk>) M" "Vs M = X - {y}"
     using assms(1,2) in_own_connected_component[of y] by force
@@ -1058,7 +451,7 @@ proof-
       Vs_subset[of " M \<lbrakk>connected_component G y\<rbrakk>" M]
     by auto
   have Vs_M_projected_superset:
-       "Vs (M \<lbrakk>connected_component G y\<rbrakk>) \<supseteq> connected_component G y - {y}"
+    "Vs (M \<lbrakk>connected_component G y\<rbrakk>) \<supseteq> connected_component G y - {y}"
   proof(rule, goal_cases)
     case (1 x)
     hence 1: "x \<in> connected_component G y" "x \<noteq> y" 
@@ -1077,7 +470,7 @@ proof-
   have component_is_M_vs: "connected_component G y - {y} = Vs (M \<lbrakk>connected_component G y\<rbrakk>)"
     by (simp add: Vs_M_projected_subset Vs_M_projected_superset subset_antisym)
   moreover have perfect_M:
-   "perfect_matching (G \<lbrakk>connected_component G y - {y}\<rbrakk>) (M \<lbrakk>connected_component G y - {y}\<rbrakk>)"
+    "perfect_matching (G \<lbrakk>connected_component G y - {y}\<rbrakk>) (M \<lbrakk>connected_component G y - {y}\<rbrakk>)"
   proof(rule perfect_matchingI, goal_cases)
     case 1
     then show ?case 
@@ -1089,10 +482,10 @@ proof-
   next
     case 3
     have "perfect_matching ( G \<lbrakk>Vs ( M \<lbrakk>connected_component G y\<rbrakk>)\<rbrakk>) ( M \<lbrakk>connected_component G y\<rbrakk>)"
-     using matching_confined_in_component graph_inter_Vs_subset(1)[of G "connected_component G y"]
+      using matching_confined_in_component graph_inter_Vs_subset(1)[of G "connected_component G y"]
         perfect_matching_if_projected_to_matched_verts[of " M \<lbrakk>connected_component G y\<rbrakk>" G]
-     by(auto dest: perfect_matchingD(3))
-   moreover have "perfect_matching ( M \<lbrakk>Vs ( M \<lbrakk>connected_component G y\<rbrakk>)\<rbrakk>)
+      by(auto dest: perfect_matchingD(3))
+    moreover have "perfect_matching ( M \<lbrakk>Vs ( M \<lbrakk>connected_component G y\<rbrakk>)\<rbrakk>)
              ( M \<lbrakk>connected_component G y\<rbrakk>)"
       using matching_confined_in_component 
         graph_inter_Vs_subset(1)[of M "connected_component G y"]
@@ -1107,33 +500,22 @@ proof-
     by (simp add: graph_inter_Vs_subset(1) matching_confined_in_component perfect_matchingD(3)
         perfect_matching_if_projected_to_matched_verts)
   moreover have "even (card (Vs (G \<lbrakk>connected_component G y - {y}\<rbrakk>)))"
-   by(auto intro!: perfect_matching_even_graph[OF perfect_M]
-         simp add: assms(3) dblton_graph_Vs_inter)
+    by(auto intro!: perfect_matching_even_graph[OF perfect_M]
+        simp add: assms(3) dblton_graph_Vs_inter)
   ultimately have "even (card (connected_component G y - {y}))" 
     by simp
   moreover have "card (connected_component G y - {y}) +1 = card (connected_component G y)"
     using assms(3)  card_Suc_Diff1[of "connected_component G y" y] 
-          in_connected_componentI2[of y y G] component_is_finite[of G y]
+      in_connected_componentI2[of y y G] component_is_finite[of G y]
     by auto
   ultimately show ?thesis
     by presburger
 qed
 
-lemma component_Delta_empty:  
-  "Delta G (connected_component G y) = {}"
-  using ex_in_conv[of "Delta G (connected_component G y)"] connected_components_member_eq[of _ G y]
-       vertices_edges_in_same_component[of _ _ G]
-  by(auto elim!: in_DeltaE)
-
-lemma even_number_of_matching_verts:
-  "\<lbrakk>matching M; dblton_graph M\<rbrakk> \<Longrightarrow> even ( card (Vs M))"
-  using  dvd_def[of "2" "2 * card M"] matching_vertices_double_size[of M]
-  by fastforce
-
 lemma odd_component_not_all_matched:
   assumes "graph_invar G" "graph_matching G M"
-        "y \<in> Vs G" "odd (card (connected_component G y))"
-    shows "\<not> connected_component G y \<subseteq> Vs M"
+    "y \<in> Vs G" "odd (card (connected_component G y))"
+  shows "\<not> connected_component G y \<subseteq> Vs M"
 proof(rule notI, goal_cases)
   case 1
   have "connected_component G y \<subseteq> Vs G"
@@ -1158,8 +540,8 @@ qed
 
 lemma factor_critical_is_whole_component:
   assumes "\<And> x. x \<in> X \<Longrightarrow> \<exists> M. graph_matching (G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-          "y \<in> X" "Delta G X = {}" "graph_invar G"
-    shows "connected_component G y = X"
+    "y \<in> X" "Delta G X = {}" "graph_invar G"
+  shows "connected_component G y = X"
 proof(rule ccontr, goal_cases)
   case 1
   have ys_component_in_X: "connected_component G y \<subseteq> X"
@@ -1195,158 +577,45 @@ qed
 
 lemma factor_critical_is_odd:
   assumes "\<And> x. x \<in> X \<Longrightarrow> \<exists> M. graph_matching (G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-          "y \<in> X" "Delta G X = {}" "graph_invar G"
-        shows "odd (card X)"
+    "y \<in> X" "Delta G X = {}" "graph_invar G"
+  shows "odd (card X)"
   using factor_critical_is_whole_component[OF assms, simplified]
-        component_of_factor_critical_odd[OF assms(1) _ assms(4), simplified]
+    component_of_factor_critical_odd[OF assms(1) _ assms(4), simplified]
   by auto
 
 lemma factor_critical_is_component_and_odd:
   assumes "\<And> x. x \<in> X \<Longrightarrow> \<exists> M. graph_matching (G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-          "y \<in> X" "Delta G X = {}" "graph_invar G"
-        shows "connected_component G y = X \<and> odd (card X)" 
+    "y \<in> X" "Delta G X = {}" "graph_invar G"
+  shows "connected_component G y = X \<and> odd (card X)" 
   using factor_critical_is_whole_component[OF assms, simplified]
-        component_of_factor_critical_odd[OF assms(1) _ assms(4), simplified]
+    component_of_factor_critical_odd[OF assms(1) _ assms(4), simplified]
   by auto
 
-lemma graph_diff_alias: "graph_diff G A = G \<setminus> A"
-  by(auto simp add: graph_diff_def remove_vertices_graph_def)
-
-lemma in_remove_vertices_graphE: 
-  "\<lbrakk>e \<in> G \<setminus> X; \<lbrakk>e \<in> G; e \<inter> X = {}\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  by(auto simp add: remove_vertices_graph_def)
-
-lemma walk_betw_remove_verts:
-  "\<lbrakk>walk_betw G u p v; set p\<inter> X = {}; length p \<ge> 2\<rbrakk> \<Longrightarrow> walk_betw (G \<setminus> X) u p v"
-  by(rule walk_betw_strengthen)
-    (auto intro!: in_remove_verticesI 
-           intro: path_ball_edges[OF walk_between_nonempty_pathD(1)]
-            dest: v_in_edge_in_path_gen)
-
-lemma connected_component_same_if_indep_of_removeds:
-  "connected_component G x \<inter> X = {} 
-    \<Longrightarrow> connected_component (G \<setminus> X) x = connected_component G x"
-proof(rule, all \<open>rule\<close>, goal_cases)
-  case (1 y)
-  then show ?case 
-    using remove_vertices_subgraph[of G X] con_comp_subset[of "G \<setminus> X" G x]
-    by auto
-next
-  case (2 y)
-  then show ?case 
-  proof(elim in_connected_componentE, goal_cases)
-    case 1
-    then show ?case 
-    proof(elim reachableE, goal_cases)
-      case (1 p)
-      thus ?case
-      proof(cases "x = y", goal_cases)
-        case 1
-        then show ?case
-          by (simp add: in_connected_componentI2)
-      next
-        case 2
-      hence "set p \<inter> X = {}"
-        by (simp add: disjoint_iff vertices_path_in_component)
-      hence "walk_betw (G \<setminus> X) x p y"
-        using 2
-        by(auto intro!: walk_betw_remove_verts simp add: walk_betw_length)
-      hence "reachable (G \<setminus> X) x y"
-        by (simp add: reachableI)
-      then show ?case 
-        by (simp add: in_connected_componentI)
-    qed
-  qed
-  next
-    case 2
-    then show ?case 
-      by (simp add: in_own_connected_component)
-  qed
-qed
-
-lemma remove_irrelevants_graph_inter_Vs:
-  "A \<inter> D = {} \<Longrightarrow> (G \<setminus> A) \<lbrakk>D\<rbrakk> = G \<lbrakk>D\<rbrakk>"
-  by(auto simp add: remove_vertices_graph_def graph_inter_Vs_def)
-
-lemma matched_vertex_not_in_Vs_of_graph_inter_Vs:
-  assumes "matching M" "e \<in> M" "x \<in> e" "\<not> e \<subseteq> X"
-  shows "x \<notin> Vs (M\<lbrakk>X\<rbrakk>)"
-  using assms
-  by (auto elim!: in_graph_inter_VsE 
-        simp add: vs_member 
-            dest: matching_unique_match)
-
-lemma select_unique_representative_same_card_and_bijection:
-  assumes "\<And> XX. XX \<in> \<X> \<Longrightarrow> \<exists>! x \<in> X. x \<in> XX"
-          "\<And> x. x \<in> X \<Longrightarrow> \<exists>! XX \<in> \<X>. x \<in> XX"
-          "finite X" "finite \<X>"
-    shows "card X = card \<X> \<and> (\<exists> f. bij_betw f X \<X>)"
-proof-
-  define f1 where "f1 = (\<lambda> x. SOME XX. XX \<in> \<X> \<and> x \<in> XX)"
-  have f1_props: "inj_on f1 X \<and> f1 ` X \<subseteq> \<X>"
-    proof(rule, all \<open>(rule inj_onI) | (rule, elim imageE)\<close>, goal_cases)
-      case (1 x y)
-      then show ?case
-        using someI_ex[of "\<lambda>uub. uub \<in> \<X> \<and> y \<in> uub"] someI_ex[of "\<lambda>uub. uub \<in> \<X> \<and> x \<in> uub"] 
-              assms(1,2) 
-        by (force simp add: f1_def)
-    next
-      case (2 XX x)
-      then show ?case 
-        using  assms(2)[of x]  verit_sko_ex'[of "\<lambda>uub. uub \<in> \<X> \<and> x \<in> uub"
-            "(SOME uub. uub \<in> \<X> \<and> x \<in> uub) \<in> \<X> \<and> x \<in> (SOME uub. uub \<in> \<X> \<and> x \<in> uub)"]
-        by(auto simp add: f1_def)
-    qed
-
-    have card1:  "card X \<le> card \<X>"
-      using card_inj_on_le[where f = f1, OF _ _ assms(4)] f1_props 
-      by simp
-    define f2 where "f2 = (\<lambda> XX. SOME x. x \<in> X \<and> x \<in> XX)"
-    have f2_props:"inj_on f2 \<X> \<and> f2 ` \<X> \<subseteq> X"
-    proof(rule, all \<open>(rule inj_onI) | (rule, elim imageE)\<close>, goal_cases)
-      case (1 XX YY)
-      thus ?case
-        by (metis (lifting) assms(1,2) f2_def someI_ex)
-    next
-      case (2 x XX)
-      then show ?case 
-        using  assms(1)[of XX] someI_ex[of "\<lambda>R. R \<in> X \<and> R \<in> XX"]
-        by(auto simp add: f2_def)
-    qed
-    have card2: "card X \<ge> card \<X>"
-      using card_inj_on_le[where f = f2, OF _ _ assms(3)] f2_props
-      by auto
-    obtain f where "bij_betw f X \<X>"
-      using Schroeder_Bernstein[of f1 X \<X> f2] f1_props f2_props 
-      by auto
-    thus ?thesis 
-      using card1 card2 
-      by auto
-qed
+subsection \<open>Decomposition for a Matching\<close>
 
 lemma edmonds_gallai_on_matching_props:
   assumes "graph_invar G" "max_card_matching G M" "edmonds_gallai G M \<D> A"
   shows "odd_comps_in_diff G A = \<D>" (is ?thesis_odd_comps)
-        "A = Neighbourhood G (\<Union> \<D>)" (is ?neighbourhood_thesis)
-        "\<And> X x. \<lbrakk>X \<in> \<D>; x \<in> X\<rbrakk> \<Longrightarrow> \<exists> M. graph_matching (G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-        "\<And> X. X \<in> \<D> \<Longrightarrow> \<exists> x. x \<in> X \<and> Vs (M\<lbrakk>X\<rbrakk>) = X - {x}"
-        "perfect_matching (G \<setminus> (\<Union> \<D> \<union> A)) (M \<setminus> (\<Union> \<D> \<union> A))" (is ?thesis_perfect)
-        "\<And> X. \<lbrakk>X \<subseteq> A; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X \<le> card {D | D . D \<in> \<D> \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}"
-        "\<And> X. \<lbrakk>X \<subseteq> A; X \<noteq> {}; card X = card {D |D. D \<in> \<D> \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}\<rbrakk> 
+    "A = Neighbourhood G (\<Union> \<D>)" (is ?neighbourhood_thesis)
+    "\<And> X x. \<lbrakk>X \<in> \<D>; x \<in> X\<rbrakk> \<Longrightarrow> \<exists> M. graph_matching (G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
+    "\<And> X. X \<in> \<D> \<Longrightarrow> \<exists> x. x \<in> X \<and> Vs (M\<lbrakk>X\<rbrakk>) = X - {x}"
+    "perfect_matching (G \<setminus> (\<Union> \<D> \<union> A)) (M \<setminus> (\<Union> \<D> \<union> A))" (is ?thesis_perfect)
+    "\<And> X. \<lbrakk>X \<subseteq> A; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X \<le> card {D | D . D \<in> \<D> \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}"
+    "\<And> X. \<lbrakk>X \<subseteq> A; X \<noteq> {}; card X = card {D |D. D \<in> \<D> \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}\<rbrakk> 
           \<Longrightarrow> X \<union>  \<Union> {D |D. D \<in> \<D> \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D} \<subseteq> Vs M"
-        "\<exists> m. inj_on m A \<and> m ` A \<subseteq> \<Union> \<D> \<and> (\<forall> x \<in> A. {x, m x} \<in> M)
+    "\<exists> m. inj_on m A \<and> m ` A \<subseteq> \<Union> \<D> \<and> (\<forall> x \<in> A. {x, m x} \<in> M)
               \<and> (\<forall> x y. x \<in> A \<and> y \<in> A \<and> x \<noteq> y \<longrightarrow>
                      (\<exists> D1 D2. D1 \<in> \<D> \<and> D2 \<in> \<D> \<and> D1 \<noteq> D2  \<and> (m x) \<in> D1 \<and> (m y) \<in> D2))"
-          (is ?thesis_distinct_match)
-        "2 * card M + (int (card \<D>) - int (card A)) = card (Vs G)" (is ?thesis_berge_formula)
-        "\<And> e. \<lbrakk>e \<in> M; 
+    (is ?thesis_distinct_match)
+    "2 * card M + (int (card \<D>) - int (card A)) = card (Vs G)" (is ?thesis_berge_formula)
+    "\<And> e. \<lbrakk>e \<in> M; 
                e \<subseteq> Vs G - \<Union> \<D> - A \<Longrightarrow> P;
                \<And> x y D. \<lbrakk> e = {x, y}; x \<in> A; y \<in> D; D \<in> \<D>; x \<noteq> y\<rbrakk> \<Longrightarrow> P;
                \<And> D. \<lbrakk>D \<in> \<D>; e \<subseteq> D\<rbrakk> \<Longrightarrow> P\<rbrakk>
                \<Longrightarrow> P"
-        "\<Union> \<D> = inessentials G"
-        "\<exists> m. inj_on m (Vs G - Vs M) \<and> m ` (Vs G - Vs M) \<subseteq> \<D>"
-        "\<And> e. \<lbrakk>e \<in> G; 
+    "\<Union> \<D> = inessentials G"
+    "\<exists> m. inj_on m (Vs G - Vs M) \<and> m ` (Vs G - Vs M) \<subseteq> \<D>"
+    "\<And> e. \<lbrakk>e \<in> G; 
                e \<subseteq> Vs G - \<Union> \<D> - A \<Longrightarrow> P;
                e \<subseteq> A \<Longrightarrow> P;
                \<And> x y D. \<lbrakk> e = {x, y}; x \<in> A; y \<in> D; D \<in> \<D>; x \<noteq> y\<rbrakk> \<Longrightarrow> P;
@@ -1356,15 +625,15 @@ lemma edmonds_gallai_on_matching_props:
 proof-
   note edmonds_gallaiD = edmonds_gallaiD[OF assms(3)]
   show first_theses: ?neighbourhood_thesis
-        "\<And> X x. \<lbrakk>X \<in> \<D>; x \<in> X\<rbrakk> \<Longrightarrow> \<exists> M. graph_matching (G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-        "\<And> X. X \<in> \<D> \<Longrightarrow> \<exists> x. x \<in> X \<and> Vs (M\<lbrakk>X\<rbrakk>) = X - {x}"
+    "\<And> X x. \<lbrakk>X \<in> \<D>; x \<in> X\<rbrakk> \<Longrightarrow> \<exists> M. graph_matching (G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
+    "\<And> X. X \<in> \<D> \<Longrightarrow> \<exists> x. x \<in> X \<and> Vs (M\<lbrakk>X\<rbrakk>) = X - {x}"
     using edmonds_gallaiD by auto
 
   have A_in_G:"A \<subseteq> Vs G" 
     by (simp add: Neighbourhood_in_G first_theses(1))
   have unconnected_sides: "Vs G - A - \<Union> \<D> \<leftarrow>|\<rightarrow>\<^bsub>G\<^esub> \<Union> \<D>" 
     by(auto elim!: not_in_NeighbourhoodE 
-         simp add: first_theses(1) connected_set_of_vertices_def doubleton_eq_iff  insert_commute)
+        simp add: first_theses(1) connected_set_of_vertices_def doubleton_eq_iff  insert_commute)
   hence unconnected_sides_A_removed: "Vs G - A - \<Union> \<D> \<leftarrow>|\<rightarrow>\<^bsub>G \<setminus> A\<^esub> \<Union> \<D>" 
     using  un_connected_sets_of_certices_anti_mono[OF _ remove_vertices_subgraph] by force
   have unconnected_D: "D \<in> \<D> \<Longrightarrow> Vs G - A - D \<leftarrow>|\<rightarrow>\<^bsub>G\<^esub> D" for D
@@ -1375,32 +644,32 @@ proof-
     then obtain D' where D': "D' \<in> \<D>" "u \<in> D'"
       using edmonds_gallaiD(5)[of _ D] 1
       by(force elim!: not_in_NeighbourhoodE  
-           simp add: connected_set_of_vertices_def first_theses(1) insert_commute)
+          simp add: connected_set_of_vertices_def first_theses(1) insert_commute)
     thus False
       using "1"(1) edmonds_gallaiD(5) uv(1,3,4)
       by(auto simp add:  connected_set_of_vertices_def)
   qed
   hence unconnected_D_A_removed: "D \<in> \<D> \<Longrightarrow> Vs G - A - D \<leftarrow>|\<rightarrow>\<^bsub>G \<setminus> A\<^esub> D" for D
     using  un_connected_sets_of_certices_anti_mono[OF _ remove_vertices_subgraph] by force
-    have Vs1: "Vs (G \<setminus> A) \<subseteq> Vs G - A \<union> (Vs G - A - \<Union> \<D>)" 
-     using remove_vertices_not_vs[of _ A G] remove_vertices_subgraph_Vs[of _ G A]
-     by auto
-   have Vs2:"Vs (G \<setminus> A) \<subseteq> Vs G - A - \<Union> \<D> \<union> \<Union> \<D>"
-     using Vs1 by auto
-   have Vs3: "Vs(G \<setminus> A) \<subseteq> Vs G  -A"
-     using Vs1 by auto
-   have D_delta_A_removed_empty: "D \<in> \<D> \<Longrightarrow> Delta (G \<setminus> A) D = {}" for D 
-   proof(rule ccontr, goal_cases)
-     case 1
-     then obtain u v where "{u, v} \<in> G \<setminus> A" "u \<in> D" "v \<notin> D"
-       by (auto elim!: in_DeltaE)
-     thus ?case 
-       using Vs3 doubleton_eq_iff[of u v v u]  unconnected_D_A_removed[OF 1(1)]
-         connected_set_of_vertices_def[of "Vs G - A - D" "G \<setminus> A" D]
-         edges_are_Vs_2[of u v "G \<setminus> A"]
-       by auto
-   qed
-   have a_comp_in_remainings_or_in_some_D:
+  have Vs1: "Vs (G \<setminus> A) \<subseteq> Vs G - A \<union> (Vs G - A - \<Union> \<D>)" 
+    using remove_vertices_not_vs[of _ A G] remove_vertices_subgraph_Vs[of _ G A]
+    by auto
+  have Vs2:"Vs (G \<setminus> A) \<subseteq> Vs G - A - \<Union> \<D> \<union> \<Union> \<D>"
+    using Vs1 by auto
+  have Vs3: "Vs(G \<setminus> A) \<subseteq> Vs G  -A"
+    using Vs1 by auto
+  have D_delta_A_removed_empty: "D \<in> \<D> \<Longrightarrow> Delta (G \<setminus> A) D = {}" for D 
+  proof(rule ccontr, goal_cases)
+    case 1
+    then obtain u v where "{u, v} \<in> G \<setminus> A" "u \<in> D" "v \<notin> D"
+      by (auto elim!: in_DeltaE)
+    thus ?case 
+      using Vs3 doubleton_eq_iff[of u v v u]  unconnected_D_A_removed[OF 1(1)]
+        connected_set_of_vertices_def[of "Vs G - A - D" "G \<setminus> A" D]
+        edges_are_Vs_2[of u v "G \<setminus> A"]
+      by auto
+  qed
+  have a_comp_in_remainings_or_in_some_D:
     "X \<in> comps (Vs G - A) (G \<setminus> A) \<Longrightarrow> X \<subseteq> Vs G - A - \<Union> \<D> \<or> (\<exists> X'. X' \<in> \<D> \<and> X \<subseteq> X')" for X
   proof(cases "X \<subseteq> Vs G - A - \<Union> \<D>", goal_cases)
     case 2
@@ -1424,164 +693,168 @@ proof-
         by(fastforce simp add: comps_def)
       then show ?case 
         using x'(2)  D(1,2) x(1) Vs2 unconnected_sides_A_removed
-         by(intro two_unconnected_sets_connected_component_not_inter_both[
-                                                   of "G \<setminus> A" x' "Vs G - A - \<Union> \<D>" "\<Union> \<D>"])
-            auto
-     qed
-     then obtain D x'' where D: "D \<in> \<D>" "X \<inter> D \<noteq> {}" "x'' \<in> X" "x'' \<in> D"
-       using D(1,2) x(1) by auto
-     moreover have "X \<subseteq> D"
-     proof(rule ccontr, goal_cases)
-       case 1
-       then obtain D' y' where "D' \<in> \<D>" "y' \<in> D'" "D' \<noteq> D" "y' \<in> X"
-         using X_in_D by force
-       show ?case
-       proof(rule two_unconnected_sets_connected_component_not_inter_both[of 
-                    "G \<setminus> A" x' D "Vs (G \<setminus> A) - D"], goal_cases)
-         case 1
-         then show ?case 
-           using calculation(2) x'(2) by auto
-       next
-         case 2
-         then show ?case 
-           by (metis "1" Int_Diff calculation(3,4) connected_component_subset diff_shunt_var in_connected_componentE
-               inf.order_iff subsetI x'(2))
-       next
-         case 3
-         then show ?case 
-           by simp
-       next
-         case 4
-         then show ?case 
-           by simp
-       next
-         case 5
-         hence "D \<leftarrow>|\<rightarrow>\<^bsub>G \<setminus> A\<^esub> Vs G - A - D"
-           using unconnected_D_A_removed[of D] calculation(1) 
-           by(auto simp add: connected_sym)
-         then show ?case 
-           using Vs3 connected_sets_of_certices_mono[OF _ subset_refl] Diff_mono by fastforce
-       qed
-     qed
-     ultimately show ?case 
-       by auto
-   qed auto
+        by(intro two_unconnected_sets_connected_component_not_inter_both[
+              of "G \<setminus> A" x' "Vs G - A - \<Union> \<D>" "\<Union> \<D>"])
+          auto
+    qed
+    then obtain D x'' where D: "D \<in> \<D>" "X \<inter> D \<noteq> {}" "x'' \<in> X" "x'' \<in> D"
+      using D(1,2) x(1) by auto
+    moreover have "X \<subseteq> D"
+    proof(rule ccontr, goal_cases)
+      case 1
+      note one = this
+      then obtain D' y' where "D' \<in> \<D>" "y' \<in> D'" "D' \<noteq> D" "y' \<in> X"
+        using X_in_D by force
+      show ?case
+      proof(rule two_unconnected_sets_connected_component_not_inter_both[of 
+            "G \<setminus> A" x' D "Vs (G \<setminus> A) - D"], goal_cases)
+        case 1
+        then show ?case 
+          using calculation(2) x'(2) by auto
+      next
+        case 2
+        have hlp:"x'' \<in> connected_component (G \<setminus> A) x'" 
+          using D(3) x'(2) by auto
+        show ?case 
+          using  "1" 1 calculation(3,4) x'(2)
+          by(cases rule: in_connected_componentE[OF hlp] )
+            (auto dest: in_connected_component_in_edges[of _ "G \<setminus> A"])
+      next
+        case 3
+        then show ?case 
+          by simp
+      next
+        case 4
+        then show ?case 
+          by simp
+      next
+        case 5
+        hence "D \<leftarrow>|\<rightarrow>\<^bsub>G \<setminus> A\<^esub> Vs G - A - D"
+          using unconnected_D_A_removed[of D] calculation(1) 
+          by(auto simp add: connected_sym)
+        then show ?case 
+          using Vs3 connected_sets_of_certices_mono[OF _ subset_refl] Diff_mono by fastforce
+      qed
+    qed
+    ultimately show ?case 
+      by auto
+  qed auto
 
-   have dblton_M:"dblton_graph M" 
-     using assms(1,2) max_card_matchingDs(1) by fastforce
+  have dblton_M:"dblton_graph M" 
+    using assms(1,2) max_card_matchingDs(1) by fastforce
 
-   have x_in_G_without_a_without_D_in_M_Vs: 
-     "x \<in> Vs G - A- \<Union> \<D> \<Longrightarrow> x \<in> Vs (M \<setminus> \<Union> \<D> \<union> A)" for x
-   proof(goal_cases)
-     case 1
-     note one = this
-      then obtain e' where e': "e' \<in> M" "x \<in> e'" "x \<notin> A" "x \<notin> \<Union> \<D>"
-         using edmonds_gallaiD(11) subsetD[of "Vs G - \<Union> \<D>" "Vs M" x]
-         by (auto simp add: vs_member)
-       moreover have "e' \<in> M \<setminus> \<Union> \<D> \<union> A"
-       proof(rule in_remove_verticesI[OF e'(1)], rule ccontr, goal_cases)
-         case 1
-         obtain y where "e' = {x, y}" "x \<noteq> y" 
-           using dblton_M e'(1,2) by blast
-         then obtain x y where  "e' = {x, y}" "x \<noteq> y" "x \<in> (\<Union> \<D> \<union> A)" "y \<notin> (\<Union> \<D> \<union> A)"
-           using "1" first_theses(1)  e'(4,3)
-           by(auto simp add: doubleton_eq_iff) 
-         hence "e' \<in> Delta M (\<Union> \<D> \<union> A)" 
-           using e'(1)
-           by(auto intro!: in_DeltaI[of "{x, y}" x y])
-         thus False
-           by (simp add: local.edmonds_gallaiD(9))
-       qed
-       ultimately show ?case
-         by auto
-     qed
+  have x_in_G_without_a_without_D_in_M_Vs: 
+    "x \<in> Vs G - A- \<Union> \<D> \<Longrightarrow> x \<in> Vs (M \<setminus> \<Union> \<D> \<union> A)" for x
+  proof(goal_cases)
+    case 1
+    note one = this
+    then obtain e' where e': "e' \<in> M" "x \<in> e'" "x \<notin> A" "x \<notin> \<Union> \<D>"
+      using edmonds_gallaiD(11) subsetD[of "Vs G - \<Union> \<D>" "Vs M" x]
+      by (auto simp add: vs_member)
+    moreover have "e' \<in> M \<setminus> \<Union> \<D> \<union> A"
+    proof(rule in_remove_verticesI[OF e'(1)], rule ccontr, goal_cases)
+      case 1
+      obtain y where "e' = {x, y}" "x \<noteq> y" 
+        using dblton_M e'(1,2) by blast
+      then obtain x y where  "e' = {x, y}" "x \<noteq> y" "x \<in> (\<Union> \<D> \<union> A)" "y \<notin> (\<Union> \<D> \<union> A)"
+        using "1" first_theses(1)  e'(4,3)
+        by(auto simp add: doubleton_eq_iff) 
+      hence "e' \<in> Delta M (\<Union> \<D> \<union> A)" 
+        using e'(1)
+        by(auto intro!: in_DeltaI[of "{x, y}" x y])
+      thus False
+        by (simp add: local.edmonds_gallaiD(9))
+    qed
+    ultimately show ?case
+      by auto
+  qed
 
-   have Vs_G_without_D_A_is_Vs_M:  "Vs (G \<setminus> \<Union> \<D> \<union> A) = Vs (M \<setminus> \<Union> \<D> \<union> A)"
-    proof(rule, all \<open>rule, elim vs_member_elim in_remove_vertices_graphE\<close>, goal_cases)
-       case (1 x e)
-       note one = this
-       thus ?case
-         using  vs_member_intro[of x e G] x_in_G_without_a_without_D_in_M_Vs[of x]
-         by auto
-     next
-       case (2 x e)
-       then show ?case 
-         using assms(2)
-         by(auto intro: in_remove_vertices_vsI dest!: max_card_matchingD)
-     qed
+  have Vs_G_without_D_A_is_Vs_M:  "Vs (G \<setminus> \<Union> \<D> \<union> A) = Vs (M \<setminus> \<Union> \<D> \<union> A)"
+  proof(rule, all \<open>rule, elim vs_member_elim in_remove_vertices_graphE\<close>, goal_cases)
+    case (1 x e)
+    note one = this
+    thus ?case
+      using  vs_member_intro[of x e G] x_in_G_without_a_without_D_in_M_Vs[of x]
+      by auto
+  next
+    case (2 x e)
+    then show ?case 
+      using assms(2)
+      by(auto intro: in_remove_vertices_vsI dest!: max_card_matchingD)
+  qed
 
-   show perfect_on_remainder: "perfect_matching (G \<setminus> (\<Union> \<D> \<union> A)) (M \<setminus> (\<Union> \<D> \<union> A))"
-   proof(rule perfect_matchingI, goal_cases)
-     case 1
-     then show ?case 
-       using assms(2)
-       by(auto dest: max_card_matchingDs(1) remove_vertices_mono)
-   next
-     case 2
-     then show ?case
-       using assms(2)
-       by(auto dest: matching_remove_vertices max_card_matchingD)
-   next
-     case 3
-     then show ?case 
-       using Vs_G_without_D_A_is_Vs_M by simp
-   qed
+  show perfect_on_remainder: "perfect_matching (G \<setminus> (\<Union> \<D> \<union> A)) (M \<setminus> (\<Union> \<D> \<union> A))"
+  proof(rule perfect_matchingI, goal_cases)
+    case 1
+    then show ?case 
+      using assms(2)
+      by(auto dest: max_card_matchingDs(1) remove_vertices_mono)
+  next
+    case 2
+    then show ?case
+      using assms(2)
+      by(auto dest: matching_remove_vertices max_card_matchingD)
+  next
+    case 3
+    then show ?case 
+      using Vs_G_without_D_A_is_Vs_M by simp
+  qed
 
-   have x_in_G_without_a_without_D_in_G_Vs: 
-     "x \<in> Vs G - A- \<Union> \<D> \<Longrightarrow> x \<in> Vs (G \<setminus> \<Union> \<D> \<union> A)" for x
-     using Vs_G_without_D_A_is_Vs_M x_in_G_without_a_without_D_in_M_Vs by presburger
+  have x_in_G_without_a_without_D_in_G_Vs: 
+    "x \<in> Vs G - A- \<Union> \<D> \<Longrightarrow> x \<in> Vs (G \<setminus> \<Union> \<D> \<union> A)" for x
+    using Vs_G_without_D_A_is_Vs_M x_in_G_without_a_without_D_in_M_Vs by presburger
 
-   have other_component_is_even:
-      "connected_component (G \<setminus> A) x \<subseteq> Vs G - A- \<Union> \<D>
+  have other_component_is_even:
+    "connected_component (G \<setminus> A) x \<subseteq> Vs G - A- \<Union> \<D>
           \<Longrightarrow> even (card ( connected_component (G \<setminus> A) x))"
-     for x
-   proof(goal_cases)
-     case 1
-     have same_comp:"connected_component (G \<setminus> A) x = connected_component (G \<setminus>  \<Union> \<D> \<union> A) x"
-       using 1
-       by(subst connected_component_same_if_indep_of_removeds[of "G \<setminus> A" x "\<Union> \<D>", symmetric])
-         (auto simp add: remove_remove_union sup_commute)
-     show ?case 
-       unfolding same_comp
-       using perfect_on_remainder 1 in_own_connected_component[of x "G \<setminus> A"]
-       by(intro perfect_matching_component_even)
-         (auto intro!: x_in_G_without_a_without_D_in_G_Vs 
-             simp add: assms(1) graph_invar_remove_vertices)
-   qed
+    for x
+  proof(goal_cases)
+    case 1
+    have same_comp:"connected_component (G \<setminus> A) x = connected_component (G \<setminus>  \<Union> \<D> \<union> A) x"
+      using 1
+      by(subst connected_component_same_if_indep_of_removeds[of "G \<setminus> A" x "\<Union> \<D>", symmetric])
+        (auto simp add: remove_remove_union sup_commute)
+    show ?case 
+      unfolding same_comp
+      using perfect_on_remainder 1 in_own_connected_component[of x "G \<setminus> A"]
+      by(intro perfect_matching_component_even)
+        (auto intro!: x_in_G_without_a_without_D_in_G_Vs 
+          simp add: assms(1) graph_invar_remove_vertices)
+  qed
 
-   have X_in_D_inter_A_empty: "X \<in> \<D> \<Longrightarrow> X \<inter> A = {}"  for X
-     using self_not_in_Neighbourhood[of _ "\<Union> \<D>" G]
-     by(auto simp add:  first_theses(1))
- 
+  have X_in_D_inter_A_empty: "X \<in> \<D> \<Longrightarrow> X \<inter> A = {}"  for X
+    using self_not_in_Neighbourhood[of _ "\<Union> \<D>" G]
+    by(auto simp add:  first_theses(1))
+
   show ?thesis_odd_comps
     unfolding odd_comps_in_diff_def
   proof(rule, all \<open>rule\<close>, goal_cases)
     case (1 X)
     then obtain x where x: "x \<in> Vs G - A" "X = connected_component (G \<setminus> A) x" "odd (card X)"
-     using  graph_diff_subset[of G A] Vs_subset[of "G \<setminus> A" G] remove_vertices_not_vs[of _ A G]
-            connected_components_notE_singletons[of _ "G \<setminus> A"]
-     by (fastforce simp add: odd_components_def singl_in_diff_def odd_component_def graph_diff_alias) 
-   obtain D where D: "D \<in> \<D>" "connected_component (G \<setminus> A) x \<subseteq> D"
-     using a_comp_in_remainings_or_in_some_D[of X] other_component_is_even[of x] x(2) x
-     by(auto simp add: comps_def)
-   moreover have "X = D"
-     unfolding x(2)
-   proof(rule factor_critical_is_whole_component, goal_cases)
-     case (1 x)
-     then show ?case
-       using X_in_D_inter_A_empty D(1)first_theses(2)
-       by(subst remove_irrelevants_graph_inter_Vs) auto
-   next
-     case 2
-     then show ?case 
-       using D(2) in_own_connected_component by force
-   next
-     case 3
-     then show ?case 
-       using D_delta_A_removed_empty D(1) by auto
-   qed (simp add: assms(1) graph_invar_remove_vertices)
-   ultimately show ?case 
-     by simp
+      using  graph_diff_subset[of G A] Vs_subset[of "G \<setminus> A" G] remove_vertices_not_vs[of _ A G]
+        connected_components_notE_singletons[of _ "G \<setminus> A"]
+      by (fastforce simp add: odd_components_def singl_in_diff_def odd_component_def) 
+    obtain D where D: "D \<in> \<D>" "connected_component (G \<setminus> A) x \<subseteq> D"
+      using a_comp_in_remainings_or_in_some_D[of X] other_component_is_even[of x] x(2) x
+      by(auto simp add: comps_def)
+    moreover have "X = D"
+      unfolding x(2)
+    proof(rule factor_critical_is_whole_component, goal_cases)
+      case (1 x)
+      then show ?case
+        using X_in_D_inter_A_empty D(1)first_theses(2)
+        by(subst remove_irrelevants_graph_inter_Vs) auto
+    next
+      case 2
+      then show ?case 
+        using D(2) in_own_connected_component by force
+    next
+      case 3
+      then show ?case 
+        using D_delta_A_removed_empty D(1) by auto
+    qed (simp add: assms(1) graph_invar_remove_vertices)
+    ultimately show ?case 
+      by simp
   next
     case (2 X)
     then obtain x where x: "x \<in> X"
@@ -1589,25 +862,25 @@ proof-
     have "connected_component (G \<setminus> A) x = X \<and> odd (card X)"
     proof(rule factor_critical_is_component_and_odd[of X "G \<setminus> A" x], goal_cases)
       case 1
-       then show ?case
-       using X_in_D_inter_A_empty x first_theses(2) 2
-       by(subst remove_irrelevants_graph_inter_Vs) auto
-   next
-     case 2
-     then show ?case 
-       using x in_own_connected_component by force
-   next
-     case 3
-     then show ?case 
-       using D_delta_A_removed_empty 2 by auto
-   qed (simp add: assms(1) graph_invar_remove_vertices)
-   moreover have "x \<in> Vs (G \<setminus> A) \<or> (x \<in> Vs G \<and> x \<notin> A \<and> x \<notin> Vs (G \<setminus> A))"
-     using "2" local.edmonds_gallaiD(2) x X_in_D_inter_A_empty by auto
-   moreover have "\<lbrakk>x \<in> Vs G; x \<notin> A; x \<notin> Vs (G \<setminus> A)\<rbrakk> \<Longrightarrow> X = {x}"
-     using calculation(1) by(auto intro!: connected_components_notE_singletons)
-   ultimately show ?case
-     by(auto simp add: graph_diff_alias odd_components_def odd_component_def singl_in_diff_def)
- qed
+      then show ?case
+        using X_in_D_inter_A_empty x first_theses(2) 2
+        by(subst remove_irrelevants_graph_inter_Vs) auto
+    next
+      case 2
+      then show ?case 
+        using x in_own_connected_component by force
+    next
+      case 3
+      then show ?case 
+        using D_delta_A_removed_empty 2 by auto
+    qed (simp add: assms(1) graph_invar_remove_vertices)
+    moreover have "x \<in> Vs (G \<setminus> A) \<or> (x \<in> Vs G \<and> x \<notin> A \<and> x \<notin> Vs (G \<setminus> A))"
+      using "2" local.edmonds_gallaiD(2) x X_in_D_inter_A_empty by auto
+    moreover have "\<lbrakk>x \<in> Vs G; x \<notin> A; x \<notin> Vs (G \<setminus> A)\<rbrakk> \<Longrightarrow> X = {x}"
+      using calculation(1) by(auto intro!: connected_components_notE_singletons)
+    ultimately show ?case
+      by(auto simp add: odd_components_def odd_component_def singl_in_diff_def)
+  qed
 
   define m where "m = (\<lambda> x. (SOME y. {x, y} \<in> M))"
 
@@ -1628,7 +901,7 @@ proof-
     case 1
     hence x_in_M:"x \<in> Vs M" 
       using  A_in_G edmonds_gallaiD(11) self_not_in_Neighbourhood[of x "\<Union> \<D>" G] 
-             subsetD[of "Vs G - \<Union> \<D>" "Vs M" x]
+        subsetD[of "Vs G - \<Union> \<D>" "Vs M" x]
       by (auto simp add:  first_theses(1))
     then obtain e where e:"x \<in> e" "e \<in> M" 
       by (auto simp add: vs_member)
@@ -1649,13 +922,13 @@ proof-
   qed
 
   have m_on_obtain_Ds:
-     "\<lbrakk>x \<in> A; y \<in> A; x \<noteq> y\<rbrakk> \<Longrightarrow> 
+    "\<lbrakk>x \<in> A; y \<in> A; x \<noteq> y\<rbrakk> \<Longrightarrow> 
         \<exists>D1 D2. D1 \<in> \<D> \<and> D2 \<in> \<D> \<and> D1 \<noteq> D2 \<and> m x \<in> D1 \<and> m y \<in> D2" for x y
   proof(goal_cases)
     case 1
     note one = this
     then obtain D1 D2 where D1D2: "D1 \<in> \<D>" "D2 \<in> \<D>" "m x \<in> D1" "m y \<in> D2"
-          "{x, m x} \<in> M" "{y, m y} \<in> M" "x \<notin> D1"  "x \<notin> D2" "y \<notin> D1" "y \<notin> D2"
+      "{x, m x} \<in> M" "{y, m y} \<in> M" "x \<notin> D1"  "x \<notin> D2" "y \<notin> D1" "y \<notin> D2"
       using m_on_A[of x "m x"] m_on_A[of y "m y"] by auto
     note near_perfects = first_theses(3)[OF D1D2(1)] first_theses(3)[OF D1D2(2)]
     have "D1 \<noteq> D2"
@@ -1818,7 +1091,7 @@ proof-
         by simp
     qed (auto intro: one)
   qed
-  
+
   define mD where "mD = (\<lambda> x. SOME D. D \<in> \<D> \<and> m x \<in> D \<and> x \<notin> D)"
 
   have mD_props: "x \<in> A \<Longrightarrow> mD x \<in> \<D> \<and> m x \<in> mD x \<and> x \<notin> mD x" for x
@@ -1837,7 +1110,7 @@ proof-
   have Delta_M_D_unique:
     "\<lbrakk>e \<in> Delta M X; e' \<in> Delta M X; X \<in> \<D>\<rbrakk> \<Longrightarrow> e = e'" for e e' X
     using assms(1,2) Delta_finite[of M X]
-       finite_Vs_then_finite[of M] edmonds_gallaiD(10)[of X]
+      finite_Vs_then_finite[of M] edmonds_gallaiD(10)[of X]
       max_card_matchingDs(1)[of G M] graph_invar_subset[of G M]
     by (auto simp add: card_le_Suc0_iff_eq)
 
@@ -1852,7 +1125,7 @@ proof-
       using props 1
       by(intro Delta_M_D_unique[of _ "mD x"])
         (auto intro!: in_DeltaI[of "{x, m x}" "m x" x] in_DeltaI[of "{y, m y}" "m y" y] 
-            simp add: insert_commute)
+          simp add: insert_commute)
     hence "x = y"
       using "1"(4) props(2,6) by fastforce
     thus False 
@@ -1860,7 +1133,7 @@ proof-
   qed
 
   have image_mD_better_bound: 
-   "X \<subseteq> A \<Longrightarrow> mD ` X \<subseteq> {D |D. D \<in> \<D> \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}" for X
+    "X \<subseteq> A \<Longrightarrow> mD ` X \<subseteq> {D |D. D \<in> \<D> \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}" for X
   proof(rule, elim imageE, goal_cases)
     case (1 D x)
     hence D:"D \<in> \<D>" "m x \<in> D" "x \<notin> D"
@@ -1879,7 +1152,7 @@ proof-
     by auto
 
   show number_neighbs_weak:
-     "\<lbrakk>X \<subseteq> A; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X \<le> card {D |D. D \<in> \<D> \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}" for X
+    "\<lbrakk>X \<subseteq> A; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X \<le> card {D |D. D \<in> \<D> \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}" for X
   proof(rule card_inj_on_le[where f = mD], goal_cases)
     case 1
     then show ?case 
@@ -2001,30 +1274,30 @@ proof-
           graph_invar_no_edge_no_vertex[of M x] graph_invar_subset[of G M] graph_invar_edgeD[of M x x]
         by force
       have y_not_in_D:"y \<notin> D" 
-       using x(1,2) Vs_def[of " M \<lbrakk>D\<rbrakk>"] y(1) in_graph_inter_VsI[of "{x, y}" M D]
-       by auto
-     have y_in_A:"y \<in> A" 
-       using max_card_matchingDs(1)[OF assms(2)] y(1)  D(1) x(2)
-             Dds_connecting_edge_contr[of D _ x y] y_not_in_D
-       by(auto intro!: in_NeighbourhoodI[of x y G] simp add: first_theses(1))
-     hence my_is_x: "m y = x" 
-       using assms(2) y(1)  doubleton_in_matching(1)[of M y "m y" x]
+        using x(1,2) Vs_def[of " M \<lbrakk>D\<rbrakk>"] y(1) in_graph_inter_VsI[of "{x, y}" M D]
+        by auto
+      have y_in_A:"y \<in> A" 
+        using max_card_matchingDs(1)[OF assms(2)] y(1)  D(1) x(2)
+          Dds_connecting_edge_contr[of D _ x y] y_not_in_D
+        by(auto intro!: in_NeighbourhoodI[of x y G] simp add: first_theses(1))
+      hence my_is_x: "m y = x" 
+        using assms(2) y(1)  doubleton_in_matching(1)[of M y "m y" x]
           m_on_A[of y "m y"] max_card_matchingDs(2)[of G M]
-       by(auto simp add: insert_commute)
-     note mD_props' = mD_props[OF y_in_A]
-     hence "mD y = D"
-       using my_is_x mD_props' D(1) edmonds_gallaiD(1)x(2) by (auto simp add: disjoint_def)
-     then show ?case 
-       using y_in_A by blast
-   qed
-   thus ?thesis
-     using md_inj_A 
-     by(auto simp add: bij_betw_def)
- qed
+        by(auto simp add: insert_commute)
+      note mD_props' = mD_props[OF y_in_A]
+      hence "mD y = D"
+        using my_is_x mD_props' D(1) edmonds_gallaiD(1)x(2) by (auto simp add: disjoint_def)
+      then show ?case 
+        using y_in_A by blast
+    qed
+    thus ?thesis
+      using md_inj_A 
+      by(auto simp add: bij_betw_def)
+  qed
 
   have card_rw_1:"card (Vs G) = card (Vs M) + card (Vs G - Vs M)"
     using assms(1,2) card_Un_disjoint[of "Vs M" "Vs G - Vs M"] Vs_subset[of M G] 
-       max_card_matchingD[of G M] Diff_partition[of "Vs M" "Vs G"] finite_subset[of "Vs M" "Vs G"]
+      max_card_matchingD[of G M] Diff_partition[of "Vs M" "Vs G"] finite_subset[of "Vs M" "Vs G"]
     by auto
   have card_rw_2: "card (Vs M) = 2 * card M" 
     using assms(1,2) max_card_matchingD[of G M] matching_vertices_double_size[of M]
@@ -2052,11 +1325,11 @@ proof-
       case 1
       have "x' \<notin> Vs (M\<lbrakk>D\<rbrakk>)" 
         using"1"(1) not_in_Vs_no_edge[of x' " M \<lbrakk>D\<rbrakk>"] not_in_Vs_no_edge[of x' M]
-              in_graph_inter_VsD(1)[of _ M D] 
+          in_graph_inter_VsD(1)[of _ M D] 
         by auto
       moreover have "x \<notin> Vs (M\<lbrakk>D\<rbrakk>)" 
         using x not_in_Vs_no_edge[of x " M \<lbrakk>D\<rbrakk>"] not_in_Vs_no_edge[of x' M]
-              in_graph_inter_VsD(1)[of _ M D] 
+          in_graph_inter_VsD(1)[of _ M D] 
         by auto
       ultimately have "x = x'" 
         using "1"(2) D(1) first_theses(3) x_prop(2) by fastforce
@@ -2076,7 +1349,7 @@ proof-
       by(intro ex1I[of _ D]) (auto simp add: disjoint_def)
   qed (auto simp add: finite_D assms(1))
   hence card_rw_5:"card (Vs G - Vs M) = card {D |D. D \<in> \<D> \<and> \<not> D \<subseteq> Vs M}"
-        and biject: "(\<exists> um. bij_betw um (Vs G - Vs M) {D |D. D \<in> \<D> \<and> \<not> D \<subseteq> Vs M})"
+    and biject: "(\<exists> um. bij_betw um (Vs G - Vs M) {D |D. D \<in> \<D> \<and> \<not> D \<subseteq> Vs M})"
     by auto
 
   show "2 * card  M + (int (card \<D>) - int (card A)) = card (Vs G)"
@@ -2094,6 +1367,8 @@ proof-
     using bij_betw_imp_surj_on[OF um]
     by(auto intro!: exI[of _ um] intro: bij_betw_imp_inj_on)
 qed
+
+subsection \<open>Main Theorem\<close>
 
 lemma edmonds_gallai_on_matching_strong_hall:
   assumes "graph_invar G" "max_card_matching G M" "edmonds_gallai G M \<D> A"
@@ -2129,17 +1404,17 @@ proof(rule ccontr, goal_cases)
     by unfold_locales (simp add: assms(1))
   note new_edg = computesth.decomposition_correct[OF M'(1)]
   note edmonds_gallai_on_matching_props2 =
-         edmonds_gallai_on_matching_props[OF assms(1) M'(1) new_edg]
+    edmonds_gallai_on_matching_props[OF assms(1) M'(1) new_edg]
   note edg_rws = edmonds_gallai_on_matching_props2(1,2,11)
   note Odds_is = edg_rws(1)[simplified edg_rws(2, 3), symmetric] 
   note evens_is = edg_rws(2)[simplified edg_rws(3)]
-        
+
   note old_edg_rws = edmonds_gallai_on_matching_props1(1,2,11)
   note D_is = old_edg_rws(1)[simplified old_edg_rws(2, 3), symmetric] 
   note A_is = old_edg_rws(2)[simplified old_edg_rws(3)]
 
   note transformed_to_snd = 
-     edmonds_gallai_on_matching_props2(7)[simplified Odds_is evens_is, folded D_is A_is]
+    edmonds_gallai_on_matching_props2(7)[simplified Odds_is evens_is, folded D_is A_is]
 
   show False
     using transformed_to_snd[OF 1(1,2) X_card] D M'(2) x by blast
@@ -2154,77 +1429,77 @@ abbreviation "\<I> \<equiv> inessentials"
 theorem edmonds_gallai_decomposition_all:
   assumes "graph_invar G" "max_card_matching G M"
   shows 
-  "\<lbrakk>X \<in> \<oo>\<cc> G (\<A> G); x \<in> X\<rbrakk> \<Longrightarrow> \<exists>M. graph_matching ( G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-  "X \<in> \<oo>\<cc> G (\<A> G) \<Longrightarrow> \<exists>x. x \<in> X \<and> Vs ( M \<lbrakk>X\<rbrakk>) = X - {x}"
-  "perfect_matching (G \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G) (M \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G)"
-  "\<lbrakk>X \<subseteq> \<A> G; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X < card {D |D. D \<in> \<oo>\<cc> G (\<A> G) \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}"
-  "\<exists>m. inj_on m (\<A> G) \<and> m ` \<A> G \<subseteq> \<Union> (\<oo>\<cc> G (\<A> G)) \<and>
+    "\<lbrakk>X \<in> \<oo>\<cc> G (\<A> G); x \<in> X\<rbrakk> \<Longrightarrow> \<exists>M. graph_matching ( G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
+    "X \<in> \<oo>\<cc> G (\<A> G) \<Longrightarrow> \<exists>x. x \<in> X \<and> Vs ( M \<lbrakk>X\<rbrakk>) = X - {x}"
+    "perfect_matching (G \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G) (M \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G)"
+    "\<lbrakk>X \<subseteq> \<A> G; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X < card {D |D. D \<in> \<oo>\<cc> G (\<A> G) \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}"
+    "\<exists>m. inj_on m (\<A> G) \<and> m ` \<A> G \<subseteq> \<Union> (\<oo>\<cc> G (\<A> G)) \<and>
         (\<forall>x\<in>\<A> G. {x, m x} \<in> M) \<and>
         (\<forall>x y. x \<in> \<A> G \<and> y \<in> \<A> G \<and> x \<noteq> y \<longrightarrow>
         (\<exists>D1 D2. D1 \<in> \<oo>\<cc> G (\<A> G) \<and> D2 \<in> \<oo>\<cc> G (\<A> G) \<and> D1 \<noteq> D2 \<and> m x \<in> D1 \<and> m y \<in> D2))"
-  "2 * \<nu> G + (int (card (\<oo>\<cc> G (\<A> G))) - int (card (\<A> G))) = card (Vs G)"
-  "\<lbrakk>e \<in> M ; \<lbrakk>e \<subseteq> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G\<rbrakk> \<Longrightarrow> P;
+    "2 * \<nu> G + (int (card (\<oo>\<cc> G (\<A> G))) - int (card (\<A> G))) = card (Vs G)"
+    "\<lbrakk>e \<in> M ; \<lbrakk>e \<subseteq> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G\<rbrakk> \<Longrightarrow> P;
       \<And>x y D. \<lbrakk>e = {x, y}; x \<in> \<A> G; y \<in> D; D \<in> \<oo>\<cc> G (\<A> G); x \<noteq> y\<rbrakk> \<Longrightarrow> P;
       \<And>D. \<lbrakk>D \<in> \<oo>\<cc> G (\<A> G); e \<subseteq> D\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  "\<Union> (\<oo>\<cc> G (\<A> G)) = \<I> G"
-  "\<exists>m. inj_on m (Vs G - Vs M) \<and> m ` (Vs G - Vs M) \<subseteq> \<oo>\<cc> G (\<A> G)"
-  "\<lbrakk>e \<in> G; e \<subseteq> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G \<Longrightarrow> P; e \<subseteq> \<A> G \<Longrightarrow> P;
+    "\<Union> (\<oo>\<cc> G (\<A> G)) = \<I> G"
+    "\<exists>m. inj_on m (Vs G - Vs M) \<and> m ` (Vs G - Vs M) \<subseteq> \<oo>\<cc> G (\<A> G)"
+    "\<lbrakk>e \<in> G; e \<subseteq> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G \<Longrightarrow> P; e \<subseteq> \<A> G \<Longrightarrow> P;
       \<And>x y D. \<lbrakk>e = {x, y}; x \<in> \<A> G; y \<in> D; D \<in> \<oo>\<cc> G (\<A> G); x \<noteq> y\<rbrakk> \<Longrightarrow> P;
       \<And>x y. \<lbrakk>e = {x, y}; x \<in> \<A> G; y \<in> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G; x \<noteq> y\<rbrakk> \<Longrightarrow> P;
       \<And>D. \<lbrakk>D \<in> \<oo>\<cc> G (\<A> G); e \<subseteq> D\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
 proof-
-interpret computesth: obtain_edmonds_gallai G
+  interpret computesth: obtain_edmonds_gallai G
     by unfold_locales (simp add: assms(1))
   note new_edg = computesth.decomposition_correct[OF assms(2)]
   note edmonds_gallai_on_matching_props =
-         edmonds_gallai_on_matching_props[OF assms new_edg]
+    edmonds_gallai_on_matching_props[OF assms new_edg]
   note edg_rws = edmonds_gallai_on_matching_props(1,2,11)
   note Odds_is = edg_rws(1)[simplified edg_rws(2, 3), symmetric] 
   note evens_is = edg_rws(2)[simplified edg_rws(3)]
-        
+
   note edmonds_gallai_on_matching_props =
     edmonds_gallai_on_matching_props[simplified Odds_is evens_is, folded adj_inessentials_def]
 
   note strong_hall = 
     edmonds_gallai_on_matching_strong_hall[OF assms new_edg,
-          simplified Odds_is evens_is, folded adj_inessentials_def]
+      simplified Odds_is evens_is, folded adj_inessentials_def]
 
   have nu_def: "\<nu> G = card M" 
     using assms(2) computesth.graph_invar max_matching_is_\<nu>[of G M] finite_Vs_then_finite[of G]
     by auto
 
   show   "\<lbrakk>X \<in> \<oo>\<cc> G (\<A> G); x \<in> X\<rbrakk> \<Longrightarrow> \<exists>M. graph_matching ( G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-  "X \<in> \<oo>\<cc> G (\<A> G) \<Longrightarrow> \<exists>x. x \<in> X \<and> Vs ( M \<lbrakk>X\<rbrakk>) = X - {x}"
-  "perfect_matching (G \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G) (M \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G)"
-  "\<lbrakk>X \<subseteq> \<A> G; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X < card {D |D. D \<in> \<oo>\<cc> G (\<A> G) \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}"
-  "\<exists>m. inj_on m (\<A> G) \<and> m ` \<A> G \<subseteq> \<Union> (\<oo>\<cc> G (\<A> G)) \<and>
+    "X \<in> \<oo>\<cc> G (\<A> G) \<Longrightarrow> \<exists>x. x \<in> X \<and> Vs ( M \<lbrakk>X\<rbrakk>) = X - {x}"
+    "perfect_matching (G \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G) (M \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G)"
+    "\<lbrakk>X \<subseteq> \<A> G; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X < card {D |D. D \<in> \<oo>\<cc> G (\<A> G) \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}"
+    "\<exists>m. inj_on m (\<A> G) \<and> m ` \<A> G \<subseteq> \<Union> (\<oo>\<cc> G (\<A> G)) \<and>
         (\<forall>x\<in>\<A> G. {x, m x} \<in> M) \<and>
         (\<forall>x y. x \<in> \<A> G \<and> y \<in> \<A> G \<and> x \<noteq> y \<longrightarrow>
                (\<exists>D1 D2. D1 \<in> \<oo>\<cc> G (\<A> G) \<and> D2 \<in> \<oo>\<cc> G (\<A> G) \<and> D1 \<noteq> D2 \<and> m x \<in> D1 \<and> m y \<in> D2))"
-  "2 * \<nu> G + (int (card (\<oo>\<cc> G (\<A> G))) - int (card (\<A> G))) = card (Vs G)"
-  "\<Union> (\<oo>\<cc> G (\<A> G)) = \<I> G"
-  "\<exists>m. inj_on m (Vs G - Vs M) \<and> m ` (Vs G - Vs M) \<subseteq> \<oo>\<cc> G (\<A> G)"
+    "2 * \<nu> G + (int (card (\<oo>\<cc> G (\<A> G))) - int (card (\<A> G))) = card (Vs G)"
+    "\<Union> (\<oo>\<cc> G (\<A> G)) = \<I> G"
+    "\<exists>m. inj_on m (Vs G - Vs M) \<and> m ` (Vs G - Vs M) \<subseteq> \<oo>\<cc> G (\<A> G)"
     unfolding nu_def
     using edmonds_gallai_on_matching_props strong_hall by auto
   show "\<lbrakk>e \<in> M ; \<lbrakk>e \<subseteq> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G\<rbrakk> \<Longrightarrow> P;
       \<And>x y D. \<lbrakk>e = {x, y}; x \<in> \<A> G; y \<in> D; D \<in> \<oo>\<cc> G (\<A> G); x \<noteq> y\<rbrakk> \<Longrightarrow> P;
       \<And>D. \<lbrakk>D \<in> \<oo>\<cc> G (\<A> G); e \<subseteq> D\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  "\<lbrakk>e \<in> G; e \<subseteq> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G \<Longrightarrow> P; e \<subseteq> \<A> G \<Longrightarrow> P;
+    "\<lbrakk>e \<in> G; e \<subseteq> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G \<Longrightarrow> P; e \<subseteq> \<A> G \<Longrightarrow> P;
       \<And>x y D. \<lbrakk>e = {x, y}; x \<in> \<A> G; y \<in> D; D \<in> \<oo>\<cc> G (\<A> G); x \<noteq> y\<rbrakk> \<Longrightarrow> P;
       \<And>x y. \<lbrakk>e = {x, y}; x \<in> \<A> G; y \<in> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G; x \<noteq> y\<rbrakk> \<Longrightarrow> P;
       \<And>D. \<lbrakk>D \<in> \<oo>\<cc> G (\<A> G); e \<subseteq> D\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-      using  edmonds_gallai_on_matching_props(10,13)[of e P] by force+
-  qed
+    using  edmonds_gallai_on_matching_props(10,13)[of e P] by force+
+qed
 
 theorem edmonds_gallai_decomposition_general:
- assumes "graph_invar G"
- shows 
-  "\<lbrakk>X \<in> \<oo>\<cc> G (\<A> G); x \<in> X\<rbrakk> \<Longrightarrow> \<exists>M. graph_matching ( G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-  "\<exists> M. perfect_matching (G \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G) M"
-  "\<lbrakk>X \<subseteq> \<A> G; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X < card {D |D. D \<in> \<oo>\<cc> G (\<A> G) \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}"
-  "2 * \<nu> G + (int (card (\<oo>\<cc> G (\<A> G))) - int (card (\<A> G))) = card (Vs G)"
-  "\<Union> (\<oo>\<cc> G (\<A> G)) = \<I> G"
-  "\<lbrakk>e \<in> G; e \<subseteq> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G \<Longrightarrow> P; e \<subseteq> \<A> G \<Longrightarrow> P;
+  assumes "graph_invar G"
+  shows 
+    "\<lbrakk>X \<in> \<oo>\<cc> G (\<A> G); x \<in> X\<rbrakk> \<Longrightarrow> \<exists>M. graph_matching ( G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
+    "\<exists> M. perfect_matching (G \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G) M"
+    "\<lbrakk>X \<subseteq> \<A> G; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X < card {D |D. D \<in> \<oo>\<cc> G (\<A> G) \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}"
+    "2 * \<nu> G + (int (card (\<oo>\<cc> G (\<A> G))) - int (card (\<A> G))) = card (Vs G)"
+    "\<Union> (\<oo>\<cc> G (\<A> G)) = \<I> G"
+    "\<lbrakk>e \<in> G; e \<subseteq> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G \<Longrightarrow> P; e \<subseteq> \<A> G \<Longrightarrow> P;
     \<And>x y D. \<lbrakk>e = {x, y}; x \<in> \<A> G; y \<in> D; D \<in> \<oo>\<cc> G (\<A> G); x \<noteq> y\<rbrakk> \<Longrightarrow> P;
     \<And>x y. \<lbrakk>e = {x, y}; x \<in> \<A> G; y \<in> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G; x \<noteq> y\<rbrakk> \<Longrightarrow> P;
     \<And>D. \<lbrakk>D \<in> \<oo>\<cc> G (\<A> G); e \<subseteq> D\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
@@ -2232,10 +1507,10 @@ proof-
   obtain M where M: "max_card_matching G M"
     using assms finite_Vs_then_finite max_card_matching_exists by auto
   show"\<lbrakk>X \<in> \<oo>\<cc> G (\<A> G); x \<in> X\<rbrakk> \<Longrightarrow> \<exists>M. graph_matching ( G \<lbrakk>X\<rbrakk>) M \<and> Vs M = X - {x}"
-  "\<exists> M. perfect_matching (G \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G) M"
-  "\<lbrakk>X \<subseteq> \<A> G; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X < card {D |D. D \<in> \<oo>\<cc> G (\<A> G) \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}"
-  "2 * \<nu> G + (int (card (\<oo>\<cc> G (\<A> G))) - int (card (\<A> G))) = card (Vs G)"
-  "\<Union> (\<oo>\<cc> G (\<A> G)) = \<I> G"
+    "\<exists> M. perfect_matching (G \<setminus> \<Union> (\<oo>\<cc> G (\<A> G)) \<union> \<A> G) M"
+    "\<lbrakk>X \<subseteq> \<A> G; X \<noteq> {}\<rbrakk> \<Longrightarrow> card X < card {D |D. D \<in> \<oo>\<cc> G (\<A> G) \<and> X \<longleftrightarrow>\<^bsub>G\<^esub> D}"
+    "2 * \<nu> G + (int (card (\<oo>\<cc> G (\<A> G))) - int (card (\<A> G))) = card (Vs G)"
+    "\<Union> (\<oo>\<cc> G (\<A> G)) = \<I> G"
     using edmonds_gallai_decomposition_all[OF assms M] by auto
   show   "\<lbrakk>e \<in> G; e \<subseteq> Vs G - \<Union> (\<oo>\<cc> G (\<A> G)) - \<A> G \<Longrightarrow> P; e \<subseteq> \<A> G \<Longrightarrow> P;
       \<And>x y D. \<lbrakk>e = {x, y}; x \<in> \<A> G; y \<in> D; D \<in> \<oo>\<cc> G (\<A> G); x \<noteq> y\<rbrakk> \<Longrightarrow> P;
@@ -2245,23 +1520,25 @@ proof-
 qed
 
 lemmas edmonds_gallai_decomposition_max_matching_specific =
-   edmonds_gallai_decomposition_all(2,3,5,7)
+  edmonds_gallai_decomposition_all(2,3,5,7)
+
+subsection \<open>Connection to the Berge-Tutte Formula\<close>
 
 lemma decomposition_is_berge_maximiser:
   assumes "graph_invar G" "X \<subseteq> Vs G"
   shows "int (card (\<oo>\<cc> G X)) - int (card X) \<le> int (card (\<oo>\<cc> G (\<A> G))) - int (card (\<A> G))"
 proof-
-   obtain M where M: "max_card_matching G M"
-     using assms(1) finite_Vs_then_finite max_card_matching_exists by auto
-   hence graph_match:"graph_matching G M"
-     by (simp add: max_card_matchingDs(1,2))
-   have M_card: "card M = \<nu> G"
-     by (simp add: M assms(1) finite_Vs_then_finite max_matching_is_\<nu>)
-   show ?thesis
-     using left_uncoverred_matching[OF assms(1) graph_match assms(2)]
-           edmonds_gallai_decomposition_general(4)[OF assms(1), symmetric]
-     by (auto simp add: algebra_simps M_card)
- qed
+  obtain M where M: "max_card_matching G M"
+    using assms(1) finite_Vs_then_finite max_card_matching_exists by auto
+  hence graph_match:"graph_matching G M"
+    by (simp add: max_card_matchingDs(1,2))
+  have M_card: "card M = \<nu> G"
+    by (simp add: M assms(1) finite_Vs_then_finite max_matching_is_\<nu>)
+  show ?thesis
+    using left_uncoverred_matching[OF assms(1) graph_match assms(2)]
+      edmonds_gallai_decomposition_general(4)[OF assms(1), symmetric]
+    by (auto simp add: algebra_simps M_card)
+qed
 
 lemma decomposition_is_berge_maximiser_nat:
   assumes "graph_invar G" "X \<subseteq> Vs G"
@@ -2279,8 +1556,8 @@ proof-
     then show ?case 
       unfolding setcompr_eq_image
       by(auto intro!: finite_imageI[of _ "\<lambda> X. int (card (\<oo>\<cc> G X)) - int (card X)", simplified]
-                      finite_Collect_subsets 
-            simp add: assms(1))
+          finite_Collect_subsets 
+          simp add: assms(1))
   next
     case 2
     then show ?case 
@@ -2312,8 +1589,8 @@ proof(rule linorder_class.Max_eq_if, goal_cases)
       case 2
       thus ?case
         by(auto intro!: exI[of _ "int (card (\<oo>\<cc> G {}))"] exI[of _ "{}"])
-  qed
- qed 
+    qed
+  qed 
 qed (auto simp add: assms(1))
 
 lemma card_odd_comp_leq_card_Vs_G:
@@ -2324,8 +1601,8 @@ proof(rule order.trans[OF _ number_comps_below_vertex_card, where E1 = G], goal_
   then show ?case
     using assms
     by(auto intro!: card_mono finite_verts_finite_no_comps 
-              dest: finite_Vs_then_finite
-              elim: odd_comps_in_diff_are_componentsOb)
+        dest: finite_Vs_then_finite
+        elim: odd_comps_in_diff_are_componentsOb)
 next
   case 2
   then show ?case 
@@ -2338,13 +1615,13 @@ lemma berge_max_nat_swap:
         Max {card (\<oo>\<cc> G X) - card X | X. X \<subseteq> Vs G}"
 proof-
   have finite1: "finite {int (card (\<oo>\<cc> G X)) - int (card X) | X. X \<subseteq> Vs G}"
-  and finite2: "finite {card (\<oo>\<cc> G X) - card X | X. X \<subseteq> Vs G}"
+    and finite2: "finite {card (\<oo>\<cc> G X) - card X | X. X \<subseteq> Vs G}"
     using assms by auto
   have nempty:"{int (card (\<oo>\<cc> G X)) - int (card X) | X. X \<subseteq> Vs G} \<noteq> {}"
-       "{card (\<oo>\<cc> G X) - card X | X. X \<subseteq> Vs G} \<noteq> {}"
+    "{card (\<oo>\<cc> G X) - card X | X. X \<subseteq> Vs G} \<noteq> {}"
     by auto
   obtain i X where i:"i \<in> {int (card (\<oo>\<cc> G X)) - int (card X) | X. X \<subseteq> Vs G}"
-   "i = Max {int (card (\<oo>\<cc> G X)) - int (card X) | X. X \<subseteq> Vs G}" 
+    "i = Max {int (card (\<oo>\<cc> G X)) - int (card X) | X. X \<subseteq> Vs G}" 
     "i = int (card (\<oo>\<cc> G X)) - int (card X)" "X \<subseteq> Vs G"
     using finite1 nempty(1)
       Max_eq_iff[of "{int (card (\<oo>\<cc> G uub)) - int (card uub) |uub. uub \<subseteq> Vs G}"
@@ -2353,8 +1630,8 @@ proof-
   have i_geq: "X' \<subseteq> Vs G \<Longrightarrow> int (card (\<oo>\<cc> G X')) - int (card X') \<le> i" for X'
     using Max_ge finite1 i(2) by blast
   obtain n X' where n: "n \<in> {card (\<oo>\<cc> G X) - card X | X. X \<subseteq> Vs G}"
-       "n = Max {card (\<oo>\<cc> G X) - card X | X. X \<subseteq> Vs G}"
-       "n = card (\<oo>\<cc> G X') - card X'" "X' \<subseteq> Vs G"
+    "n = Max {card (\<oo>\<cc> G X) - card X | X. X \<subseteq> Vs G}"
+    "n = card (\<oo>\<cc> G X') - card X'" "X' \<subseteq> Vs G"
     using finite2 nempty(2)
       Max_eq_iff[of "{card (\<oo>\<cc> G uub) - card uub |uub. uub \<subseteq> Vs G}"
         "Max {card (\<oo>\<cc> G uub) - card uub |uub. uub \<subseteq> Vs G}"]
@@ -2436,11 +1713,10 @@ proof -
   then have "(\<exists>A. Max {card (\<oo>\<cc> G A) - card A |A. A \<subseteq> Vs G} = card (\<oo>\<cc> G A) - card A \<and> A \<subseteq> Vs G) \<and> finite (Vs G) \<and> (\<exists>A. Max {card (\<oo>\<cc> G A) - card A |A. A \<subseteq> Vs G} = card (\<oo>\<cc> G A) - card A \<and> A \<subseteq> Vs G) \<and> finite {card (\<oo>\<cc> G A) - card A |A. A \<subseteq> Vs G} \<and> dblton_graph G"
     using f2 Max_in[of "{card (\<oo>\<cc> G A) - card A |A. A \<subseteq> Vs G}"] assms by simp
   then show ?thesis
-    using f1 
-   using Max_ge[of "{card (\<oo>\<cc> G uub) - card uub |uub. uub \<subseteq> Vs G}" "card (\<oo>\<cc> G (\<A> G)) - card (\<A> G)"]
+    using f1 Max_ge[of "{card (\<oo>\<cc> G uub) - card uub |uub. uub \<subseteq> Vs G}" "card (\<oo>\<cc> G (\<A> G)) - card (\<A> G)"]
       order_antisym[of "Max {card (\<oo>\<cc> G uub) - card uub |uub. uub \<subseteq> Vs G}" "card (\<oo>\<cc> G (\<A> G)) - card (\<A> G)"]
       decomposition_is_berge_maximiser_nat[of G]
-   by fastforce
+    by fastforce
 qed
 
 lemma berge_formula_nat_unfolded:
@@ -2450,5 +1726,9 @@ lemma berge_formula_nat_unfolded:
   using decomposition_is_berge_maximiser_nat[OF assms(1,2)] assms(3)[OF adj_inessentialsin_G] 
   unfolding berge_formula_nat[OF assms(1) refl, symmetric] Max_valid_nat[OF assms(1)]
   by (auto simp add: algebra_simps)
- 
+
+text \<open>Fun fact: Now chapter 10 in KV is fully formalised, except ear decompositions.
+      We have: Berge's Lemma, Tutte's Theorem, the Berge-Tutte Formula,
+       the Blossom Algorithm and the Edmonds-Gallai Decomposition.\<close>
+
 end

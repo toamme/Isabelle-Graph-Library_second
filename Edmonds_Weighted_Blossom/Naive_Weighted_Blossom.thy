@@ -2,42 +2,6 @@ theory Naive_Weighted_Blossom
   imports Laminar_Family.Laminar_Family Matching_LPs.Edmonds_Matching_LP
    "HOL-Library.Disjoint_Sets" Directed_Set_Graphs.More_Arith Partition_Quotient_Graph
 begin
-(*
-definition "factor_critical E = 
-    (\<forall> v \<in> Vs E. \<exists> M. graph_matching (E \<setminus> {v}) M \<and> Vs M = Vs E - {v})"
-
-lemma 
-  factor_criticalI: "(\<And>v. v \<in> Vs E \<Longrightarrow> \<exists>M. graph_matching (E  \<setminus> {v}) M \<and> Vs M = Vs E - {v}) \<Longrightarrow> factor_critical E" and
-  factor_criticalD:  "\<lbrakk>factor_critical E; v \<in> Vs E\<rbrakk> \<Longrightarrow> \<exists>M. graph_matching (E  \<setminus> {v}) M \<and> Vs M = Vs E - {v}" and
-  factor_criticalE:  "\<lbrakk>factor_critical E; 
-               (\<And> v. v \<in> Vs E \<Longrightarrow> \<exists> M. graph_matching (E \<setminus> {v}) M \<and> Vs M = Vs E - {v}) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  unfolding factor_critical_def by auto
-
-lemma empty_factor_critical: "factor_critical {}"
-  by(auto intro!: factor_criticalI)
-
-lemma factor_critical_is_odd:
-  assumes "graph_invar G" "factor_critical G" "G \<noteq> {}"
-  shows   "odd (card (Vs G))"
-  using assms
-proof(elim factor_criticalE, goal_cases)
-  case 1
-  obtain v where v: "v \<in> Vs G"
-    using assms(1,3) edges_are_Vs by blast
-  then obtain M where "graph_matching (G \<setminus> {v}) M" "Vs M = Vs G - {v}"
-    using "1"(3)[of v] by auto
-  moreover hence "even (card (Vs M))"
-    using remove_vertices_subgraph  assms(1)
-    by(subst graph_abs.matching_card_vs[symmetric])
-      (force intro!: graph_abs_mono[of G M] graph_abs.intro)+
-  ultimately have "even (card (Vs G - {v}))" 
-    by simp
-  moreover have "finite (Vs G - {v})"
-    using assms(1) by force
-  ultimately show ?case
-    using v by auto
-qed
-*)
 
 lemma near_perfect_matching_odd:
   assumes "dblton_graph M" "matching M" "Vs M = X - {x}" "x \<in> X" "finite X"

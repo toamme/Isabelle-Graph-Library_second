@@ -246,6 +246,17 @@ lemma (in graph_abs) matching_card_vs:
   using assms graph
   by (auto simp: Vs_def card_2_iff card_partition finite_E dblton_graph_def matching_def)
 
+lemma matching_vertices_double_size:
+  assumes "graph_invar M"
+  assumes "matching M"
+  shows "2 * (card M) = card (Vs M)"
+  by (simp add: assms(1,2) graph_abs.intro graph_abs.matching_card_vs)
+
+lemma even_number_of_matching_verts:
+  "\<lbrakk>matching M; dblton_graph M\<rbrakk> \<Longrightarrow> even ( card (Vs M))"
+  using  dvd_def[of "2" "2 * card M"] matching_vertices_double_size[of M]
+  by fastforce
+
 lemma matching_vertex_disj_union:
   assumes "matching M" "matching M'" "Vs M \<inter> Vs M' = {}"
   shows   "matching (M \<union> M')" 
@@ -333,6 +344,30 @@ lemma matching_image_iff:
   assumes "inj_on f (Vs M)"
   shows   "matching ((image f) ` M) \<longleftrightarrow> matching M"
   using assms matching_image matching_image_rev by blast
+
+lemma graph_matching_image:
+  assumes "graph_matching G M" "inj_on f (Vs M)"
+  shows   "graph_matching ((image f) ` G) ((image f) ` M)"
+  using assms
+  by(auto intro!: graph_matchingI simp add: matching_image)
+
+lemma graph_matching_image_rev:
+  assumes  "graph_matching ((image f) ` G) ((image f) ` M)"  "inj_on f (Vs (G \<union> M))"
+  shows  "graph_matching G M"
+proof-
+  have  "inj_on f (Vs G)"  "inj_on f (Vs M)"
+    using assms(2) by(auto simp add: inj_on_Un vs_union)
+  thus ?thesis
+    using assms
+    by(auto intro!: graph_matchingI matching_image_rev[of f M] simp add: inj_on_lifted_graph_subset)
+qed
+
+lemma graph_matching_image_iff:
+  assumes  "inj_on f (Vs (G \<union> M))"
+  shows  "graph_matching ((image f) ` G) ((image f) ` M) \<longleftrightarrow> graph_matching G M"
+  using assms  Vs_subset[of M M] Vs_subset[of M "G \<union> M"]
+    subset_inj_on matching_image_iff[of f M] inj_on_lifted_graph_subset[of f G M] 
+  by force
 
 lemma graph_matching_union:
  assumes "graph_matching G M"  "graph_matching G M'"
@@ -598,6 +633,19 @@ next
     qed
   qed
 qed
+
+lemma graph_matching_inter_Vs:
+  "graph_matching G M \<Longrightarrow> graph_matching (G\<lbrakk>X\<rbrakk>) (M\<lbrakk>X\<rbrakk>)"
+  using graph_inter_Vs_subset graph_inter_subset[of M G]
+  by (auto intro!:  matching_subgraph[of M])
+
+lemma matched_vertex_not_in_Vs_of_graph_inter_Vs:
+  assumes "matching M" "e \<in> M" "x \<in> e" "\<not> e \<subseteq> X"
+  shows "x \<notin> Vs (M\<lbrakk>X\<rbrakk>)"
+  using assms
+  by (auto elim!: in_graph_inter_VsE 
+      simp add: vs_member 
+      dest: matching_unique_match)
 
 subsection \<open>Augmenting and Alternating Paths\<close>
 
@@ -1817,6 +1865,87 @@ next
            simp add: edges_of_path_length)
 qed
 
+lemma graph_augmenting_path_rev_iff:
+  "graph_augmenting_path G M (rev p) = graph_augmenting_path G M p"
+  by (auto simp add: rev_path_is_path_iff matching_augmenting_path_rev_iff)
+
+lemma alt_path_split_off_last:
+  "alt_path M p \<Longrightarrow> alt_path M (butlast p)"
+  using alt_path_prefix 
+  by (cases p rule: rev_cases) auto
+
+lemma rev_of_rev_alt_path_is_alt_path:
+  assumes "rev_alt_path M p" "odd (length p)"
+  shows "alt_path M (rev p)"
+  using assms
+  by(auto intro!: alt_list_rev_even 
+        simp add: edges_of_path_rev[symmetric] edges_of_path_length)
+
+lemma alt_path_vert_is_matched:
+  assumes "alt_path M p" "v \<in> set p" "v \<noteq> hd p" "v \<noteq> last p" "p \<noteq> []"
+  shows "\<exists>e \<in> set (edges_of_path p). v \<in> e \<and> e \<in> M"
+  using assms
+proof(induction "length p" arbitrary: p rule: nat_less_induct)
+  case ass: 1
+  then show ?case
+  proof(cases p)
+    case Nil
+    then show ?thesis
+      using ass.prems
+      by simp
+  next
+    case cons1: (Cons a' p')
+    show ?thesis
+    proof(cases p')
+      case Nil
+      then show ?thesis
+        using ass.prems cons1
+        by simp
+    next
+      case cons2: (Cons a'' p'')
+      then show ?thesis
+        using ass cons1
+        apply (simp add: neq_Nil_conv split: if_splits)
+        apply clarify
+        by (metis Suc_lessD alt_list_step edges_of_path.simps(3) insert_iff lessI list.sel(1) list.simps(15))
+    qed
+  qed
+qed
+
+lemma alt_path_vert_is_matched':
+  assumes "alt_path M p" "v \<in> set p" "v \<noteq> hd p" "v \<noteq> last p" "p \<noteq> []"
+  shows "v \<in> Vs M"
+  using alt_path_vert_is_matched[OF assms]
+  unfolding Vs_def
+  by auto   
+
+lemma alt_path_image:
+  assumes "inj_on f (Vs M \<union> set p)"
+  shows "alt_path ((`) f ` M) (map f p) \<longleftrightarrow> alt_path M p"
+  unfolding edges_of_path_image
+proof(goal_cases)
+  case 1
+  have "e \<in> set (edges_of_path p) \<Longrightarrow> (f ` e \<notin> (`) f ` M) = (e \<notin> M)" for e
+  proof(goal_cases)
+    case 1
+    hence e_in_p:"e \<subseteq> set p"
+      by (simp add: edges_of_path_subset_path)
+    moreover have "\<lbrakk>f ` e = f ` e'; e' \<in> M\<rbrakk> \<Longrightarrow> e \<in> M" for e'
+    proof(goal_cases)
+      case 1
+      hence "e = e'"
+        using e_in_p assms Vs_def[of M] inj_on_image_eq_iff[of f "Vs M \<union> set p" e e']
+        by auto
+      thus ?thesis
+        using 1 by auto
+    qed
+    ultimately show ?thesis
+      by auto
+  qed
+  thus ?case
+    by(intro alt_list_image) auto
+qed
+
 subsection \<open>Matchings and Optimisation\<close>
 
 subsubsection \<open>Cardinality Matching\<close>
@@ -2387,6 +2516,12 @@ corollary perfect_maching_odd_set_odd_delta:
   using perfect_maching_card_parity_delta[OF assms(1-4)] assms(5) 
   by auto
 
+lemma perfect_matching_even_graph:
+  assumes "perfect_matching G M" "dblton_graph G"
+  shows "even (card (Vs G))"
+  using assms(1,2) dvd_triv_left[of "2" "card M"] perfect_matching_card[of G M]
+  by (fastforce simp add: graph_abs_def)
+
 corollary perfect_maching_even_set_even_delta:
   assumes "X \<subseteq> Vs G" "graph_invar G" "perfect_matching G M" "finite (Vs G)" "even (card X)"
   shows "even (card (Delta M X))"
@@ -2398,6 +2533,40 @@ corollary perfect_maching_odd_set_delta_geq_1:
   shows "card (Delta M X) \<ge> 1"
   using perfect_maching_odd_set_odd_delta[OF assms] 
   by presburger
+
+lemma max_card_matching_image_iff:
+  assumes "inj_on f (Vs (G \<union> M))"
+  shows   "max_card_matching ((image f) ` G) ((image f) ` M) \<longleftrightarrow> max_card_matching G M"
+proof-
+  have  inj_M: "inj_on f (Vs M)" and inj_G: "inj_on f (Vs G)"
+    using assms by(auto simp add: inj_on_Un vs_union)
+  have inj_on_G: "G' \<subseteq> G \<Longrightarrow> inj_on ((`) f) G'" for G'
+    using inj_G subset_inj_on[of "(`) f" G G'] inj_on_image[of f G]
+    by(auto simp add: Vs_def)
+  have in_G_matching:"C \<subseteq> G \<Longrightarrow> matching ((`) f ` C) \<longleftrightarrow> matching C" for C 
+    using  inj_G Vs_subset[of C G] inj_on_subset[of f "Vs G" "Vs C"]
+    by(intro matching_image_iff[of f C]) auto
+  show ?thesis
+  proof(rule, goal_cases)
+    case 2
+    then show ?case 
+      using inj_M
+      by(auto intro!: max_card_matchingI inj_on_card_of_image_leqI inj_on_G
+          elim!: max_card_matchingE subset_imageE
+          simp add: max_card_matching_subgraphD matching_image max_card_matchingDs(2)
+          bij_betw_imp_inj_on in_G_matching)
+  next
+    case 1
+    then show ?case
+      using assms max_card_matchingDs(1)[OF 1] graph_matching_image_rev[of f M G]
+      by(auto intro!: max_card_matchingI inj_on_card_of_image_leqI inj_on_G
+          elim!: max_card_matchingE subset_imageE
+          simp add: max_card_matching_subgraphD matching_image max_card_matchingDs(2)
+          bij_betw_imp_inj_on inj_on_lifted_graph_same inj_on_G 
+          image_mono[of _ G "(`) f"] card_image_subst[of "(`) f" _ "(`) f ` _"] 
+          in_G_matching)
+  qed
+qed
 
 subsubsection \<open>Weighted Matchings\<close>
 

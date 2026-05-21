@@ -112,56 +112,6 @@ lemma find_aug_path_dom_step:
   using assms
   by (auto simp add: Let_def intro: find_aug_path.domintros)
 
-lemma blossom_cycle_longer_2:
-  assumes \<open>match_blossom M stem cyc\<close> 
-  shows "card (set cyc) \<ge> 2"
-proof-
-  have "distinct (butlast cyc)"
-    using match_blossomD(2)[OF \<open>match_blossom M stem cyc\<close>] distinct_append
-    by blast
-  then have "length (butlast cyc) = card (set (butlast cyc))"
-    by (simp add: distinct_card)
-  have "length (butlast cyc) = length cyc - 1"
-    using length_butlast by blast
-  then have "length (butlast cyc) \<ge> 2"
-    using odd_cycleD(1)[OF match_blossomD(3)[OF \<open>match_blossom M stem cyc\<close>]] 
-    by auto
-  then have "card (set (butlast cyc)) \<ge> 2"
-    using \<open>length (butlast cyc) = card (set (butlast cyc))\<close>
-    by auto
-  moreover have "set cyc = insert (last cyc) (set (butlast cyc))"
-  proof-
-    have "cyc = (butlast cyc) @ [last cyc]"
-      by (metis \<open>length (butlast cyc) = card (set (butlast cyc))\<close> append_butlast_last_id butlast.simps(1) calculation le_zero_eq list.size(3) zero_neq_numeral)
-    then show ?thesis
-      by (metis list.simps(15) rotate1.simps(2) set_rotate1)
-  qed
-  ultimately show ?thesis
-    using card_insert_le order.trans by fastforce
-qed
-
-lemma blossom_diff: 
-assumes
-  "graph_invar E" 
-  "match_blossom M stem cyc"
-  "path E (stem @ cyc)"
-shows "((Vs E) - set cyc) \<subset> (Vs E)" (is "?s \<subset> _")
-proof-  
-  have "set cyc \<subseteq> Vs E"
-    using path_suff subset_path_Vs assms
-    by metis
-  then have "Vs E - ?s = set cyc"
-    by auto
-  moreover have "?s \<subseteq> Vs E"
-    by auto
-  moreover have "card (set cyc) \<ge> 2"
-    using blossom_cycle_longer_2[OF \<open>match_blossom M stem cyc\<close>] .
-  moreover have "finite (Vs E)"
-    by (simp add: assms)
-  ultimately show ?thesis
-    by auto
-qed
-
 lemma find_aug_path_dom:
   assumes "matching M" "M \<subseteq> E" "graph_invar E" 
   shows "find_aug_path_dom (E,M)"
@@ -329,42 +279,6 @@ proof-
 qed
 
 end
-
-lemma match_blossom_distinct_tl:
-  assumes "match_blossom M stem cyc"
-  shows "distinct (tl cyc)"
-proof-
-  have "distinct (butlast cyc)" "hd cyc = last cyc"
-    using match_blossomD[OF assms] odd_cycleD
-    unfolding distinct_append[symmetric] 
-    by auto
-  then have "distinct (tl (butlast cyc))" "hd cyc \<notin> set (tl (butlast cyc))"
-    using distinct_tl
-    by (metis \<open>distinct (butlast cyc)\<close> append_butlast_last_id assms distinct.simps(2) empty_iff hd_append2 list.collapse list.sel(2) list.set(1) match_blossomD(3) odd_cycle_nempty)+
-  then have "distinct ((tl (butlast cyc)) @ [last cyc])"
-    using \<open>hd cyc = last cyc\<close>
-    by auto
-  moreover have "(tl (butlast cyc)) @ [last cyc] = tl cyc" if "length cyc \<ge> 3" for cyc::"'a list"
-    using that
-  proof(induction cyc)
-    case Nil
-    then show ?case by auto
-  next
-    case (Cons a' cyc')
-    then show ?case 
-      by auto
-  qed
-  moreover have "length cyc \<ge> 3"
-    using odd_cycleD(1)[OF match_blossomD(3)[OF assms]]
-    by auto
-  ultimately show ?thesis
-    by auto
-qed
-
-lemma cycle_set_tl_eq_butlast:
-  assumes "match_blossom M stem cyc"
-  shows "set (tl cyc) = set (butlast cyc)"
-  by (metis append_butlast_last_id assms match_blossomD(3) butlast.simps(2) last_tl list.exhaust_sel odd_cycleD(3) odd_cycle_nempty rotate1.simps(2) set_rotate1)
 
 context find_aug_path
 begin
@@ -1470,6 +1384,30 @@ proof-
     by (simp add: calculation(3) last_rev match_blossomD(5) odd_cycleD(3))
   ultimately show ?thesis
     by(auto simp add: match_blossom_def)
+qed
+
+lemma match_blossom_path_rev_stem:
+  assumes 
+    path: "path G (stem @ C)" and
+    match_blossom: "match_blossom M stem C"
+  shows "path G (C @ (rev stem))"
+  apply(cases stem)
+  subgoal using path by simp
+  subgoal apply(rule path_append)
+    subgoal using path_suff[OF path] .
+    subgoal using rev_path_is_path[OF path_pref[OF path]] .
+    subgoal by (smt match_blossom match_blossomD(3) edge_between_pref_suff hd_rev insert_commute
+                    list.simps(3) odd_cycleD(3) odd_cycle_nempty path)
+    done
+  done
+
+lemma flower_reverse_blossom:
+  assumes  "blossom E M stem C" 
+  shows   "blossom E M stem (rev C)"  
+proof-
+  show ?thesis
+    using assms rev_path_is_path_iff[of E "stem @ rev C"] match_blossom_path_rev_stem[of E stem C M]
+    by(auto intro: match_flower_reverse_blossom)
 qed
 
 locale match = graph_abs G for G+ 

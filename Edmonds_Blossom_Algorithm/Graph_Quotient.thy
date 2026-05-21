@@ -240,6 +240,129 @@ lemma odd_cycle_even_verts: assumes "odd_cycle C" shows "even (length C)"
   using odd_cycleD[OF assms(1)]
   by (auto simp: Suc_le_length_iff numeral_3_eq_3 edges_of_path_length split: if_splits)
 
+lemma in_odd_cycle_in_M:
+  assumes "v \<in> set C" "odd_cycle C" "alt_path M C" "v \<noteq> last C"
+  shows "v \<in>  Vs M"
+  using assms(1,4)
+  using alt_path_vert_is_matched' odd_cycleD(2,3)[OF assms(2)] assms(3) by fastforce
+
+lemma matching_edge_incident_on_cycle:
+  assumes "odd_cycle C" "alt_path M C" "e \<in> M" "v1 \<in> set C" "v2 \<notin> set C" "{v1, v2} \<subseteq> e" "matching M"
+  shows "v1 = last C"
+proof(rule ccontr)
+  assume "v1 \<noteq> last C"
+  then obtain p1 p2 where p1p2: "C = p1 @ v1 # p2" "p1 \<noteq> []" "p2 \<noteq> []"
+    using odd_cycleD(3)[OF assms(1)] assms(4) split_list_last
+    by fastforce
+  have "(edges_of_path p1) @ [{last p1, v1}] = edges_of_path (p1 @ [v1])"
+    using edges_of_path_snoc[OF p1p2(2)]
+    by auto
+  moreover have "edges_of_path (v1 # p2) = {v1, hd p2} # edges_of_path p2"
+    using p1p2(3)
+    by (metis edges_of_path.simps(3) list.exhaust_sel)
+  moreover have "edges_of_path C = (edges_of_path (p1 @ [v1])) @ (edges_of_path (v1 # p2))"
+    using edges_of_path_append_2[where p' = "v1 # p2"] p1p2(1)
+    by auto
+  ultimately have "edges_of_path C = (edges_of_path p1) @ {last p1, v1} # {v1, hd p2} # edges_of_path p2"
+    using p1p2(1)
+    by auto
+  then have i: "{last p1, v1} \<in> M \<or> {v1, hd p2} \<in> M"
+    using odd_cycleD(2)[OF assms(1)] assms(2)
+    by (metis alt_list_append_1'')
+  have "last p1 \<in> set C" "hd p2 \<in> set C"
+    using p1p2 by auto
+  then have ii: "{last p1, v1} \<noteq> e" "{v1, hd p2} \<noteq> e"
+    using assms(4-6)
+    by fastforce+
+
+  show False
+    using i ii assms(4-7)
+    unfolding matching_def2 Vs_def
+    by (metis UnionI assms(3) insertI1 insert_commute insert_subset)
+qed
+
+text\<open>Since it is an odd cycle, then either both the first and last edges are matching edges or no.\<close>
+
+lemma odd_cycle_hd_last_or:
+  assumes cycle: "odd_cycle p" "alt_path M p"
+  shows "(hd (edges_of_path p) \<in> M \<and> last (edges_of_path  p) \<in> M) \<or>
+                (hd (edges_of_path p) \<notin> M \<and> last (edges_of_path p) \<notin> M)"
+proof-
+  let ?ep = "edges_of_path p"
+  show ?thesis
+  proof(cases "length (filter (\<lambda>e. e \<notin> M) ?ep) < length (filter (\<lambda>e. e \<in> M) ?ep)")
+    case True
+    then have "alt_list (\<lambda>e. e \<in> M) (\<lambda>e. e \<notin> M) (edges_of_path p)"
+      using cycle
+      unfolding odd_cycle_def
+      using alternating_list_gt_or
+      by blast
+    then show ?thesis
+      using cycle
+      unfolding odd_cycle_def
+      apply(intro disjI1 alternating_list_gt)
+      using alt_list_not_commute
+        True
+      by blast+
+  next
+    have "odd (length (edges_of_path p))"
+      using cycle
+      unfolding odd_cycle_def
+      by simp
+    then have "length (filter (\<lambda>e. e \<notin> M) ?ep) \<noteq> length (filter (\<lambda>e. e \<in> M) ?ep)"
+      apply(intro alternating_eq_even'; simp)
+      using cycle
+      unfolding odd_cycle_def by simp
+    moreover case False
+    ultimately have "length (filter (\<lambda>e. e \<in> M) ?ep) < length (filter (\<lambda>e. e \<notin> M) ?ep)"
+      by simp
+    then show ?thesis
+      apply(intro disjI2 alternating_list_gt)
+      using cycle
+      unfolding odd_cycle_def
+      by auto    
+  qed
+qed
+
+lemma matching_odd_cycle_hd_last_unmatched:
+  assumes cycle: "odd_cycle p" "alt_path M p" "distinct (tl p)" and
+          matching: "matching M"
+  shows "(hd (edges_of_path p) \<notin> M \<and> last (edges_of_path p) \<notin> M)"
+proof(rule ccontr)
+  assume "\<not> (hd (edges_of_path p) \<notin> M \<and> last (edges_of_path p) \<notin> M)"
+  then have inM: "hd (edges_of_path p) \<in> M \<and> last (edges_of_path p) \<in> M"
+    using odd_cycle_hd_last_or[OF cycle(1,2)]
+    by auto
+  have "distinct (edges_of_path (tl p))"
+    using cycle(3)
+    by (simp add: distinct_edges_of_vpath)
+  then have "distinct (edges_of_path p)"
+    using cycle[unfolded odd_cycle_def] 
+    apply (cases p; simp add: distinct_edges_of_vpath split: if_splits)
+    by (metis alt_list.cases inM length_greater_0_conv list.sel(1) odd_pos)
+  moreover have "length (edges_of_path p) \<ge> 2"
+    using cycle(1)
+    unfolding odd_cycle_def
+    using edges_of_path_length
+    by (smt One_nat_def Suc_1 Suc_leI antisym_conv diff_Suc_Suc diff_zero eq_diff_iff le_trans less_le numeral_3_eq_3 odd_pos one_le_numeral)
+  ultimately have "hd (edges_of_path p) \<noteq> last (edges_of_path p)"
+    by (metis One_nat_def Suc_1 Suc_le_length_iff distinct.simps(2) last.simps last_in_set le_zero_eq length_0_conv list.sel(1) nat.simps(3))
+  moreover have "last p \<in> (hd (edges_of_path p))" "last p \<in> (last (edges_of_path p))"
+    using cycle
+    unfolding odd_cycle_def
+    subgoal by (metis One_nat_def Suc_1 hd_v_in_hd_e linear not_less_eq_eq numeral_3_eq_3)
+    subgoal
+      using alternating_list_odd_last cycle(1) cycle(2) inM odd_cycleD(2) by blast
+    done
+  moreover have "last p \<in> Vs M"
+    using inM
+    using Vs_def calculation(2) by fastforce
+  ultimately show False
+    using matching[unfolded matching_def2] inM
+    unfolding matching_def2
+    by auto
+qed
+
 subsection \<open>Blossoms\<close>
 
 text \<open>The definition of what a blossom is w.r.t. a matching.\<close>
@@ -307,7 +430,292 @@ lemma stem_even:
   shows "even (length stem)"
   using assms match_blossom_stem_even by auto
 
-subsection \<open>Quotient graph\<close>
+lemma matched_flower_vertex'_edge_in_flower:
+  assumes "match_blossom M stem C" "{x, y} \<in> M" "x \<in> set (stem@C)" "matching M"
+  shows "{x, y} \<in> set (edges_of_path (stem@C))"
+proof-
+  note match_blossomD= match_blossomD[OF assms(1)]
+  have stemC_nempty:"stem @C \<noteq> []"
+    using assms(3) by fastforce
+  show ?thesis
+  proof(cases "x= hd (stem @ C)")
+    case True
+      (*contradictory case: base of stem is matched*)
+    hence False 
+      using match_blossomD(4) assms(2) edges_are_Vs[of x y M]
+      by auto
+    then show ?thesis
+      by simp
+  next
+    case False
+    obtain i where "i < length (stem @C)" "i > 0" "(stem@C) ! i = x"
+      using False assms(3) stemC_nempty 
+      by(cases "stem @C")(fastforce simp add: in_set_conv_nth)+
+    hence "\<exists> i. i +1 < length (stem @C) \<and> i > 0 \<and> (stem@C) ! i = x"  
+    proof(cases "x = last (stem@C)", goal_cases)
+      case 1
+      thus ?case
+        using odd_cycleD(1,3)[OF match_blossomD(3)] False last_append[of _ C] 
+          nth_append_length_plus[of _ C "0"] assms(1) hd_conv_nth[of C] 
+        by(cases stem)(auto intro!: exI[of _ "length stem"])
+    next
+      case 2
+      thus ?case
+        using less_Suc_eq
+        by(cases "stem @ C" rule: rev_cases)(auto intro!: exI[of _ i])
+    qed
+    then obtain i where i: "i +1 < length (stem @C)" "i > 0" "(stem@C) ! i = x"   
+      by auto
+    have "x \<in> (edges_of_path (stem@C)) ! i"
+      using edges_of_path_index i(1,3) by force
+    moreover have "x \<in> (edges_of_path (stem@C)) ! (i - 1)"
+      using edges_of_path_index[of "i-1" "stem@C"] i by simp
+    moreover have "(edges_of_path (stem@C)) ! i \<in> M \<or> (edges_of_path (stem@C)) ! (i - 1) \<in> M"
+    proof(cases "even i")
+      case True
+      have "Suc (i - 1) < length (stem @ C) \<and> odd (i-1)"
+        using True i(1,2) by auto
+      then show ?thesis
+        using alt_path_intersected_with_matching[OF assms(4) match_blossomD(1)]
+        by fast
+    next
+      case False
+      have "Suc i < length (stem @ C) \<and> odd i"
+        using False i(1) by force
+      then show ?thesis
+        using alt_path_intersected_with_matching[OF assms(4) match_blossomD(1)]
+        by fast
+    qed
+    ultimately have "{x, y} = edges_of_path (stem @ C) ! i \<or>
+         {x, y} = edges_of_path (stem @ C) ! (i-1)"
+      using matchingD[OF assms(4,2), of "edges_of_path (stem @ C) ! i"]
+        matchingD[OF assms(4,2), of "edges_of_path (stem @ C) ! (i-1)"]
+      by auto
+    moreover have "edges_of_path (stem @ C) ! (i-1) \<in> set (edges_of_path (stem @ C))"
+      using i(1,2) edges_of_path_length[of "stem @ C"]
+      by auto
+    moreover have "edges_of_path (stem @ C) ! i \<in> set (edges_of_path (stem @ C))"
+      using i(1,2) edges_of_path_length[of "stem @ C"]
+      by auto
+    ultimately show ?thesis
+      by auto
+  qed
+qed
+
+lemma matched_blossom_vertex'_partner_last_in_stem:
+  assumes "match_blossom M stem C" "{x, y} \<in> M" "x = hd C" "matching M"
+  shows "stem \<noteq> []" "y = last stem"
+proof-
+  note match_blossomD= match_blossomD[OF assms(1)]
+  show  stem_nempty:"stem \<noteq> []"
+    using local.match_blossomD(4) assms(2,3) edges_are_Vs[of x y M]
+    by auto
+  have "alt_path M (stem@[hd C])"
+    using local.match_blossomD(1,3) odd_cycle_nempty[of "[]"]
+      edges_of_path_append_2[of C stem]
+      alt_list_append_1[of "\<lambda>R. R \<notin> M" "\<lambda>R. R \<in> M" "edges_of_path (stem @ [hd C])" "edges_of_path C"]
+    by force
+  hence "last (edges_of_path (stem@[hd C])) \<in> M" 
+    using stem_nempty edges_of_path_snoc[of stem "hd C"]
+    by(auto intro!: last_even_P2[of "\<lambda>a. a \<notin> M" "\<lambda>a. a \<in> M"]
+        match_blossom_stem_even[OF assms(1)]
+        simp add: edges_of_path_length)
+  hence "{last stem, hd C} = {x, y}"
+    using assms stem_nempty last_snoc[of "edges_of_path stem" "{last stem, x}"] 
+      edges_of_path_snoc[of stem x]
+    by (intro matching_revD) force+
+  thus "y = last stem"
+    using assms(3) by (auto simp add: doubleton_eq_iff)
+qed
+
+lemma blossom_matched_in_C:
+  assumes "match_blossom M stem C" "matching M"
+  shows "set (tl (butlast C)) \<subseteq> Vs (M \<lbrakk>set C\<rbrakk>)"
+proof(rule, goal_cases)
+  case (1 x)
+  hence "even (length C)"
+    using assms(1) match_blossomD(3) odd_cycle_even_verts by blast
+  moreover have "tl (butlast C) = butlast (tl C)"
+    by (simp add: butlast_tl)
+  ultimately obtain i where i: "x \<in> edges_of_path C ! i" "Suc i <length C" "odd i"
+    using verts_of_odd_edges[of C, symmetric] 1
+    by (auto simp add: vs_member) 
+  moreover hence "edges_of_path C ! i \<in> M"
+    using alt_path_intersected_with_matching[OF assms(2), of C]
+    using assms(1) match_blossom_alt_cycle by fastforce
+  ultimately have "edges_of_path C ! i \<in> M \<lbrakk> set C\<rbrakk>"
+    by (simp add: edges_of_path_length edges_of_path_subset_path in_graph_inter_VsI)
+  thus ?case 
+    using i by auto
+qed
+
+lemma blossom_matched:
+  assumes "match_blossom M stem C" "matching M"
+  shows "set (tl (butlast C)) \<subseteq> Vs M"
+  using blossom_matched_in_C[OF assms] Vs_subset[OF graph_inter_Vs_subset(1)]
+  by fast
+
+lemma flower_matched_in_C:
+  assumes "match_blossom M stem C" "matching M" "stem \<noteq> []"
+  shows "set (tl (stem @ C)) \<subseteq> Vs (M \<lbrakk> set (stem @ C)\<rbrakk>)"
+proof(rule,  goal_cases)
+  case (1 x)
+  have even_len:"even (length (stem @ C))"
+    using assms(1) odd_cycle_even_verts[of C] match_blossom_stem_even[of M stem C]
+    by (auto dest: match_blossomD(3))
+  have "butlast (tl (stem @ C)) = tl stem @ butlast C"
+    using  assms(1,3) butlast_append[of "tl stem" C] odd_cycle_nempty
+    by (auto dest: match_blossomD(3))
+  moreover have "set (butlast C) = set C"
+    using last_in_set match_blossomD(3)[OF assms(1)] odd_cycleD[of C]
+    by(cases C rule: list_cases_hd_and_last) auto
+  ultimately have "x \<in>  set (butlast (tl (stem @ C)))"
+    using 1 assms(3) by(cases stem) auto
+  then obtain i where i: "x \<in> edges_of_path (stem @ C) ! i" "Suc i < length (stem @ C)" "odd i"
+    using verts_of_odd_edges[of "stem@C", symmetric] even_len 
+    by(auto simp add: vs_member)
+  moreover hence "edges_of_path (stem@C) ! i \<in> M"
+    "edges_of_path (stem@C) ! i \<in> set (edges_of_path (stem@C))"
+    using alt_path_intersected_with_matching[OF assms(2), of "stem@C"]
+      alt_path_prefix assms(1) match_blossomD(1) by fast+
+  ultimately have "edges_of_path (stem@C) ! i \<in> M \<lbrakk> set (stem @ C)\<rbrakk>"
+    using edges_of_path_subset_path[of "edges_of_path (stem @ C) ! i" "stem@C"]
+    by(auto intro!: in_graph_inter_VsI)
+  thus ?case 
+    using i by auto
+qed
+
+lemma flower_matched:
+  assumes "match_blossom M stem C" "matching M" "stem \<noteq> []"
+  shows "set (tl (stem @ C)) \<subseteq> Vs M"
+  using flower_matched_in_C[OF assms] Vs_subset[OF graph_inter_Vs_subset(1)]
+  by fast
+
+lemma blossom_stem_nempty_bloss_base_parter:
+  assumes "match_blossom M stem C" "matching M" "stem \<noteq> []"
+  shows "{hd C, last stem} \<in> M"
+proof-
+  note match_blossomD= match_blossomD[OF assms(1)]
+  have pos: "Suc (length stem - 1) < length (stem @ C)"
+    by (simp add: assms(3) local.match_blossomD(3) odd_cycle_nempty)
+  hence "edges_of_path (stem@C) ! (length stem - 1) = {last stem, hd C}"
+    by(subst edges_of_path_index)
+      (auto simp add: assms(3) hd_conv_nth last_conv_nth nth_append)
+  moreover have "edges_of_path (stem@C) ! (length stem - 1) \<in> M"
+    using pos assms(3) match_blossom_stem_even[OF assms(1)]
+      edges_of_path_length[of "stem @ C"] edges_of_path_length[of stem] pos
+      zero_less_diff[of "length (stem @ C) - 1" "length (edges_of_path stem)"]
+    by(auto intro!: alternating_list_odd_index[OF match_blossomD(1)])
+  ultimately show ?thesis
+    by(auto simp add: insert_commute)
+qed
+
+lemma blossom_cycle_longer_2:
+  assumes \<open>match_blossom M stem cyc\<close> 
+  shows "card (set cyc) \<ge> 2"
+proof-
+  have "distinct (butlast cyc)"
+    using match_blossomD(2)[OF \<open>match_blossom M stem cyc\<close>] distinct_append
+    by blast
+  then have "length (butlast cyc) = card (set (butlast cyc))"
+    by (simp add: distinct_card)
+  have "length (butlast cyc) = length cyc - 1"
+    using length_butlast by blast
+  then have "length (butlast cyc) \<ge> 2"
+    using odd_cycleD(1)[OF match_blossomD(3)[OF \<open>match_blossom M stem cyc\<close>]] 
+    by auto
+  then have "card (set (butlast cyc)) \<ge> 2"
+    using \<open>length (butlast cyc) = card (set (butlast cyc))\<close>
+    by auto
+  moreover have "set cyc = insert (last cyc) (set (butlast cyc))"
+  proof-
+    have "cyc = (butlast cyc) @ [last cyc]"
+      by (metis \<open>length (butlast cyc) = card (set (butlast cyc))\<close> append_butlast_last_id butlast.simps(1) calculation le_zero_eq list.size(3) zero_neq_numeral)
+    then show ?thesis
+      by (metis list.simps(15) rotate1.simps(2) set_rotate1)
+  qed
+  ultimately show ?thesis
+    using card_insert_le order.trans by fastforce
+qed
+
+lemma blossom_diff: 
+assumes
+  "graph_invar E" 
+  "match_blossom M stem cyc"
+  "path E (stem @ cyc)"
+shows "((Vs E) - set cyc) \<subset> (Vs E)" (is "?s \<subset> _")
+proof-  
+  have "set cyc \<subseteq> Vs E"
+    using path_suff subset_path_Vs assms
+    by metis
+  then have "Vs E - ?s = set cyc"
+    by auto
+  moreover have "?s \<subseteq> Vs E"
+    by auto
+  moreover have "card (set cyc) \<ge> 2"
+    using blossom_cycle_longer_2[OF \<open>match_blossom M stem cyc\<close>] .
+  moreover have "finite (Vs E)"
+    by (simp add: assms)
+  ultimately show ?thesis
+    by auto
+qed
+
+lemma match_blossom_distinct_tl:
+  assumes "match_blossom M stem cyc"
+  shows "distinct (tl cyc)"
+proof-
+  have "distinct (butlast cyc)" "hd cyc = last cyc"
+    using match_blossomD[OF assms] odd_cycleD
+    unfolding distinct_append[symmetric] 
+    by auto
+  then have "distinct (tl (butlast cyc))" "hd cyc \<notin> set (tl (butlast cyc))"
+    using distinct_tl
+    by (metis \<open>distinct (butlast cyc)\<close> append_butlast_last_id assms distinct.simps(2) empty_iff hd_append2 list.collapse list.sel(2) list.set(1) match_blossomD(3) odd_cycle_nempty)+
+  then have "distinct ((tl (butlast cyc)) @ [last cyc])"
+    using \<open>hd cyc = last cyc\<close>
+    by auto
+  moreover have "(tl (butlast cyc)) @ [last cyc] = tl cyc" if "length cyc \<ge> 3" for cyc::"'a list"
+    using that
+  proof(induction cyc)
+    case Nil
+    then show ?case by auto
+  next
+    case (Cons a' cyc')
+    then show ?case 
+      by auto
+  qed
+  moreover have "length cyc \<ge> 3"
+    using odd_cycleD(1)[OF match_blossomD(3)[OF assms]]
+    by auto
+  ultimately show ?thesis
+    by auto
+qed
+
+lemma cycle_set_tl_eq_butlast:
+  assumes "match_blossom M stem cyc"
+  shows "set (tl cyc) = set (butlast cyc)"
+  by (metis append_butlast_last_id assms match_blossomD(3) butlast.simps(2) last_tl list.exhaust_sel odd_cycleD(3) odd_cycle_nempty rotate1.simps(2) set_rotate1)
+
+lemma nempty_blossom_stem_last_stem_hd_C_in_C_Delta:
+  assumes "match_blossom M stem C" "stem \<noteq> []" "matching M"
+  shows "{last stem, hd C} \<in> Delta M (set C)"
+proof-
+  have "{hd C, last stem} \<in> M" 
+    using assms
+    by(auto intro!: blossom_stem_nempty_bloss_base_parter)
+  moreover have "hd C \<in> set C"
+    using assms(1) list.set_sel(1) match_blossomD(3) odd_cycle_nempty by blast
+  moreover have "last stem \<notin> set C" 
+    using assms match_blossomD[of M stem C]
+    by(cases stem rule: rev_cases, all \<open>cases C rule: list_cases_hd_and_last\<close>)
+      (auto simp add: odd_cycle_def)
+  ultimately show ?thesis
+    by (auto intro: in_DeltaI simp add: insert_commute)
+qed
+
+subsection \<open>Quotient Graph\<close>
+
+subsubsection \<open>Definitions and Basic Lemmas\<close>
 
 definition quot_graph where
   "quot_graph P G = {e'. \<exists>e\<in>G. e' = P ` e}"
@@ -326,7 +734,6 @@ lemma quot_id: "quot_graph (image id) G = G"  "quot_graph id G = G"
 lemma quot_graph_cong:
   "(\<And> e. e \<in> G \<Longrightarrow> P `e = P' ` e) \<Longrightarrow> quot_graph P G = quot_graph P' G" 
   by(auto simp add: quot_graph_def)
-
 
 lemma dblton_graph_contract_into_one_vert:
   assumes "dblton_graph G"
@@ -400,29 +807,6 @@ proof-
   qed
 qed
 
-(*definition rev_map where
-  "rev_map P s u  \<equiv> SOME v. v \<in> s \<and> P v = u"*)
-
-lemma Vs_quot_graph:
-  shows "v \<in> Vs E \<Longrightarrow> P v \<in> Vs (quot_graph P E)"
-  by (auto simp: quot_graph_def image_def Vs_def)
-
-lemma path_is_quot_path:
-  assumes "path M p"
-  shows "path (quot_graph P M) (map P p)"
-  using assms
-proof(induction)
-  case (path1 v)
-  then show ?case
-    using Vs_quot_graph
-    by simp
-next
-  case (path2 v v' vs)
-  then show ?case
-    using edge_in_graph_in_quot[OF path2.hyps(1)]
-    by auto
-qed simp
-
 text\<open>Locale that fixes the constants concerning graph quotients a.k.a.\ graph contractions\<close>
 
 locale pre_quot = choose sel +
@@ -432,7 +816,6 @@ locale pre_quot = choose sel +
   assumes good_quot_map: (*"\<forall>v\<in>s. P v = v"*) "u\<notin>s" (*"(\<forall>v. v\<notin>s \<longrightarrow> P v = u)"*) and
           rev_map: "s \<subset> Vs E \<Longrightarrow> (rev_P E u) \<in> Vs E - s" "\<And>v. v\<in>s \<Longrightarrow> rev_P E v = v"*)
          
-
 locale quot = pre_quot sel E for sel E +
   fixes s::"'a set" and u::'a
   assumes good_quot_map: "u \<notin> s" "s \<subset> Vs E"
@@ -451,7 +834,6 @@ lemma rev_map_works_1:
   shows "rev_P v = v"
   using assms rev_map good_quot_map
   by (auto simp add: subset_iff)
-
 
 lemma rev_map_works_2:
   assumes "u \<in> Vs (quot_graph P E)" "s \<subset> Vs E"
@@ -480,24 +862,6 @@ lemma edge_in_quot_in_graph_1':
   apply simp
   by (smt dual_order.antisym mem_Collect_eq subset_eq)
 
-(*lemma edge_in_quot_in_graph_2:
-  assumes edge: "(P ` e) \<in> (quot_graph P E)" "u \<in> P ` e"
-  shows "\<exists>e' v. e' \<in> E \<and> P ` e' = P ` e \<and> v \<notin> s \<and> v \<in> e'"
-proof-
-  obtain e' v where e'v: "e' \<in> E \<and> P ` e' = P`e \<and> v \<notin> s \<and> v \<in> e'"
-    using assms good_quot_map
-    apply (auto simp: quot_graph_def Vs_def image_def)
-    sledgehammer
-  then have "e \<inter> s = e' \<inter> s"
-    using good_quot_map
-    unfolding image_def
-    by auto
-  then show ?thesis
-    using e'v
-    by auto
-  apply (auto simp add: quot_graph_def image_def)
-*)
-
 lemma edge_in_quot_in_graph_2':
   assumes edge: "e \<in> (quot_graph P M)" "u \<in> e" "M \<subseteq> E"
   shows "\<exists>e' v. e' \<in> M \<and> P ` e' = e \<and> v \<notin> s \<and> v \<in> e' \<and> e \<inter> s = e' \<inter> s"
@@ -515,8 +879,7 @@ proof-
 qed
 
 lemma edge_in_quot_in_graph_2'_doubleton:
-  assumes edge: "{u, v} \<in> (quot_graph P M)" "v \<in> s" "M \<subseteq> E"(*and
-    graph: "(\<forall>e\<in>E. \<exists>u v. e = {u, v})"*)
+  assumes edge: "{u, v} \<in> (quot_graph P M)" "v \<in> s" "M \<subseteq> E"
   shows "\<exists>w. {v,w} \<in> M \<and> w \<notin> s"
 proof-
   obtain v1 v2 where v1v2: "{v1, v2} \<in> M" "P ` {v1, v2} = {u, v}"
@@ -550,26 +913,200 @@ lemma edge_in_quot_in_graph_2'':
   using edge_in_quot_in_graph_2' assms
   by auto
 
+lemma rev_map_map:
+  assumes "set p \<subseteq> s" "s \<subseteq> t"
+  shows "(map rev_P p) = p"
+  using rev_map
+  by (simp add: assms(1) assms(2) map_idI rev_map_works_1 set_rev_mp)
+
+lemma edge_in_graph_edge_in_quot:
+  assumes "v \<in> s" "w \<notin> s" "{v, w} \<in> E" 
+  shows "{v, u} \<in> quotG E"
+  using assms good_quot_map
+  apply(simp add: image_def quot_graph_def)
+  by (smt (verit, best) Collect_cong Int_insert_left_if0 Un_Int_eq(3) insertCI insert_commute 
+                        insert_def mk_disjoint_insert singleton_conv)
+
+lemma edge_in_graph_edge_in_quot':
+  assumes "v \<in> s" "w \<notin> s" "{w, v} \<in> E" 
+  shows "{u, v} \<in> quotG E "
+  using edge_in_graph_edge_in_quot[of v w] assms 
+  by(auto simp add: insert_commute)
+
+lemma edge_in_s_in_quotG: 
+  assumes "e \<subseteq> s" "G \<subseteq> E"
+  shows "e \<in> quotG G \<longleftrightarrow> e \<in> G"
+proof-
+  have helper1: 
+    "\<lbrakk>(\<lambda>x. u) ` (ea \<inter> {v. v \<notin> s}) \<subseteq> s; ea \<in> G; ea \<inter> s \<union> (\<lambda>x. u) ` (ea \<inter> {v. v \<notin> s}) \<notin> G\<rbrakk>
+      \<Longrightarrow> x = u" for ea x
+    using good_quot_map(1) all_not_in_conv[of "ea \<inter> {R. R \<notin> s}"] inf_sup_aci(1)[of s ea] 
+          subsetI[of ea s] subsetI[of "{}" "(\<lambda>Q. u) ` bot"] inf.absorb2[of ea s] 
+    by auto
+  have helper2: 
+    "\<lbrakk>(\<lambda>x. u) ` (ea \<inter> {v. v \<notin> s}) \<subseteq> s; ea \<in> G; ea \<inter> s \<union> (\<lambda>x. u) ` (ea \<inter> {v. v \<notin> s}) \<notin> G\<rbrakk>
+      \<Longrightarrow> u \<in> ea" for ea 
+    using assms(2) subset_edges_G[of G ea] helper1[of ea]
+    by force
+  have helper3:
+    "\<lbrakk>ea \<in> G; ea \<inter> s \<union> (\<lambda>x. u) ` (ea \<inter> {v. v \<notin> s}) \<notin> G;
+       u \<notin> (\<lambda>x. u) ` (ea \<inter> {v. v \<notin> s})\<rbrakk> \<Longrightarrow> u \<in> s"
+    for ea
+    using rev_image_eqI[of u "ea \<inter> {R. R \<notin> s}" u "\<lambda>Q. u"]
+      helper2[of ea] 
+    by auto
+  show ?thesis
+    using assms
+    by(auto simp add: quot_graph_def intro: helper1 helper2 helper3)
+qed
+
+lemma edge_in_s_then_in_quotG:  
+  "\<lbrakk>e \<subseteq> s;  e \<in> E\<rbrakk> \<Longrightarrow> e \<in> quotG E"
+ and edge_in_s_id_in_quotG:  
+  "\<lbrakk>e \<subseteq> s; e \<in> quotG E\<rbrakk> \<Longrightarrow> e \<in> E"
+ and edge_in_s_then_in_quot_graph: 
+  "\<lbrakk>e \<subseteq> s;  e \<in> E\<rbrakk> \<Longrightarrow> e \<in> quot_graph P E"
+  using edge_in_s_in_quotG by auto
+
+lemma edge_in_s_then_in_quotG_subgraph:  
+  "\<lbrakk>e \<subseteq> s; e \<in> G; G \<subseteq> E\<rbrakk> \<Longrightarrow> e \<in> quotG G"
+ and edge_in_s_id_in_quotG_subgraph:  
+  "\<lbrakk>e \<subseteq> s; e \<in> quotG G; G \<subseteq> E\<rbrakk> \<Longrightarrow> e \<in> G"
+  using edge_in_s_in_quotG by auto
+
+lemma in_quotG_subset_E: 
+  "\<lbrakk>e \<in> quotG G; G \<subseteq> E; 
+    \<And> ua va. \<lbrakk>e = {ua, va}; ua \<noteq> va; {ua, va} \<subseteq> s; e \<in> G; e \<noteq> {u}; P ` {ua, va} = e\<rbrakk> \<Longrightarrow> Q;
+    \<And> va ua. \<lbrakk>e = {u, va}; va \<in> s; ua \<notin> s; {ua, va} \<in> G; ua \<noteq> va; e \<noteq> {u}; P ` {ua, va} = e\<rbrakk> \<Longrightarrow> Q\<rbrakk> \<Longrightarrow> Q"
+proof(goal_cases)
+  case 1
+  then obtain e' where e':  "e' \<in> E" "e = P ` e'" "e \<noteq> {u}"  "e' \<in> G"
+    by(auto simp add: quot_graph_def)
+  then obtain ua va where uava: "e' = {ua, va}" "ua \<noteq> va"
+    by (auto elim!: dblton_graphE)
+  show ?case
+  proof(cases "{ua, va} \<subseteq> s")
+    case True
+    hence "e = e'"
+      by (simp add: e'(2) uava(1))
+    then show ?thesis 
+      using True uava e'(4)
+      by(auto intro!: 1(3)[of ua va])
+  next
+    case False
+    then obtain ua va where uava: "e' = {ua, va}" "ua \<noteq> va" "ua \<notin> s" "va \<in> s"
+      using e'(2,3) uava(1) by auto
+    then show ?thesis 
+      using e' by(auto intro!: 1(4)[of va ua])
+  qed
+qed
+
+lemma in_quotGE: 
+  "\<lbrakk>e \<in> quotG E; \<And> ua va. \<lbrakk>e = {ua, va}; ua \<noteq> va; {ua, va} \<subseteq> s; e \<in> E; e \<noteq> {u}; P ` {ua, va} = e\<rbrakk> \<Longrightarrow> Q;
+     \<And> va ua. \<lbrakk>e = {u, va}; va \<in> s; ua \<notin> s; {ua, va} \<in> E; ua \<noteq> va; e \<noteq> {u}; P ` {ua, va} = e\<rbrakk> \<Longrightarrow> Q\<rbrakk> \<Longrightarrow> Q"
+proof(goal_cases)
+  case 1
+  then obtain e' where e':  "e' \<in> E" "e = P ` e'" "e \<noteq> {u}"
+    by(auto simp add: quot_graph_def)
+  then obtain ua va where uava: "e' = {ua, va}" "ua \<noteq> va"
+    by (auto elim!: dblton_graphE)
+  show ?case
+  proof(cases "{ua, va} \<subseteq> s")
+    case True
+    hence "e = e'"
+      by (simp add: e'(2) uava(1))
+    then show ?thesis 
+      using True uava e'(1)
+      by(auto intro!: 1(2)[of ua va])
+  next
+    case False
+    then obtain ua va where uava: "e' = {ua, va}" "ua \<noteq> va" "ua \<notin> s" "va \<in> s"
+      using e'(2,3) uava(1) by auto
+    then show ?thesis 
+      using e' by(auto intro!: 1(3)[of va ua])
+  qed
+qed
+
+lemma in_quot_graphE: 
+  "\<lbrakk>e \<in> quot_graph P E; \<And> ua va. \<lbrakk>e = {ua, va}; ua \<noteq> va; {ua, va} \<subseteq> s; e \<in> E; e \<noteq> {u}; P ` {ua, va} = e\<rbrakk> \<Longrightarrow> Q;
+     \<And> va ua. \<lbrakk>e = {u, va}; va \<in> s; ua \<notin> s; {ua, va} \<in> E; ua \<noteq> va; e \<noteq> {u}; P ` {ua, va} = e\<rbrakk> \<Longrightarrow> Q;
+     \<And> ua va. \<lbrakk>e = {u}; {ua, va} \<inter> s = {}; {ua, va} \<in> E; P ` {ua, va} = e\<rbrakk> \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
+proof(goal_cases)
+  case 1
+  then obtain e' where e':  "e' \<in> E" "e = P ` e'" 
+    by(auto simp add: quot_graph_def)
+  then obtain ua va where uava: "e' = {ua, va}" "ua \<noteq> va"
+    by (auto elim!: dblton_graphE)
+  show ?case
+  proof(cases "{ua, va} \<subseteq> s")
+    case True
+    hence "e = e'"
+      by (simp add: e'(2) uava(1))
+    then show ?thesis 
+      using True uava e'(1)
+      by(auto intro!: 1(2)[of ua va])
+  next
+    case False
+    note false = this
+    show ?thesis
+    proof(cases "{ua, va} \<inter> s = {}")
+      case True
+      hence "e = {u}"
+        by (simp add: e'(2) uava(1))
+      then show ?thesis
+        using True e'(1) uava(1) 
+        by(auto intro!: 1(4)[of ua va])
+    next
+      case False
+      hence e_neq_u: "e \<noteq> {u}" 
+        using  e'(2) good_quot_map(1) uava(1) by auto
+     obtain ua va where uava: "e' = {ua, va}" "ua \<noteq> va" "ua \<notin> s" "va \<in> s"
+      using e'(2) e_neq_u  uava(1) false False by auto
+    then show ?thesis 
+      using e' e_neq_u by(auto intro!: 1(3)[of va ua])
+  qed
+qed
+qed
+
+lemma subgraph_edge_in_graph_edge_in_quot:
+  assumes "v \<in> s" "w \<notin> s" "{v, w} \<in> G" "G \<subseteq> E"
+  shows "{v, u} \<in> quotG G"
+  using assms good_quot_map
+  apply(simp add: image_def quot_graph_def)
+  by (smt (verit, best) Collect_cong Int_insert_left_if0 Un_Int_eq(3) insertCI insert_commute 
+                        insert_def mk_disjoint_insert singleton_conv)
+
+lemma subgraph_edge_in_graph_edge_in_quot':
+  assumes "v \<in> s" "w \<notin> s" "{w, v} \<in> G" "G \<subseteq> E"
+  shows "{u, v} \<in> quotG G"
+  using subgraph_edge_in_graph_edge_in_quot[of v w] assms 
+  by(auto simp add: insert_commute)
+end
+
+subsubsection \<open>Basic Graph Theory on Quotients\<close>
+
+lemma Vs_quot_graph:
+  shows "v \<in> Vs E \<Longrightarrow> P v \<in> Vs (quot_graph P E)"
+  by (auto simp: quot_graph_def image_def Vs_def)
+
 lemma path_is_quot_path:
-  assumes path: "path (quotG E) p" "set p \<subseteq> s"
-  shows "path E (map rev_P p)"
+  assumes "path M p"
+  shows "path (quot_graph P M) (map P p)"
   using assms
-proof(induction )
-case (path0)
-  then show ?case
-   by simp
-next
+proof(induction)
   case (path1 v)
   then show ?case
-    using rev_map_works_1 good_quot_map
-    apply simp
-    by blast
+    using Vs_quot_graph
+    by simp
 next
   case (path2 v v' vs)
   then show ?case
-    using rev_map_works_1
-    using edge_in_quot_in_graph_1' by auto
-qed
+    using edge_in_graph_in_quot[OF path2.hyps(1)]
+    by auto
+qed simp
+
+context quot
+begin
 
 lemma edge_of_path_in_graph_iff_in_quot:
   assumes "set p \<subseteq> s" "e \<in> set (edges_of_path p)" "M \<subseteq> E"
@@ -590,40 +1127,6 @@ proof-
   ultimately show ?thesis
     by blast
 qed
-
-lemma dblton_graph_contract_into_one_vert:
-  "\<lbrakk>dblton_graph G; contr = (\<lambda> v. if v \<in> S then new_vert else v); new_vert \<notin> Vs G - S\<rbrakk>
-       \<Longrightarrow> dblton_graph (quot_graph contr G - {{new_vert}})"
-proof(rule dblton_graphI, goal_cases)
-  case (1 e)
-  then obtain e' where "e = contr ` e'" "e' \<in> G" "contr ` e' \<noteq> {new_vert}"
-    by(auto simp add: quot_graph_def)
-  moreover then obtain u v where "e' = {u, v}" "u \<noteq> v"
-    using "1"(1) by force
-  ultimately have "e = {contr u, contr v}" "contr u \<noteq> contr v"
-    by (auto simp add: 1(2))
-  thus ?case
-    by auto
-qed
-
-lemma rev_map_map:
-  assumes "set p \<subseteq> s" "s \<subseteq> t"
-  shows "(map rev_P p) = p"
-  using rev_map
-  by (simp add: assms(1) assms(2) map_idI rev_map_works_1 set_rev_mp)
-
-lemma quot_alt_path_iff_alt_path:
-  assumes path: "set p \<subseteq> s" "s \<subseteq> t"
-  shows "alt_list (\<lambda>e. e \<notin> (quotG E)) (\<lambda>e. e \<in> (quotG E)) (edges_of_path p) =
-                      alt_list (\<lambda>e. e \<notin> E) (\<lambda>e. e \<in> E) (edges_of_path (map rev_P p))"
-  using edge_of_path_in_graph_iff_in_quot[OF path(1)]
-  by(auto intro!: alt_list_cong_eq simp: rev_map_map[OF path])
-
-lemma path_is_quot_path':
-  assumes path: "path (quotG E) p" "set p \<subseteq> s"
-  shows "path E p"
-  using rev_map_map path_is_quot_path[OF assms] path(2) good_quot_map
-  by auto
 
 lemma vert_in_graph_iff_in_quot:
   assumes path: "v \<in> s" "M \<subseteq> E"
@@ -661,6 +1164,445 @@ lemma vert_in_graph_iff_in_quot_diff_u:
   using v_in_quot_iff_minus_u[OF assms] vert_in_graph_iff_in_quot[OF assms]
   by simp
 
+lemma quot_Vs_in_s: "Vs (quotG E) \<supseteq> s"
+  using vert_in_graph_iff_in_quot_diff_u good_quot_map(2) by auto
+
+lemma in_quot_graph_neq_u:
+  assumes "v \<in> Vs(quot_graph P M)" "v \<noteq> u"
+  shows "v \<in> s"
+  using assms good_quot_map
+  unfolding Vs_def quot_graph_def
+  apply simp
+  by force
+
+lemma Vs_quotG_subset_Vs_quot_graph:
+  "Vs (quotG M) \<subseteq> Vs(quot_graph P M)"
+  unfolding Vs_def quot_graph_def
+  by auto
+
+lemma in_quotG_neq_u:
+  assumes "v \<in> Vs (quotG M)" "v \<noteq> u"
+  shows "v \<in> s"
+proof-
+  have "v \<in> Vs(quot_graph P M)"
+    using assms in_quot_graph_neq_u[OF _ assms(2)] Vs_quotG_subset_Vs_quot_graph
+    by force
+  then show ?thesis
+    using in_quot_graph_neq_u assms
+    by blast
+qed
+
+lemma neq_u_notin_quot_graph:
+  assumes "v \<notin> s" "v \<noteq> u"
+  shows "v \<notin> Vs (quot_graph P E)"
+  using assms
+  by (metis in_quot_graph_neq_u)
+
+lemma neq_u_notin_quotG:
+  assumes "v \<notin> s" "v \<noteq> u"
+  shows "v \<notin> Vs (quotG E)"
+  using assms
+  using in_quotG_neq_u by blast
+
+lemma path_is_quot_path:
+  assumes path: "path (quotG E) p" "set p \<subseteq> s"
+  shows "path E (map rev_P p)"
+  using assms
+proof(induction )
+case (path0)
+  then show ?case
+   by simp
+next
+  case (path1 v)
+  then show ?case
+    using rev_map_works_1 good_quot_map
+    apply simp
+    by blast
+next
+  case (path2 v v' vs)
+  then show ?case
+    using rev_map_works_1
+    using edge_in_quot_in_graph_1' by auto
+qed
+
+lemma path_is_quot_path':
+  assumes path: "path (quotG E) p" "set p \<subseteq> s"
+  shows "path E p"
+  using rev_map_map path_is_quot_path[OF assms] path(2) good_quot_map
+  by auto
+
+lemma s_not_in_quot_Delta_s_empty:
+  assumes"u \<notin> Vs (quotG E)"
+  shows "Delta E s= {}" 
+proof(rule ccontr, goal_cases)
+  case 1
+  then obtain x y where "x \<in> s" "y \<notin> s" "{x, y} \<in> E"
+    by(auto elim!: in_DeltaE)
+  hence "{y, u} \<in> (quotG E)"
+    unfolding quot_graph_def
+    using assms edge_in_graph_edge_in_quot edges_are_Vs_2 
+    by(auto intro!: bexI[of _ "{y, u}"])
+  hence "u \<in> Vs (quotG E)" 
+    by auto
+  then show ?case 
+    using assms by auto
+qed
+
+lemma Delta_s_empty_s_not_in_quot:
+  assumes "Delta E s= {}" 
+  shows"u \<notin> Vs (quotG E)"
+proof-
+  have "xc = u"
+    if "\<And> x u v. \<lbrakk>u \<in> s; {u, v} \<in> E; x = {u, v}\<rbrakk> \<Longrightarrow> v \<in> s"
+       "e \<in> E" "xb \<in> e" "xb \<notin> s" "xc \<in> e" "xc \<in> s"
+     for e xb xc
+    using that(2)
+  proof(elim dblton_graphE[of e], goal_cases)
+    case (1 u v)
+    then show ?case 
+      using that(2,3,4,5,6) that(1)[of v u "{v, u}"] that(1)[of u v "{u, v}"]
+      by (auto simp add: insert_commute)
+  qed
+  thus ?thesis
+    using good_quot_map assms(1) 
+    by(auto simp add: Delta_def quot_graph_def vs_member)
+qed
+
+
+lemma Delta_s_empty_iff_s_not_in_quot:
+ "Delta E s = {} \<longleftrightarrow> u \<notin> Vs (quotG E)"
+  using Delta_s_empty_s_not_in_quot s_not_in_quot_Delta_s_empty by blast
+
+lemma Delta_s_Delta_compl_s_iff_empty:
+  "Delta E s = {} \<longleftrightarrow> Delta E (Vs E - s) = {}"
+proof-
+  have helper:"v \<in> s"
+    if "\<And> x u v. \<lbrakk>u \<in> Vs E; {u, v} \<in> E; x = {u, v}\<rbrakk> \<Longrightarrow> u \<in> s \<or> v \<in> Vs E \<and> v \<notin> s"
+    "u \<in> s" "{u, v} \<in> E" for u v
+    using that insert_commute[of u v "{}"] edges_are_Vs[of v u E]
+    by auto
+  show ?thesis
+    by(auto simp add: Delta_def insert_commute| rule helper)+
+qed
+
+lemma Delta_wth_s_empty_quot_Vs:
+ "Delta E (Vs E - s) = {} \<Longrightarrow> Vs (quotG E) = s"
+ using Delta_s_Delta_compl_s_iff_empty Delta_s_empty_iff_s_not_in_quot quot_Vs_in_s
+  by (auto intro!: in_quotG_neq_u)
+
+lemma Delta_wth_s_nonempty_quot_Vs:
+ "Delta E (Vs E - s) \<noteq> {} \<Longrightarrow> Vs (quotG E) = insert u s"
+  using quot_Vs_in_s  neq_u_notin_quotG  Delta_s_Delta_compl_s_iff_empty s_not_in_quot_Delta_s_empty 
+  by force+
+
+lemma connected_set_of_vertices_quot_iff:
+  assumes "X \<subseteq> s" "Y \<subseteq> s"
+  shows "X \<longleftrightarrow>\<^bsub>quot_graph P E - {{u}}\<^esub> Y \<longleftrightarrow> X \<longleftrightarrow>\<^bsub>E\<^esub> Y"
+proof-
+  have "\<exists>ua v. {ua, v} \<in> quot_graph P E \<and> (ua = u \<longrightarrow> v \<noteq> u) \<and> ua \<in> X \<and> v \<in> Y"
+    if "X \<subseteq> s" "Y \<subseteq> s" "{ua, v} \<in> E" "ua \<in> X" "v \<in> Y"
+    for ua v
+   using that
+   by(auto intro!: exI[of _ ua, OF exI[of _ v]] 
+         simp add: edge_in_s_then_in_quot_graph subset_iff)
+  thus ?thesis
+    using assms
+    by (auto simp add: connected_set_of_vertices_def dest!: edge_in_quot_in_graph_1')
+qed
+
+lemma connected_set_of_vertices_quot_iff_u:
+  assumes "u \<in> X" "Y \<subseteq> s" 
+  shows "X \<longleftrightarrow>\<^bsub>quotG E\<^esub> Y \<longleftrightarrow> X - {u} \<union> (Vs E - s) \<longleftrightarrow>\<^bsub>E\<^esub> Y"
+proof(rule, goal_cases)
+  case 1
+  then obtain ua va where "{ua, va} \<in> quotG E" "ua \<in> X" "va \<in> Y"
+    by(auto simp add: connected_set_of_vertices_def)
+  then show ?case 
+  proof(elim in_quotGE, goal_cases)
+    case (1 uaa vaa)
+    then obtain uaa vaa where  "uaa \<in> X - {u}" "vaa \<in> Y" "{uaa, vaa} \<in> E"
+      using good_quot_map(1) by(auto simp add: doubleton_eq_iff)
+    then show ?case 
+      by(auto simp add: connected_set_of_vertices_def)
+  next
+    case (2 y x)
+    hence unfolds: "ua = u" "va = y"
+      using assms(2) good_quot_map(1)
+      by(auto simp add: doubleton_eq_iff)
+    note 2 = 2[simplified unfolds]
+    hence "x \<in> Vs E - s"
+      by blast
+    thus ?thesis
+      using 2
+      by(auto intro!: exI[of _ x, OF exI[of _ y]] 
+            simp add: connected_set_of_vertices_def)
+  qed
+next
+  case 2
+  then obtain x y where xy: "{x, y} \<in> E" "x \<in> X - {u} \<union> (Vs E - s)" "y \<in> Y"
+    by(auto simp add: connected_set_of_vertices_def)
+  then show ?case 
+  proof(cases "x \<in> (Vs E - s)", goal_cases)
+    case 1
+    have "{y, u} \<in> quotG E"
+      using assms(2) xy(3)  "1"(4) 
+      by(intro edge_in_graph_edge_in_quot[where w = x])
+        (auto simp add: insert_commute xy(1))
+    then show ?case
+      using assms(1) 1(3)
+      by(auto intro!: exI[of _ u, OF exI[of _ y]]  
+          simp add: connected_set_of_vertices_def insert_commute)
+  next
+    case 2
+    hence x_in_s:"x \<in> s"
+      by blast
+    hence "{x, y} \<in> quotG E"
+      using 2 assms(2) 
+      by (intro edge_in_s_then_in_quotG) auto
+    then show ?case 
+      using 2
+      by(auto simp add: connected_set_of_vertices_def)
+  qed
+qed
+
+lemma u_in_X_Neighbourhood_expanded:
+  assumes "u \<in> X"
+  shows "Neighbourhood (quotG E) X = Neighbourhood E (X - {u} \<union> (Vs E - s))"
+proof(rule, all \<open>rule, elim in_NeighbourhoodE\<close>, goal_cases)
+  case (1 x y)
+  then show ?case 
+  proof(elim in_quotGE, goal_cases)
+    case (1 ua va)
+    then show ?case 
+       using good_quot_map(1)
+       by(auto intro: in_NeighbourhoodI[of ua va]  in_NeighbourhoodI[of va ua] 
+            simp add: doubleton_eq_iff in_NeighbourhoodI)
+  next
+    case (2 va ua)
+    hence "u \<in> Vs (quotG E)"
+      using "1"(1) by auto
+    thus ?case
+      using 2 assms 
+      by (auto simp add: doubleton_eq_iff  edges_are_Vs in_NeighbourhoodI)
+  qed
+next
+  case (2 x y)
+  have "\<lbrakk>{y, x} \<in> E; u \<notin> s; u \<in> X; y \<in> X; y \<noteq> u; x \<notin> X; x \<in> s\<rbrakk>
+         \<Longrightarrow> x \<in> Neighbourhood (quot_graph P E - {{u}}) X"
+    using  edge_in_graph_edge_in_quot'[of x y] edge_in_s_then_in_quotG[of "{y, x}"] 
+           in_NeighbourhoodI[of y x "quot_graph P E - {{u}}" X]
+           in_NeighbourhoodI[of u x "quot_graph P E - {{u}}" X]
+    by auto
+  then show ?case 
+     using 2 good_quot_map(1) assms(1) edge_in_graph_edge_in_quot[of x y] 
+           in_NeighbourhoodI[of u x "quot_graph P E - {{u}}" X]
+     by(auto simp add: insert_commute)
+  qed
+
+lemma u_not_in_subgraph_same_subgraph:
+  assumes "u \<notin> X"  "X \<subseteq> Vs (quotG E)" "G \<subseteq> E"
+  shows "(quotG G) \<lbrakk>X\<rbrakk> = G \<lbrakk>X\<rbrakk>"
+proof(rule, all \<open>rule, elim in_graph_inter_VsE\<close>, goal_cases)
+  case (1 e)
+  thus ?case
+  proof(elim in_quotG_subset_E[OF _ assms(3)], goal_cases)
+    case (1 ua va)
+    then show ?case
+      by(auto intro!: in_graph_inter_VsI)
+  next
+    case (2 va ua)
+    then show ?case 
+      using assms by auto
+  qed
+next
+  case (2 e)
+  then obtain x y where xy: "e = {x, y}" "x \<noteq> y" "{x, y} \<in> G"
+    using assms(3) by force
+  hence "e \<subseteq> s" 
+    using 2  assms(1,2) neq_u_notin_quotG by auto
+  then show ?case
+  proof(intro  in_graph_inter_VsI, goal_cases)
+    case 1
+    then show ?case
+      using 2 assms(1) 
+      by(auto intro!: bexI[of _ e] simp add: quot_graph_def)
+  qed (simp add: 2)
+qed
+
+lemma quot_Delta_no_change:
+ "\<lbrakk>neighbourhood (quotG G) u \<subseteq> X; G \<subseteq> E; u\<in> X\<rbrakk> 
+    \<Longrightarrow> Delta (quotG G) X = Delta G (X - {u} \<union> (Vs E - s))"
+proof(rule, all \<open>rule, elim in_DeltaE\<close>, goal_cases)
+  case (1 e u1 v1)
+  then show ?case 
+  proof(elim in_quotG_subset_E, goal_cases)
+    case 1
+    then show ?case 
+      by auto
+  next
+    case (2 ua va)
+    then show ?case 
+      using  good_quot_map(1)
+      by(auto intro!: in_DeltaI[of "{u1, v1}" u1 v1 G "X - {u} \<union> (Vs E - s)"]
+                      in_DeltaI[of "{v1, u1}" u1 v1 G "X - {u} \<union> (Vs E - s)"] 
+            simp add: doubleton_eq_iff)
+  next
+    case (3 va ua)
+    hence "{u, va} \<in> quotG G"
+      using "1"(5) by presburger
+    hence "va \<in> neighbourhood (quotG G) u" 
+      by(auto simp add: neighbourhood_def doubleton_eq_iff insert_commute)
+    hence "va \<in> X"
+      using "3"(1) by blast
+    thus ?case 
+      using "3"(3,4,6,7) by(auto simp add: doubleton_eq_iff)
+  qed
+next
+  case (2 e u1 v1)
+  have u1: "u1 \<notin> Vs E - s"
+  proof(rule ccontr, goal_cases)
+    case 1
+    hence "{u, v1} \<in> quotG G"
+      using "2"(2,4,5,7) subgraph_edge_in_graph_edge_in_quot' vs_member' by auto
+    hence "v1 \<in> neighbourhood (quotG G) u" "v1 \<noteq> u"
+      by(auto simp add: neighbourhood_def insert_commute)
+    hence "v1 \<in> X" "v1 \<noteq> u"
+      using "2"(1) by blast+
+    then show ?case 
+      using "2"(7) by force
+  qed
+  hence "e \<in> quotG G"
+    using "2"(2,4,5,7) empty_subsetI[of s] edge_in_s_in_quotG[of e G]
+    by auto
+  thus ?case
+    using 2 u1 good_quot_map(1) 
+    by (intro in_DeltaI[of e u1 v1 "quotG G" X]) auto
+qed
+
+lemma quot_Delta_no_change2:
+  "\<lbrakk>u \<notin> X; u \<notin> Neighbourhood (quotG G) X; G \<subseteq> E; X \<subseteq> s\<rbrakk> \<Longrightarrow>
+   Delta (quotG G) X = Delta G X"
+proof(rule, all \<open>rule, elim in_DeltaE not_in_NeighbourhoodE\<close>, goal_cases)
+  case (1 e uu vv)
+  then show ?case
+  proof(elim in_quotG_subset_E, goal_cases)
+    case 1
+    then show ?case
+      by simp
+  next
+    case (2 ua va)
+    then show ?case 
+      by(intro in_DeltaI[of e uu vv G X])(auto simp add: doubleton_eq_iff)
+  next
+    case (3 va ua)
+    then show ?case 
+      using 1
+      by(auto simp add: doubleton_eq_iff)
+  qed
+next
+  case (2 e uu vv)
+  have "vv \<in> s"
+  proof(rule ccontr, goal_cases)
+    case 1
+    hence "{uu, u} \<in> quotG G"
+      using "2"(2,3,4,5,6) subgraph_edge_in_graph_edge_in_quot by blast
+    then show ?case
+      using "2"(1,6,8) by blast
+  qed
+  moreover hence "{uu, vv} \<in> quotG G"
+    using "2"(2,3,4,5,6,7) edge_in_s_then_in_quotG_subgraph by auto
+  ultimately show ?case
+    using 2
+    by(auto intro!: in_DeltaI[of "{uu, vv}" uu vv "quotG G" X])
+qed
+
+lemma Neighbourhood_quot:
+  assumes "u \<notin> Vs E"  "Vs E - s \<subseteq> X"
+  shows "Neighbourhood (quotG E) (X - (Vs E - s) \<union> {u}) = Neighbourhood E X"
+proof(rule, all \<open>rule, elim in_NeighbourhoodE\<close>, goal_cases)
+  case (1 x y)
+  then show ?case 
+  proof(elim in_quotGE, goal_cases)
+    case (1 ua va)
+    then show ?case 
+      using good_quot_map(1) 
+      by (auto simp add: doubleton_eq_iff in_NeighbourhoodI)
+  next
+    case (2 va ua)
+    then show ?case
+      using assms(2)
+      by (auto simp add: doubleton_eq_iff edges_are_Vs in_mono 
+          intro!: in_NeighbourhoodI[of ua va])
+  qed
+next
+  case (2 x y)
+  then show ?case 
+  proof(cases "y \<in> Vs E - s", goal_cases)
+    case 1
+    then show ?case
+      using assms 
+      by (intro in_NeighbourhoodI[of u x] edge_in_graph_edge_in_quot')
+        (auto dest: edges_are_Vs_2)
+  next
+    case 2
+    then show ?case
+      using assms 
+      by(auto intro!: in_NeighbourhoodI[of y x] edge_in_s_then_in_quot_graph 
+          intro: edges_are_Vs_2)
+  qed
+qed 
+
+
+lemma quotG_graph_inter_Vs_flip:
+  assumes "G \<subseteq> E" "u \<in> X"
+  shows "quotG (G \<lbrakk>X - {u} \<union> (Vs E - s)\<rbrakk>) = (quotG G) \<lbrakk>X\<rbrakk>"
+proof(rule, all \<open>rule\<close>, goal_cases)
+  case (1 e)
+  then show ?case 
+  proof(elim in_quotG_subset_E, goal_cases)
+    case 1
+    then show ?case 
+      using assms graph_inter_Vs_subset(1) by blast
+  next
+    case (2 ua va)
+    then show ?case 
+      using good_quot_map(1)  edge_in_graph_in_quot[of e G P] in_graph_inter_VsD(1)[of e G X] 
+      by (auto intro!: in_graph_inter_VsI[of "{ua, va}"] elim: in_graph_inter_VsE)
+  next
+    case (3 va ua)
+    then show ?case 
+      using assms "3"(7) edge_in_graph_in_quot[of "{ua, va}" G P]
+        graph_inter_Vs_subset(2)[of G "X - {u} \<union> (Vs E - s)"]
+        edges_are_Vs_2[of ua va " G \<lbrakk>X - {u} \<union> (Vs E - s)\<rbrakk>"]
+      by (auto intro!: in_graph_inter_VsI[of "{u, va}"] elim!: in_graph_inter_VsE)
+  qed
+next
+  case (2 e)
+  then show ?case 
+  proof(elim in_graph_inter_VsE in_quotG_subset_E[OF _ assms(1)], goal_cases)
+    case (1 ua va)
+    then show ?case
+      using good_quot_map(1)  assms(1) graph_inter_Vs_subset(1) 
+      by (intro edge_in_s_then_in_quotG_subgraph)
+        (auto intro!: in_graph_inter_VsI[of "{ua, va}" G "X- {u} \<union> (Vs E - s)"])
+  next
+    case (2 va ua)
+    then show ?case
+      using assms unfolding 2
+      by(intro subgraph_edge_in_graph_edge_in_quot'[of va ua])
+        (auto intro!: in_graph_inter_VsI elim!: in_graph_inter_VsE)
+  qed
+qed
+
+subsection\<open>Lifting a quotient augmenting path\<close>
+
+lemma quot_alt_path_iff_alt_path:
+  assumes path: "set p \<subseteq> s" "s \<subseteq> t"
+  shows "alt_list (\<lambda>e. e \<notin> (quotG E)) (\<lambda>e. e \<in> (quotG E)) (edges_of_path p) =
+                      alt_list (\<lambda>e. e \<notin> E) (\<lambda>e. e \<in> E) (edges_of_path (map rev_P p))"
+  using edge_of_path_in_graph_iff_in_quot[OF path(1)]
+  by(auto intro!: alt_list_cong_eq simp: rev_map_map[OF path])
+
 text\<open>An augmenting path in the graph is one iff it is an augmenting path in the quotient, if it does
       not touch any of the contracted vertices\<close>
 
@@ -686,8 +1628,6 @@ proof-
     unfolding matching_augmenting_path_def
     by auto
 qed
-
-subsection\<open>Lifting a quotient augmenting path\<close>
 
 text\<open>This is the proof of lifting a contracted augmenting path to a concrete graph, if it
      intersects with a contracted vertex.\<close>
@@ -781,128 +1721,8 @@ qed
 
 end
 
-text\<open>Since it is an odd cycle, then either both the first and last edges are matching edges or no.\<close>
-
-lemma odd_cycle_hd_last_or:
-  assumes cycle: "odd_cycle p" "alt_path M p"
-  shows "(hd (edges_of_path p) \<in> M \<and> last (edges_of_path  p) \<in> M) \<or>
-                (hd (edges_of_path p) \<notin> M \<and> last (edges_of_path p) \<notin> M)"
-proof-
-  let ?ep = "edges_of_path p"
-  show ?thesis
-  proof(cases "length (filter (\<lambda>e. e \<notin> M) ?ep) < length (filter (\<lambda>e. e \<in> M) ?ep)")
-    case True
-    then have "alt_list (\<lambda>e. e \<in> M) (\<lambda>e. e \<notin> M) (edges_of_path p)"
-      using cycle
-      unfolding odd_cycle_def
-      using alternating_list_gt_or
-      by blast
-    then show ?thesis
-      using cycle
-      unfolding odd_cycle_def
-      apply(intro disjI1 alternating_list_gt)
-      using alt_list_not_commute
-        True
-      by blast+
-  next
-    have "odd (length (edges_of_path p))"
-      using cycle
-      unfolding odd_cycle_def
-      by simp
-    then have "length (filter (\<lambda>e. e \<notin> M) ?ep) \<noteq> length (filter (\<lambda>e. e \<in> M) ?ep)"
-      apply(intro alternating_eq_even'; simp)
-      using cycle
-      unfolding odd_cycle_def by simp
-    moreover case False
-    ultimately have "length (filter (\<lambda>e. e \<in> M) ?ep) < length (filter (\<lambda>e. e \<notin> M) ?ep)"
-      by simp
-    then show ?thesis
-      apply(intro disjI2 alternating_list_gt)
-      using cycle
-      unfolding odd_cycle_def
-      by auto    
-  qed
-qed
-
-lemma matching_odd_cycle_hd_last_unmatched:
-  assumes cycle: "odd_cycle p" "alt_path M p" "distinct (tl p)" and
-          matching: "matching M"
-  shows "(hd (edges_of_path p) \<notin> M \<and> last (edges_of_path p) \<notin> M)"
-proof(rule ccontr)
-  assume "\<not> (hd (edges_of_path p) \<notin> M \<and> last (edges_of_path p) \<notin> M)"
-  then have inM: "hd (edges_of_path p) \<in> M \<and> last (edges_of_path p) \<in> M"
-    using odd_cycle_hd_last_or[OF cycle(1,2)]
-    by auto
-  have "distinct (edges_of_path (tl p))"
-    using cycle(3)
-    by (simp add: distinct_edges_of_vpath)
-  then have "distinct (edges_of_path p)"
-    using cycle[unfolded odd_cycle_def] 
-    apply (cases p; simp add: distinct_edges_of_vpath split: if_splits)
-    by (metis alt_list.cases inM length_greater_0_conv list.sel(1) odd_pos)
-  moreover have "length (edges_of_path p) \<ge> 2"
-    using cycle(1)
-    unfolding odd_cycle_def
-    using edges_of_path_length
-    by (smt One_nat_def Suc_1 Suc_leI antisym_conv diff_Suc_Suc diff_zero eq_diff_iff le_trans less_le numeral_3_eq_3 odd_pos one_le_numeral)
-  ultimately have "hd (edges_of_path p) \<noteq> last (edges_of_path p)"
-    by (metis One_nat_def Suc_1 Suc_le_length_iff distinct.simps(2) last.simps last_in_set le_zero_eq length_0_conv list.sel(1) nat.simps(3))
-  moreover have "last p \<in> (hd (edges_of_path p))" "last p \<in> (last (edges_of_path p))"
-    using cycle
-    unfolding odd_cycle_def
-    subgoal by (metis One_nat_def Suc_1 hd_v_in_hd_e linear not_less_eq_eq numeral_3_eq_3)
-    subgoal
-      using alternating_list_odd_last cycle(1) cycle(2) inM odd_cycleD(2) by blast
-    done
-  moreover have "last p \<in> Vs M"
-    using inM
-    using Vs_def calculation(2) by fastforce
-  ultimately show False
-    using matching[unfolded matching_def2] inM
-    unfolding matching_def2
-    by auto
-qed
-
 text\<open>Thus, if @{term "u \<notin> quotM"}, there no cycle or non cycle matching edges that include it. Accordingly it is 
   unmatched.\<close>
-
-lemma alt_path_vert_is_matched:
-  assumes "alt_path M p" "v \<in> set p" "v \<noteq> hd p" "v \<noteq> last p" "p \<noteq> []"
-  shows "\<exists>e \<in> set (edges_of_path p). v \<in> e \<and> e \<in> M"
-  using assms
-proof(induction "length p" arbitrary: p rule: nat_less_induct)
-  case ass: 1
-  then show ?case
-  proof(cases p)
-    case Nil
-    then show ?thesis
-      using ass.prems
-      by simp
-  next
-    case cons1: (Cons a' p')
-    show ?thesis
-    proof(cases p')
-      case Nil
-      then show ?thesis
-        using ass.prems cons1
-        by simp
-    next
-      case cons2: (Cons a'' p'')
-      then show ?thesis
-        using ass cons1
-        apply (simp add: neq_Nil_conv split: if_splits)
-        apply clarify
-        by (metis Suc_lessD alt_list_step edges_of_path.simps(3) insert_iff lessI list.sel(1) list.simps(15))
-    qed
-  qed
-qed
-
-lemma alt_path_vert_is_matched':
-  assumes "alt_path M p" "v \<in> set p" "v \<noteq> hd p" "v \<noteq> last p" "p \<noteq> []"
-  shows "v \<in> Vs M"
-  using alt_path_vert_is_matched[OF assms]
-  unfolding Vs_def
-  by auto   
 
 context quot
 begin
@@ -1306,31 +2126,6 @@ definition replace_cycle where
        else
          (rev p2) @ p12stem @ (rev p1))))"
 
-lemma in_quot_graph_neq_u:
-  assumes "v \<in> Vs(quot_graph P M)" "v \<noteq> u"
-  shows "v \<in> s"
-  using assms good_quot_map
-  unfolding Vs_def quot_graph_def
-  apply simp
-  by force
-
-lemma Vs_quotG_subset_Vs_quot_graph:
-  "Vs (quotG M) \<subseteq> Vs(quot_graph P M)"
-  unfolding Vs_def quot_graph_def
-  by auto
-
-lemma in_quotG_neq_u:
-  assumes "v \<in> Vs (quotG M)" "v \<noteq> u"
-  shows "v \<in> s"
-proof-
-  have "v \<in> Vs(quot_graph P M)"
-    using assms in_quot_graph_neq_u[OF _ assms(2)] Vs_quotG_subset_Vs_quot_graph
-    by force
-  then show ?thesis
-    using in_quot_graph_neq_u assms
-    by blast
-qed
-
 end
 
 lemma len_find_pfx:
@@ -1382,18 +2177,6 @@ next
       by(auto simp add: replace_cycle_def stem2vert_path_def split: if_splits)
   qed
 qed
-
-lemma neq_u_notin_quot_graph:
-  assumes "v \<notin> s" "v \<noteq> u"
-  shows "v \<notin> Vs (quot_graph P E)"
-  using assms
-  by (metis in_quot_graph_neq_u)
-
-lemma neq_u_notin_quotG:
-  assumes "v \<notin> s" "v \<noteq> u"
-  shows "v \<notin> Vs (quotG E)"
-  using assms
-  using in_quotG_neq_u by blast
 
 end
 
@@ -3341,6 +4124,11 @@ next
   qed
 qed
 
+lemma pref_suf_non_splitter_last_induction:
+  "\<lbrakk>u' \<noteq> u; u \<in> set p\<rbrakk>
+     \<Longrightarrow> pref_suf p' u (p @ [u']) = (fst (pref_suf p' u p), snd (pref_suf p' u p) @ [u'])"
+  by(induction p arbitrary: p') auto
+
 text\<open>The function the refines an augmenting path from a quotient graph to a concrete one.\<close>
 
 definition refine where
@@ -3348,6 +4136,12 @@ definition refine where
    if (u \<in> set p) then
      (replace_cycle C M (fst (pref_suf [] u p)) (snd (pref_suf [] u p)))
    else p)"
+
+lemma last_not_u_refine:
+  assumes "u' \<noteq> u" "distinct (p@[u'])"
+  shows "last (refine C M (p@[u'])) = u' \<or> hd (refine C M (p@[u'])) = u'"
+  using assms
+  by(auto simp add: refine_def pref_suf_non_splitter_last_induction replace_cycle_def Let_def)
 
 theorem refine:
   assumes cycle: "odd_cycle C" "alt_path M C" "distinct (tl C)" "path E C" and
@@ -3421,47 +4215,6 @@ subsection\<open>Quotienting/conracting an augmenting path\<close>
 
 text\<open>We prove an augmenting path in a concrete graph can be abstracted into an augmenting path in a
      quotient graph\<close>
-
-lemma in_odd_cycle_in_M:
-  assumes "v \<in> set C" "odd_cycle C" "alt_path M C" "v \<noteq> last C"
-  shows "v \<in>  Vs M"
-  using assms(1,4)
-  using alt_path_vert_is_matched' odd_cycleD(2,3)[OF assms(2)] assms(3) by fastforce
-
-lemma matching_edge_incident_on_cycle:
-  assumes "odd_cycle C" "alt_path M C" "e \<in> M" "v1 \<in> set C" "v2 \<notin> set C" "{v1, v2} \<subseteq> e" "matching M"
-  shows "v1 = last C"
-proof(rule ccontr)
-  assume "v1 \<noteq> last C"
-  then obtain p1 p2 where p1p2: "C = p1 @ v1 # p2" "p1 \<noteq> []" "p2 \<noteq> []"
-    using odd_cycleD(3)[OF assms(1)] assms(4) split_list_last
-    by fastforce
-  have "(edges_of_path p1) @ [{last p1, v1}] = edges_of_path (p1 @ [v1])"
-    using edges_of_path_snoc[OF p1p2(2)]
-    by auto
-  moreover have "edges_of_path (v1 # p2) = {v1, hd p2} # edges_of_path p2"
-    using p1p2(3)
-    by (metis edges_of_path.simps(3) list.exhaust_sel)
-  moreover have "edges_of_path C = (edges_of_path (p1 @ [v1])) @ (edges_of_path (v1 # p2))"
-    using edges_of_path_append_2[where p' = "v1 # p2"] p1p2(1)
-    by auto
-  ultimately have "edges_of_path C = (edges_of_path p1) @ {last p1, v1} # {v1, hd p2} # edges_of_path p2"
-    using p1p2(1)
-    by auto
-  then have i: "{last p1, v1} \<in> M \<or> {v1, hd p2} \<in> M"
-    using odd_cycleD(2)[OF assms(1)] assms(2)
-    by (metis alt_list_append_1'')
-  have "last p1 \<in> set C" "hd p2 \<in> set C"
-    using p1p2 by auto
-  then have ii: "{last p1, v1} \<noteq> e" "{v1, hd p2} \<noteq> e"
-    using assms(4-6)
-    by fastforce+
-
-  show False
-    using i ii assms(4-7)
-    unfolding matching_def2 Vs_def
-    by (metis UnionI assms(3) insertI1 insert_commute insert_subset)
-qed
 
 lemma alt_path_matching_quot:
   assumes "matching M" "{v, hd p} \<in> M" "alt_path M p" "odd (length p)"
@@ -3628,20 +4381,6 @@ proof(rule ccontr; simp)
     unfolding Vs_def
     by auto
 qed
-
-lemma edge_in_graph_edge_in_quot:
-  assumes "v \<in> s" "w \<notin> s" "{v, w} \<in> E" 
-  shows "{v, u} \<in> quotG E"
-  using assms good_quot_map
-  apply(simp add: image_def quot_graph_def)
-  by (smt (verit, best) Collect_cong Int_insert_left_if0 Un_Int_eq(3) insertCI insert_commute 
-                        insert_def mk_disjoint_insert singleton_conv)
-
-lemma edge_in_graph_edge_in_quot':
-  assumes "v \<in> s" "w \<notin> s" "{w, v} \<in> E" 
-  shows "{u, v} \<in> quotG E "
-  using edge_in_graph_edge_in_quot[of v w] assms 
-  by(auto simp add: insert_commute)
 
 text\<open>Constructing an absrtact aumenting path from a concrete path, given that the blossom's base is
      not matched.\<close>

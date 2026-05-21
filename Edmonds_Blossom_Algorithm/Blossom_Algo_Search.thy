@@ -505,6 +505,68 @@ next
 qed
 qed
 
+lemma finial_forest_evens'_Neighbourhood:
+  assumes "\<not> if1_cond F" "\<not> if2_cond F" "forest_invar M F" "Vs G - Vs M \<subseteq> aevens F" "\<lbrace>F\<rbrace> \<subseteq> G"
+  shows "Neighbourhood G (aevens F) = aodds F"
+proof(rule, all \<open> rule, (elim in_NeighbourhoodE)?\<close>, goal_cases)
+  case (1 x y)
+  then show ?case 
+  proof(cases "{x, y} \<in> \<lbrace> F \<rbrace>", goal_cases)
+    case 1
+    then show ?case 
+      using  assms(3) higher_forest_properties(3)[of M F y x]
+      by (auto simp add: insert_commute)
+  next
+    case 2
+    then show ?case
+    proof(cases "x \<in> FVs F", goal_cases)
+      case 1
+      then show ?case 
+        using assms(3) evens_and_odds(3) by auto
+    next
+      case 2
+      then show ?case
+      proof(cases "\<exists>v3. {x, v3} \<in> M", goal_cases)
+        case 1
+        then show ?case 
+         using assms(1) by(auto simp add: if1_cond_def)
+      next
+        case 2
+        moreover hence "x \<in> Vs G - Vs M"
+         using matching(2) 
+         by (auto simp add:  graph_abs.vs_member'[OF  graph_abs_subset] insert_commute)
+       ultimately have False
+         using assms(4) by auto
+       thus ?case
+         by simp
+     qed
+   qed 
+ qed
+next
+  case (2 x)
+  hence "x \<in> Vs \<lbrace>F\<rbrace>"
+    using evens_and_odds(3,4)[OF assms(3)] roots(2)[OF assms(3)]
+    by auto
+  then obtain e where e: "e \<in> \<lbrace>F\<rbrace>" "x \<in> e" 
+    by(auto elim!: vs_member_elim)
+  obtain y where y: "{x, y} \<in> \<lbrace>F\<rbrace>" "x \<noteq> y"
+  proof(rule Undirected_Set_Graphs.dblton_graphE[OF dblton[OF assms(3)] e(1)], goal_cases)
+    case 1
+    thus ?case
+    using e 
+    by (auto simp add: insert_commute)+
+  qed
+  hence "y \<in> aevens F" 
+    using "2"  higher_forest_properties(3)[OF assms(3), of y x]
+    by(auto simp add: insert_commute)
+  moreover have "x \<notin> aevens F"
+    using "2" assms(3) evens_and_odds(4) by blast
+  moreover have "{x, y} \<in> G"
+    using assms(5) y(1) by blast
+  ultimately show ?case 
+    by(auto intro!: in_NeighbourhoodI simp add: insert_commute)
+qed
+
 text \<open>Central lemma for completeness proof:
  On M-alternating paths with the first vertex being unmatched,
 labels alternate between Even and Odd, starting with Even.\<close>

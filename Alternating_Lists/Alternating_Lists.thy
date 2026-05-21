@@ -489,6 +489,23 @@ lemma alt_list_split_last_off:
 lemma alt_list_tl: "alt_list P Q xs \<Longrightarrow> alt_list Q P (tl xs)"
   by(cases rule: alt_list.cases[of P Q xs]) (auto simp add: alt_list.intros)
 
+lemma alt_list_image:
+  assumes "\<And> x. x \<in> set xs \<Longrightarrow> P' (f x) \<longleftrightarrow> P x"
+    "\<And> x. x \<in> set xs \<Longrightarrow> Q' (f x) \<longleftrightarrow> Q x"
+  shows "alt_list P' Q' (map f xs) \<longleftrightarrow> alt_list P Q xs"
+  using assms
+proof(induction xs arbitrary: P Q P' Q')
+  case Nil
+  then show ?case
+    by (simp add: alt_list.intros(1))
+next
+  case (Cons a xs)
+  show ?case 
+    using Cons(2,3)
+    unfolding alt_list_step list.map(2)
+    by(subst Cons(1)[of Q' Q P' P]) auto
+qed
+
 fun take_evens where
  "take_evens Nil = Nil"|
  "take_evens [x] = [x]" |

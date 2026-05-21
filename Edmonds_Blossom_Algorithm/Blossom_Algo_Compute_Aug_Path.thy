@@ -156,30 +156,6 @@ end
 
 end
 
-lemma match_blossom_path_rev_stem:
-  assumes 
-    path: "path G (stem @ C)" and
-    match_blossom: "match_blossom M stem C"
-  shows "path G (C @ (rev stem))"
-  apply(cases stem)
-  subgoal using path by simp
-  subgoal apply(rule path_append)
-    subgoal using path_suff[OF path] .
-    subgoal using rev_path_is_path[OF path_pref[OF path]] .
-    subgoal by (smt match_blossom match_blossomD(3) edge_between_pref_suff hd_rev insert_commute
-                    list.simps(3) odd_cycleD(3) odd_cycle_nempty path)
-    done
-  done
-
-lemma flower_reverse_blossom:
-  assumes  "blossom E M stem C" 
-  shows   "blossom E M stem (rev C)"  
-proof-
-  show ?thesis
-    using assms rev_path_is_path_iff[of E "stem @ rev C"] match_blossom_path_rev_stem[of E stem C M]
-    by(auto intro: match_flower_reverse_blossom)
-qed
-
 context compute_match_blossom'
 begin
 
