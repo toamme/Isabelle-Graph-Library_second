@@ -1,7 +1,16 @@
 theory CSR_Graph
   imports Separation_Logic_Imperative_HOL_Partial.Imp_Map_Spec
     Directed_Set_Graphs.Pair_Graph_Imperative BFS_Refinement
-begin                       
+    Directed_Set_Graphs.Multigraph
+begin  
+
+definition "is_multigraph_representation \<E> fst snd w nhd_map w_map index_transl= 
+  (dom nhd_map = fst ` \<E> \<and> dom w_map = fst ` \<E> \<and>
+   (\<forall> x \<in> fst ` \<E>. bij_betw (index_transl x) {e | e. e \<in> \<E> \<and> fst e = x} 
+                                             {0..<length (the (nhd_map x))} \<and>
+                   (\<forall> e \<in> {e | e. e \<in> \<E> \<and> fst e = x}.
+                       snd e = (the (nhd_map x)) ! (index_transl x e) \<and>
+                       w e = the (w_map x) ! (index_transl x e))))" for fst snd
 
 term nths
 
