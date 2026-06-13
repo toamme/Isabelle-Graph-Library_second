@@ -36,10 +36,23 @@ lemma nths_intervall_as_drop_and_take:
     by(auto simp add: nths_def)
   done
 
+lemma nths_intervall_strict_as_drop_and_take:
+  "nths list {start..<ed} = drop (start) (take ed list)"
+  by(cases ed)
+    (simp_all add: atLeastLessThanSuc_atLeastAtMost nths_intervall_as_drop_and_take)
+
 lemma nths_intervall_split_off_first:
   assumes "start \<le> end" "end < length list"
   shows "(nths list {start..end}) =  (list ! start # nths list {Suc start..end})"
   unfolding nths_intervall_as_drop_and_take
+  apply(subst Cons_nth_drop_Suc[of start, symmetric])
+  using assms(1,2)
+  by (auto intro!: arg_cong2[where f = Cons] simp add: assms(1) le_imp_less_Suc)
+
+lemma nths_intervall_strict_split_off_first:
+  assumes "start < end" "end < length list"
+  shows "(nths list {start..<end}) =  (list ! start # nths list {Suc start..<end})"
+  unfolding nths_intervall_strict_as_drop_and_take
   apply(subst Cons_nth_drop_Suc[of start, symmetric])
   using assms(1,2)
   by (auto intro!: arg_cong2[where f = Cons] simp add: assms(1) le_imp_less_Suc)
@@ -76,16 +89,17 @@ partial_function (heap) iterate_range where
           acc' \<leftarrow> fi current acc;
           iterate_range arr (Suc start) end fi acc'}
      else return acc)"
-
+(*
 definition "put arr new = Array.upd arr 0 new"
-
+*)
 
 lemma iterate_range_rule:
-  assumes "\<And> acc acci x. <acc_assn acc acci * F> fi x acci 
+  assumes "\<And> acc acci x. x \<in> set (nths list {start..end}) \<Longrightarrow> <acc_assn acc acci * F> fi x acci 
             <\<lambda> r. acc_assn (f acc x) r * F>"
   shows "<arr \<mapsto>\<^sub>a list * \<up> (start \<le> length list \<and> end < length list) *F * acc_assn acc acci>
           iterate_range arr start end fi acci 
          <\<lambda> r. arr \<mapsto>\<^sub>a list * acc_assn (foldl f acc (nths list {start..end})) r *  F>"
+  using assms
 proof(induction arbitrary: start acc acci rule: iterate_range.fixp_induct, goal_cases)
   case 1
   then show ?case
@@ -98,8 +112,39 @@ next
   case (3 fi start acc acci)
   note IH = this
   show ?case 
-     using assms(1) IH(1)[of "Suc start" "f acc _"]
+     using  IH(1)[of "Suc start" "f acc _"] IH(2)
      by (sep_auto simp: nths_intervall_split_off_first[of start] split: if_split)
+ qed
+
+partial_function (heap) iterate_range_strict where
+  "iterate_range_strict arr start end fi acc=
+    (if start < end then
+      do{ current \<leftarrow> Array.nth arr start;
+          acc' \<leftarrow> fi current acc;
+          iterate_range_strict arr (Suc start) end fi acc'}
+     else return acc)"
+
+lemma iterate_range_strict_rule:
+ assumes "\<And> acc acci x. x \<in> set (nths list {start..<end}) \<Longrightarrow> <acc_assn acc acci * F> fi x acci 
+            <\<lambda> r. acc_assn (f acc x) r * F>"
+  shows "<arr \<mapsto>\<^sub>a list * \<up> (end < length list) *F * acc_assn acc acci>
+          iterate_range_strict arr start end fi acci 
+         <\<lambda> r. arr \<mapsto>\<^sub>a list * acc_assn (foldl f acc (nths list {start..<end})) r *  F>"
+  using assms
+proof(induction arbitrary: start acc acci rule: iterate_range_strict.fixp_induct, goal_cases)
+  case 1
+  then show ?case
+    by simp
+next
+  case 2
+  then show ?case 
+    by simp
+next
+  case (3 fi start acc acci)
+  note IH = this
+  show ?case 
+     using  IH(1)[of "Suc start" "f acc _"] IH(2)
+     by (sep_auto simp: nths_intervall_strict_split_off_first[of start] split: if_split)
  qed
 
 partial_function (heap) iterate_range_infoed where
@@ -164,7 +209,8 @@ definition "iterate_neighbourhood Gi sindicesi eindicesi v fi acci=
           iterate_range Gi vstart vend (fi v) acci}}"
 
 lemma iterate_neighbourhood_raw_rule:
-  assumes "\<And> acc acci x. <acc_assn acc acci * F> fi v x acci 
+  assumes "\<And> acc acci x vs. \<lbrakk>nhlists v = Some vs; x \<in> set vs\<rbrakk> 
+              \<Longrightarrow> <acc_assn acc acci * F> fi v x acci 
             <\<lambda> r. acc_assn (f v acc x) r * F>"
   shows "<CSR_assn_raw nhlists Gi sindicesi eindicesi nha sindices eindices* acc_assn acc acci * F>
          iterate_neighbourhood Gi sindicesi eindicesi v fi acci
@@ -233,8 +279,10 @@ proof-
               apply (metis option.sel domI)
               by sep_auto 
             subgoal
-              using iterate_range_rule[of acc_assn F "fi v" "f v" Gi nha vstart vend acc acci, OF assms]
-              by sep_auto
+              using iterate_range_rule[of nha vstart vend acc_assn F "fi v" "f v" Gi  acc acci, OF assms]
+              apply (sep_auto simp: mod_pure_star_dist[where P = "_ * _ *_ *_*_*_", simplified])
+              apply (metis option.sel domI)
+              by(sep_auto simp: mod_pure_star_dist[where P = "_ * _ *_ *_*_*_", simplified])
             done
           done
         done
@@ -243,15 +291,15 @@ proof-
 qed
 
 lemma iterate_neighbourhood_rule:
-  assumes "\<And> acc acci x. <acc_assn acc acci * F> fi v x acci 
+  assumes "\<And> acc acci x vs. \<lbrakk>nhlists v = Some vs; x \<in> set vs\<rbrakk> 
+              \<Longrightarrow> <acc_assn acc acci * F> fi v x acci 
             <\<lambda> r. acc_assn (f v acc x) r * F>"
   shows "<CSR_assn nhlists Gi sindicesi eindicesi* acc_assn acc acci * F>
          iterate_neighbourhood Gi sindicesi eindicesi v fi acci
         <\<lambda> r. CSR_assn nhlists Gi sindicesi eindicesi* F* 
               acc_assn (case nhlists v of None \<Rightarrow> acc
                         | Some vs \<Rightarrow> foldl (f v) acc vs) r>"
-  using iterate_neighbourhood_raw_rule[of acc_assn F fi v f, OF assms, 
-      of nhlists Gi sindicesi eindicesi]
+  using iterate_neighbourhood_raw_rule[of nhlists v acc_assn F fi  f, OF assms, simplified]
   unfolding CSR_assn_def 
   by sep_auto
 
@@ -491,9 +539,9 @@ proof((rule ht_ex_pre_and_post_I)+, goal_cases)
   by simp
 qed
 end
-
+(*
 locale CSR_array 
-begin
+begin*)
 
 definition "CSR_assn_raw nhlists Gi sindicesi eindicesi nha sindices eindices= 
   (Gi \<mapsto>\<^sub>a nha * sindicesi \<mapsto>\<^sub>a sindices
@@ -523,7 +571,8 @@ definition "iterate_neighbourhood Gi sindicesi eindicesi v fi acci=
           iterate_range Gi vstart vend (fi v) acci}}"
 
 lemma iterate_neighbourhood_raw_rule:
-  assumes "\<And> acc acci x. <acc_assn acc acci * F> fi v x acci 
+  assumes "\<And> acc acci x vs. \<lbrakk>nhlists v = Some vs; x \<in> set vs\<rbrakk> \<Longrightarrow>
+               <acc_assn acc acci * F> fi v x acci 
             <\<lambda> r. acc_assn (f v acc x) r * F>"
   shows "<CSR_assn_raw nhlists Gi sindicesi eindicesi nha sindices eindices* acc_assn acc acci * F>
          iterate_neighbourhood Gi sindicesi eindicesi v fi acci
@@ -593,8 +642,10 @@ proof-
               apply (metis domI option.sel)
               by sep_auto 
             subgoal
-              using iterate_range_rule[of acc_assn F "fi v" "f v" Gi nha vstart vend acc acci, OF assms]
-              by sep_auto
+              using iterate_range_rule[of nha vstart vend acc_assn F "fi v" "f v" Gi  acc acci, OF assms]
+              apply (sep_auto simp: mod_pure_star_dist[where P = "_ * _ *_ *_*_*_", simplified])
+              apply (metis option.sel domI)
+              by(sep_auto simp: mod_pure_star_dist[where P = "_ * _ *_ *_*_*_", simplified])
             done
           done
         done
@@ -602,14 +653,14 @@ proof-
 qed
 
 lemma iterate_neighbourhood_rule:
-  assumes "\<And> acc acci x. <acc_assn acc acci * F> fi v x acci 
+  assumes "\<And> acc acci x vs. \<lbrakk>nhlists v = Some vs; x \<in> set vs\<rbrakk> 
+              \<Longrightarrow><acc_assn acc acci * F> fi v x acci 
             <\<lambda> r. acc_assn (f v acc x) r * F>"
   shows "<CSR_assn nhlists Gi sindicesi eindicesi* acc_assn acc acci * F>
          iterate_neighbourhood Gi sindicesi eindicesi v fi acci
         <\<lambda> r. CSR_assn nhlists Gi sindicesi eindicesi* F* 
               acc_assn (foldl (f v) acc (case nhlists v of None \<Rightarrow> Nil | Some vs \<Rightarrow> vs)) r>"
-  using iterate_neighbourhood_raw_rule[of acc_assn F fi v f, OF assms, 
-      of nhlists Gi sindicesi eindicesi]
+  using iterate_neighbourhood_raw_rule[of nhlists v acc_assn F fi  f, OF assms, simplified]
   unfolding CSR_assn_def 
   by sep_auto
 
@@ -842,8 +893,8 @@ proof((rule ht_ex_pre_and_post_I)+, goal_cases)
   using iterate_weighted_neighbourhood_raw_rule[of acc_assn F fi v f, OF assms, 
       of nhlists w Gi Wi sindicesi eindicesi nha ws sindices eindices acc acci]
   by simp
-qed
-end
+qed(*
+end*)
 
 locale imp_map_copy = imp_map +
   constrains is_map :: "('k \<rightharpoonup> 'v) \<Rightarrow> 'm \<Rightarrow> assn"
@@ -865,7 +916,7 @@ lemma iam_copy_rule:
 interpretation iam_copy: imp_map_copy is_iam iam_copy
   using iam_copy_rule
   by unfold_locales
-
+end
 
 (*
 definition "stack_assn = (\<lambda> stack (stackarr, sp) . 
@@ -876,4 +927,3 @@ definition "push_to_stack stack x = "
   oops
 definition "stack_assn_raw stack stacktail stackarr sp = stackarr \<mapsto>"
 *)
-

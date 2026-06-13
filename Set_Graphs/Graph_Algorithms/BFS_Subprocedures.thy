@@ -255,9 +255,11 @@ locale BFS_subprocedures_3 =
  BFS_subprocedures where lookup = lookup
 for lookup :: "'adjmap \<Rightarrow> 'ver \<Rightarrow> 'vset option" +
 fixes fold2_vset::"('ver \<Rightarrow> ('vset \<times> 'vset) \<Rightarrow> ('vset \<times> 'vset)) \<Rightarrow> 'vset \<Rightarrow> ('vset \<times> 'vset) \<Rightarrow> ('vset \<times> 'vset)"
+fixes fold2_vset'::"('ver \<Rightarrow> ('vset \<times> 'vset) \<Rightarrow> ('vset \<times> 'vset)) \<Rightarrow> 'vset \<Rightarrow> ('vset \<times> 'vset) \<Rightarrow> ('vset \<times> 'vset)"
 and fast_insert:: "'ver \<Rightarrow> 'vset \<Rightarrow> 'vset"
 and vset_inv2::"'vset \<Rightarrow> bool"
 assumes fold2_vset:"\<And> N f acc. vset_inv N \<Longrightarrow> \<exists> xs. set xs = t_set N \<and> fold2_vset f N acc = foldr f xs acc"
+assumes fold2_vset':"\<And> N f acc. vset_inv N \<Longrightarrow> \<exists> xs. set xs = t_set N \<and> fold2_vset' f N acc = foldr f xs acc"
 assumes fast_insert[simp, intro]:"\<And> x X. \<lbrakk>vset_inv2 X; x \<notin> t_set X\<rbrakk> \<Longrightarrow> vset_inv2 (fast_insert x X)"
    "\<And> x X. \<lbrakk>vset_inv2 X; x \<notin> t_set X\<rbrakk> \<Longrightarrow> t_set (fast_insert x X) = t_set X \<union> {x}"
  assumes vset_inv2_empty[simp]: "vset_inv2 vset_empty"
@@ -268,7 +270,7 @@ find_theorems vset_inv isin
 
 definition next_frontier_and_current::"'vset \<Rightarrow> 'vset \<Rightarrow> ('vset \<times> 'vset)"  where
 "next_frontier_and_current frontier vis= 
-   fold2_vset (\<lambda> u (nf, vis). 
+   fold2_vset' (\<lambda> u (nf, vis). 
      fold2_vset (\<lambda> v (nf, vis). if \<not> isin vis v 
                                 then (fast_insert v nf, insert v vis) 
                                 else (nf, vis)) (\<N>\<^sub>G u) (nf, vis))
@@ -292,8 +294,8 @@ proof-
   define start_nf  where "start_nf = \<emptyset>\<^sub>N"
 
   obtain fs where fs_def: "[frontier]\<^sub>s = set fs"
-               "fold2_vset f_outer frontier (start_nf, vis) = foldr f_outer fs (start_nf, vis)"
-    using fold2_vset[of frontier f_outer "(start_nf, vis)"]  assms(1)
+               "fold2_vset' f_outer frontier (start_nf, vis) = foldr f_outer fs (start_nf, vis)"
+    using fold2_vset'[of frontier f_outer "(start_nf, vis)"]  assms(1)
     by auto
   have start_nf_vset_inv: "vset_inv2 start_nf"
     by (simp add: start_nf_def)

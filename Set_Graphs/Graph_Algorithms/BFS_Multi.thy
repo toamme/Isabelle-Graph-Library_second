@@ -1,23 +1,92 @@
-theory BFS_3
-  imports Directed_Set_Graphs.Pair_Graph_Specs "HOL-Eisbach.Eisbach_Tools" Directed_Set_Graphs.Dist
+theory BFS_Multi
+  imports Directed_Set_Graphs.Pair_Graph_Specs
+ (*Awalk*)
+ "Data_Structures.Map_Addons" "Data_Structures.Set_Addons" "Data_Structures.Set_Choose" "HOL-Eisbach.Eisbach"
+
+
+ "HOL-Eisbach.Eisbach_Tools" Directed_Set_Graphs.Dist
           Data_Structures.Set2_Addons Directed_Set_Graphs.More_Lists
 begin
+
+locale Multi_Graph_Specs = 
+ adjmap: Map 
+ where update = update and invar = adjmap_inv +
+
+
+ conset: Set_Choose
+ where empty = conset_empty and delete = conset_delete and invar = conset_inv
+
+ for update :: "'v \<Rightarrow> 'conset \<Rightarrow> 'adjmap \<Rightarrow> 'adjmap" and adjmap_inv :: "'adjmap \<Rightarrow> bool"  and
+
+     conset_empty :: "'conset" and conset_delete :: "'con \<Rightarrow> 'conset \<Rightarrow> 'conset" and
+     conset_inv
+(*  Adjmap_Map_Specs where update = update
+for update :: "'a \<Rightarrow> 'vset \<Rightarrow> 'adjmap \<Rightarrow> 'adjmap"*)  +
+   fixes fst::"'con \<Rightarrow> 'v"
+    and snd::"'con \<Rightarrow> 'v"
+begin
+
+abbreviation "make_pair e \<equiv> (fst e, snd e)"
+
+notation conset_empty ("\<emptyset>\<^sub>C")
+notation empty ("\<emptyset>\<^sub>G")
+
+abbreviation isin' (infixl "\<in>\<^sub>G" 50) where "isin' G e \<equiv> isin e G" (* TODO @M strange parameter names. swap G and v? *)
+abbreviation not_isin' (infixl "\<notin>\<^sub>G" 50) where "not_isin' G e \<equiv> \<not> isin' G e"
+(*
+definition "set_of_map (m::'adjmap) = {(u,v). case (lookup m u) of Some vs \<Rightarrow> v \<in>\<^sub>G vs}"
+*)
+definition "graph_inv G = (adjmap_inv G \<and> (\<forall>v vset. lookup G v = Some vset \<longrightarrow> conset_inv vset))"
+definition "finite_graph G = (finite {v. (lookup G v) \<noteq> None})"
+definition "finite_consets G = (\<forall>v N. (lookup G v) = Some N \<longrightarrow> finite (t_set N))"
+
+lemma finite_vsets_empty: "finite_consets  \<emptyset>\<^sub>G"
+  by (simp add: adjmap.map_empty finite_consets_def)
+
+lemma graph_inv_empty[simp,intro!]: "graph_inv \<emptyset>\<^sub>G"
+  by (simp add: adjmap.invar_empty adjmap.map_empty graph_inv_def)
+
+definition connections::"'adjmap \<Rightarrow> 'v \<Rightarrow> 'conset" where
+  "(connections G v) = (case (lookup G v) of Some vset \<Rightarrow> vset | _ \<Rightarrow> conset_empty)"
+
+notation "connections" ("\<C>\<^sub>G _ _" 100)
+
+definition digraph_abs ("[_]\<^sub>g") where "digraph_abs G = {make_pair e | e u. e \<in>\<^sub>G (\<C>\<^sub>G G u)}" 
+
+lemma digraph_abs_empty[simp]: "digraph_abs empty = {}" 
+  by (simp add: adjmap.map_empty digraph_abs_def local.connections_def conset.set.invar_empty 
+      conset.set.set_empty conset.set.set_isin)
+
+definition multigraph_abs ("[_]\<^sub>m") where "multigraph_abs G = {e | e u. e \<in>\<^sub>G (\<C>\<^sub>G G u)}"
+lemma digraph_abs_def':
+  "digraph_abs G = make_pair ` (multigraph_abs G)"
+  by(auto simp add: digraph_abs_def multigraph_abs_def)
+(*
+lemma "x = neighbourhood [G]\<^sub>g u"
+*)
+(*
+lemma "Pair_Graph.neighbourhood (digraph_abs G) = snd ` connections G v"
+*)
+end
 
 record ('parents, 'vset) BFS_state = parents:: "'parents" current:: "'vset" visited:: "'vset"
 
 locale BFS =
-  Graph: Pair_Graph_Specs
-    where lookup = lookup +
-  set_ops: Set2 vset_empty vset_delete _ t_set vset_inv insert
-  
-for lookup :: "'adjmap \<Rightarrow> 'ver \<Rightarrow> 'vset option" +
+  Graph: Multi_Graph_Specs
+    where lookup = lookup and t_set = c_set+
+  set_ops: Set2 conset_empty conset_delete _ c_set conset_inv insert 
+ 
+for lookup :: "'adjmap \<Rightarrow> 'ver \<Rightarrow> 'conset option" and c_set +
 
 fixes  
 srcs::"'vset" and
 G::"'adjmap" and expand_tree::"'adjmap \<Rightarrow> 'vset \<Rightarrow> 'vset \<Rightarrow> 'adjmap" and
 next_frontier_and_current::"'vset \<Rightarrow> 'vset \<Rightarrow> ('vset \<times> 'vset )" and
-vset_inv2::"'vset \<Rightarrow> bool"
-
+vset_inv::"'vset \<Rightarrow> bool" and
+vset_inv2::"'vset \<Rightarrow> bool" and
+t_set::"'vset \<Rightarrow> 'ver set" and
+vset_empty::'vset 
+assumes vset_empty[simp]: "vset_inv2 vset_empty" "t_set vset_empty = {}"
 
 assumes
    expand_tree[simp]:
@@ -26,11 +95,9 @@ assumes
        Graph.graph_inv (expand_tree BFS_tree frontier vis)"
      "\<lbrakk>Graph.graph_inv BFS_tree; vset_inv2 frontier; vset_inv vis; Graph.graph_inv G; t_set frontier \<subseteq> t_set vis;
       t_set vis \<subseteq> dVs (Graph.digraph_abs G)\<rbrakk> \<Longrightarrow>
-        Graph.digraph_abs (expand_tree BFS_tree frontier vis) = 
-         (Graph.digraph_abs BFS_tree) \<union> 
-         {(u,v) | u v. u \<in> t_set (frontier) \<and> 
-                       v \<in> (Pair_Graph.neighbourhood (Graph.digraph_abs G) u -
-                       t_set vis)}"
+        Graph.multigraph_abs (expand_tree BFS_tree frontier vis) = 
+         (Graph.multigraph_abs BFS_tree) \<union> 
+         {e | e. fst e \<in> t_set (frontier) \<and> snd e \<notin> t_set vis \<and> e \<in> Graph.multigraph_abs G}"
     "\<lbrakk>Graph.graph_inv BFS_tree; vset_inv2 frontier; vset_inv vis; Graph.graph_inv G;
         Graph.finite_graph BFS_tree; t_set frontier \<subseteq> t_set vis; t_set vis \<subseteq> dVs (Graph.digraph_abs G)\<rbrakk> \<Longrightarrow> 
         Graph.finite_graph (expand_tree BFS_tree frontier vis)"
@@ -53,14 +120,14 @@ and vset_inv2[intro]: "\<And> S. vset_inv2 S \<Longrightarrow> vset_inv S"
 begin
 
 definition "BFS_axiom \<longleftrightarrow>
-  Graph.graph_inv G \<and> Graph.finite_graph G \<and> Graph.finite_vsets G \<and>
+  Graph.graph_inv G \<and> Graph.finite_graph G \<and> Graph.finite_consets G \<and>
   t_set srcs \<subseteq> dVs (Graph.digraph_abs G) \<and>
   (\<forall>u. finite (Pair_Graph.neighbourhood (Graph.digraph_abs G) u)) \<and>
   t_set srcs \<noteq> {} \<and> vset_inv2 srcs"
 
-abbreviation "neighbourhood' \<equiv> Graph.neighbourhood G" 
-notation "neighbourhood'" ("\<N>\<^sub>G _" 100)
-
+abbreviation "connections' \<equiv> Graph.connections G" 
+notation "connections'" ("\<N>\<^sub>G _" 100)
+notation vset_empty ("\<emptyset>\<^sub>N")
 
 function (domintros) BFS::"('adjmap, 'vset) BFS_state \<Rightarrow> ('adjmap, 'vset) BFS_state" where
   "BFS BFS_state = 
@@ -133,7 +200,7 @@ lemma invar_1D:
   unfolding invar_1_def by auto
 
 definition "invar_2 bfs_state = ( 
-  Graph.digraph_abs (parents bfs_state) \<subseteq> Graph.digraph_abs G \<and> 
+  Graph.multigraph_abs (parents bfs_state) \<subseteq> Graph.multigraph_abs G \<and> 
   t_set (visited bfs_state) \<subseteq> dVs (Graph.digraph_abs G) \<and> 
   t_set (current bfs_state) \<subseteq> dVs (Graph.digraph_abs G) \<and> 
   dVs (Graph.digraph_abs (parents bfs_state)) \<subseteq> t_set (visited bfs_state)  \<and>
@@ -194,14 +261,14 @@ definition "initial_state = \<lparr>parents =  empty, current = srcs, visited = 
 lemmas[code] = BFS_impl.simps initial_state_def
 
 context
-  includes Graph.adjmap.automation and Graph.vset.set.automation and set_ops.automation2
+  includes Graph.adjmap.automation and Graph.conset.set.automation and set_ops.automation2
   assumes BFS_axiom  
 begin
 
 lemma graph_inv[simp]:
      "Graph.graph_inv G" 
      "Graph.finite_graph G"
-     "Graph.finite_vsets G" and
+     "Graph.finite_consets G" and
    srcs_in_G[simp,intro]: 
      "t_set srcs \<subseteq> dVs (Graph.digraph_abs G)" and
    finite_vset:
@@ -296,7 +363,7 @@ lemma invar_1_props[invar_props_elims]:
 
 lemma invar_2_props[invar_props_elims]: 
   "invar_2 bfs_state \<Longrightarrow> 
-  (\<lbrakk>Graph.digraph_abs (parents bfs_state) \<subseteq> Graph.digraph_abs G;
+  (\<lbrakk>Graph.multigraph_abs (parents bfs_state) \<subseteq> Graph.multigraph_abs G;
     t_set (visited bfs_state) \<subseteq> dVs (Graph.digraph_abs G);
     t_set (current bfs_state) \<subseteq> dVs (Graph.digraph_abs G);
     dVs (Graph.digraph_abs (parents bfs_state)) \<subseteq> t_set (visited bfs_state) ;
@@ -318,7 +385,7 @@ lemma finite_simp:
    "{(u,v). u \<in> front \<and> v \<in> (Pair_Graph.neighbourhood (Graph.digraph_abs G) u) \<and> v \<notin> vis} = 
        {(u,v). u \<in> front} \<inter> {(u,v). v \<in> (Pair_Graph.neighbourhood (Graph.digraph_abs G) u)} - {(u,v) . v \<in> vis}"
    "finite {(u, v)| v . v \<in> (s u)} = finite (s u)"
-  using finite_image_iff[where f = snd and A = "{(u, v) |v. v \<in> s u}"]
+  using finite_image_iff[where f = prod.snd and A = "{(u, v) |v. v \<in> s u}"]
   by (auto simp: inj_on_def image_def)
   
 lemma invar_1_holds_upd1[invar_holds_intros]:
@@ -341,7 +408,7 @@ lemma invar_1_holds_ret_1[invar_holds_intros]:
   by (auto simp: intro: invar_props_intros)
   
 lemma invar_2_intro[invar_props_intros]:
-   "\<lbrakk>Graph.digraph_abs (parents bfs_state) \<subseteq> Graph.digraph_abs G;
+   "\<lbrakk>Graph.multigraph_abs (parents bfs_state) \<subseteq> Graph.multigraph_abs G;
      t_set (visited bfs_state) \<subseteq> dVs (Graph.digraph_abs G);
      t_set (current bfs_state) \<subseteq> dVs (Graph.digraph_abs G);
      dVs (Graph.digraph_abs (parents bfs_state)) \<subseteq> t_set (visited bfs_state) \<union> t_set (current bfs_state);
@@ -361,7 +428,13 @@ proof(cases "next_frontier_and_current (current bfs_state) (visited bfs_state)",
   apply(auto elim!: call_cond_elims invar_1_props invar_2_props
             intro!: invar_props_intros 
               simp: BFS_upd1_def Let_def )
-   apply(auto simp: dVs_def) 
+     apply(auto simp: dVs_def) 
+    subgoal 
+      apply(auto simp add: Graph.digraph_abs_def')
+   
+      using expand_tree(2)
+      find_theorems "expand_tree _ _ _"
+    oops
   by blast+
 qed
 
@@ -1997,16 +2070,6 @@ locale BFS_distance =
   and set_all_dists_in_set::"'dist \<Rightarrow> 'vset \<Rightarrow> nat \<Rightarrow> 'dist"
   and dist_lookup::"'dist \<Rightarrow> 'ver \<Rightarrow> nat"
   and dist_invar::"'dist \<Rightarrow> 'ver set \<Rightarrow> bool"
-  assumes set_all_dists_in_set:
-    "\<And> dists front S n. \<lbrakk>vset_inv front; t_set front \<subseteq> dVs (Graph.digraph_abs G); dist_invar dists S\<rbrakk> \<Longrightarrow> 
-                    dist_invar (set_all_dists_in_set dists front n) (S \<union> t_set front)"
-    "\<And> dists front S n x. \<lbrakk>vset_inv front; t_set front \<subseteq> dVs (Graph.digraph_abs G); 
-          dist_invar dists S; x \<in> t_set front\<rbrakk> \<Longrightarrow> 
-          dist_lookup (set_all_dists_in_set dists front n) x = n"
-    "\<And> dists front S n x. \<lbrakk>vset_inv front; t_set front \<subseteq> dVs (Graph.digraph_abs G); 
-                       dist_invar dists S; x \<in> S - t_set front\<rbrakk> \<Longrightarrow> 
-          dist_lookup (set_all_dists_in_set dists front n) x = dist_lookup dists x"
-  and some_dist: "dist_invar some_dist {}"
 begin
 
 
@@ -2135,7 +2198,17 @@ qed
 qed
 
 context 
-  assumes BFS_axiom: BFS_axiom
+  assumes set_all_dists_in_set:
+    "\<And> dists front S n. \<lbrakk>vset_inv front; t_set front \<subseteq> dVs (Graph.digraph_abs G); dist_invar dists S\<rbrakk> \<Longrightarrow> 
+                    dist_invar (set_all_dists_in_set dists front n) (S \<union> t_set front)"
+    "\<And> dists front S n x. \<lbrakk>vset_inv front; t_set front \<subseteq> dVs (Graph.digraph_abs G); 
+          dist_invar dists S; x \<in> t_set front\<rbrakk> \<Longrightarrow> 
+          dist_lookup (set_all_dists_in_set dists front n) x = n"
+    "\<And> dists front S n x. \<lbrakk>vset_inv front; t_set front \<subseteq> dVs (Graph.digraph_abs G); 
+                       dist_invar dists S; x \<in> S - t_set front\<rbrakk> \<Longrightarrow> 
+          dist_lookup (set_all_dists_in_set dists front n) x = dist_lookup dists x"
+  and some_dist: "dist_invar some_dist {}"
+  and BFS_axiom: BFS_axiom
 begin
 
 definition "distances_invar old_state state =
