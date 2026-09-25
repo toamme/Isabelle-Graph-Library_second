@@ -1,5 +1,8 @@
 theory Acyclic_Flow
-  imports Flow_Theory.Cost_Optimality Data_Structures.Abstract_ADTs 
+  imports Flow_Theory.Cost_Optimality 
+       Data_Structures.Iterable_Set_Specs
+       Data_Structures.Fixed_Univ_Map_Specs
+       Data_Structures.Real_Embedding
 begin
 
 context 
@@ -185,7 +188,7 @@ text \<open>State of the inner DFS-like procedure. Parallel stacks describe the 
 
 text \<open>Three-valued vertex state, replacing the two seen / finished sets: a vertex is @{term Unseen}
       (never explored, or dropped by a truncation), @{term OnStack} (currently on the DFS stack), or
-      @{term Finished} (fully explored). Kept in a single @{locale abstract_array}, so classifying a
+      @{term Finished} (fully explored). Kept in a single @{locale fixed_univ_map}, so classifying a
       neighbour is \emph{one} lookup instead of two set-membership probes.\<close>
 
 datatype vertex_state = Unseen | OnStack | Finished
@@ -242,8 +245,6 @@ text \<open>The executable specification locale: fixes the graph-iterator / arra
       definition of the acyclic-flow procedure.\<close>
 
 locale acyclic_flow_impl_spec =
- (* cost_flow_spec where fst = "fst :: 'e \<Rightarrow> 'v"
-  for fst +*)
   fixes out_current   :: "'g \<Rightarrow> 'v \<Rightarrow> 'e" and out_has       :: "'g \<Rightarrow> 'v \<Rightarrow> bool"
     and out_move      :: "'g \<Rightarrow> 'v \<Rightarrow> 'g" and out_reset     :: "'g \<Rightarrow> 'v \<Rightarrow> 'g"
     and in_current    :: "'g \<Rightarrow> 'v \<Rightarrow> 'e" and in_has        :: "'g \<Rightarrow> 'v \<Rightarrow> bool"
@@ -285,12 +286,12 @@ locale acyclic_flow_impl =
       and in_current = in_current and in_has = in_has
       and in_iterated = in_iterated and in_remaining = in_remaining
       and in_move = in_move and in_reset = in_reset +
-  flow_array: abstract_array where
-      K = \<E> and abstract_array_invar = flow_invar
-      and abstract_array_upd = flow_upd and abstract_array_lookup = flow_lookup +
-  state_arr: abstract_array where
-      K = \<V> and abstract_array_invar = st_invar
-      and abstract_array_upd = st_upd and abstract_array_lookup = st_lookup +
+  flow_array: fixed_univ_map where
+      K = \<E> and fixed_univ_map_invar = flow_invar
+      and fixed_univ_map_upd = flow_upd and fixed_univ_map_lookup = flow_lookup +
+  state_arr: fixed_univ_map where
+      K = \<V> and fixed_univ_map_invar = st_invar
+      and fixed_univ_map_upd = st_upd and fixed_univ_map_lookup = st_lookup +
   vertex_iterator: iterable_set where
       iterable_set_invar = vit_invar and iterable_set_abstract = vit_abstract
       and current_element = current_vertex and has_current = has_vertex
@@ -898,12 +899,12 @@ text \<open>Following the DFS template, the correctness argument is carried by a
       each proved preserved branch-by-branch. We begin with Theme A --- data-structure
       well-formedness.\<close>
 
-text \<open>Three bridge facts specialising the @{thm abstract_array.abstract_array_upd_invar} axiom to the
+text \<open>Three bridge facts specialising the @{thm fixed_univ_map.fixed_univ_map_upd_invar} axiom to the
       flow, vertex-state and edge arrays of this locale.\<close>
 
 lemma flow_upd_invar: "\<lbrakk>flow_invar A; k\<in> \<E>\<rbrakk>
  \<Longrightarrow> flow_invar (flow_upd A k v)"
-  by (rule flow_array.abstract_array_upd_invar)
+  by (rule flow_array.fixed_univ_map_upd_invar)
 
 subsection \<open>Properties of the self-loop normaliser\<close>
 
@@ -936,7 +937,7 @@ lemma af_selfloop_handle_flow_off:
   assumes ae: "a \<in> \<E>" and fi: "flow_invar (af_flow st)" and ne: "b \<noteq> a"
   shows "flow_lookup (af_flow (af_selfloop_handle st a)) b = flow_lookup (af_flow st) b"
   using af_selfloop_handle_flow_cases[of st a] ne
-        flow_array.abstract_array_upd[OF fi ae] by auto
+        flow_array.fixed_univ_map_upd[OF fi ae] by auto
 
 lemma af_selfloop_handle_notfree:
   assumes ae: "a \<in> \<E>" and fi: "flow_invar (af_flow st)" and nub: "\<not> af_unbounded (af_selfloop_handle st a)"
@@ -946,12 +947,12 @@ proof (cases "\<c> a < 0")
   hence cne: "cap a \<noteq> - 1" using nub by (simp add: af_selfloop_handle_unbounded[OF ae])
   have "flow_lookup (af_flow (af_selfloop_handle st a)) a = cap a"
     using True cne ae
-    by (auto simp: af_selfloop_handle_def Let_def cost_neg_bridge[OF ae] flow_array.abstract_array_upd[OF fi ae] split: if_splits)
+    by (auto simp: af_selfloop_handle_def Let_def cost_neg_bridge[OF ae] flow_array.fixed_univ_map_upd[OF fi ae] split: if_splits)
   thus ?thesis by (simp add: af_arc_free_def Let_def)
 next
   case False
   hence "flow_lookup (af_flow (af_selfloop_handle st a)) a = 0"
-    using ae by (auto simp: af_selfloop_handle_def Let_def cost_neg_bridge[OF ae] flow_array.abstract_array_upd[OF fi ae] split: if_splits)
+    using ae by (auto simp: af_selfloop_handle_def Let_def cost_neg_bridge[OF ae] flow_array.fixed_univ_map_upd[OF fi ae] split: if_splits)
   thus ?thesis by (simp add: af_arc_free_def Let_def)
 qed
 
@@ -962,12 +963,12 @@ lemma af_selfloop_handle_norm:
 proof (rule conjI; rule impI)
   assume "0 \<le> \<c> a"
   thus "flow_lookup (af_flow (af_selfloop_handle st a)) a = 0"
-    using ae by (auto simp: af_selfloop_handle_def Let_def cost_neg_bridge[OF ae] flow_array.abstract_array_upd[OF fi ae] split: if_splits)
+    using ae by (auto simp: af_selfloop_handle_def Let_def cost_neg_bridge[OF ae] flow_array.fixed_univ_map_upd[OF fi ae] split: if_splits)
 next
   assume neg: "\<c> a < 0"
   have cne: "cap a \<noteq> - 1" using neg nub by (simp add: af_selfloop_handle_unbounded[OF ae])
   have "flow_lookup (af_flow (af_selfloop_handle st a)) a = cap a"
-    using neg cne ae by (auto simp: af_selfloop_handle_def Let_def cost_neg_bridge[OF ae] flow_array.abstract_array_upd[OF fi ae] split: if_splits)
+    using neg cne ae by (auto simp: af_selfloop_handle_def Let_def cost_neg_bridge[OF ae] flow_array.fixed_univ_map_upd[OF fi ae] split: if_splits)
   thus "cap a \<noteq> - 1 \<and> flow_lookup (af_flow (af_selfloop_handle st a)) a = cap a" using cne by simp
 qed
 
@@ -977,16 +978,16 @@ lemma af_selfloop_handle_free_imp_flow_id:
   shows "af_flow (af_selfloop_handle st a) = af_flow st"
 proof -
   have n0: "\<not> af_arc_free (flow_upd (af_flow st) a 0) a"
-    using flow_array.abstract_array_upd[OF fi ae] by (simp add: af_arc_free_def Let_def)
+    using flow_array.fixed_univ_map_upd[OF fi ae] by (simp add: af_arc_free_def Let_def)
   have ncap: "\<not> af_arc_free (flow_upd (af_flow st) a (cap a)) a"
-    using flow_array.abstract_array_upd[OF fi ae] by (simp add: af_arc_free_def Let_def)
+    using flow_array.fixed_univ_map_upd[OF fi ae] by (simp add: af_arc_free_def Let_def)
   show ?thesis using fr n0 ncap af_selfloop_handle_flow_cases[of st a] by auto
 qed
 
 lemma st_upd_invar: 
 "\<lbrakk>st_invar A; k \<in> \<V> \<rbrakk>
   \<Longrightarrow> st_invar (st_upd A k v)"
-  by (rule state_arr.abstract_array_upd_invar)
+  by (rule state_arr.fixed_univ_map_upd_invar)
 
 lemma out_move_invar: 
   "\<lbrakk> out_invar A; v\<in> \<V>\<rbrakk>
@@ -1162,11 +1163,11 @@ lemma af_reset_unsee_seg_flow[simp]: "af_flow (af_reset_unsee_seg n vs st) = af_
   by (induction n vs st rule: af_reset_unsee_seg.induct) (auto simp: af_reset_def)
 
 lemma af_reset_unsee_seg_state:
-  "set vs \<subseteq> \<V> \<Longrightarrow> st_invar (af_state st) \<Longrightarrow>
+  "\<lbrakk>set vs \<subseteq> \<V>; st_invar (af_state st)\<rbrakk> \<Longrightarrow>
      st_lookup (af_state (af_reset_unsee_seg n vs st)) w =
        (if w \<in> set (take n vs) then Unseen else st_lookup (af_state st) w)"
   by (induction n vs st rule: af_reset_unsee_seg.induct)
-     (auto simp: af_reset_def state_arr.abstract_array_upd st_upd_invar)
+     (auto simp: af_reset_def state_arr.fixed_univ_map_upd st_upd_invar)
 
 text \<open>Truncate-to-bottleneck drops at most as many vertices as there are stack arcs, so it never
       empties the stack (the surviving reached endpoint stays on it).\<close>
@@ -1219,7 +1220,7 @@ proof -
     by (auto simp: AF_invar_2_def)
   with assms(4) have xni: "x \<notin> set (af_vstack st)" by auto
   from assms(2,3) xni show ?thesis
-    by (auto simp: AF_invar_2_def state_arr.abstract_array_upd[OF si xV])
+    by (auto simp: AF_invar_2_def state_arr.fixed_univ_map_upd[OF si xV])
 qed
 
 text \<open>Back-edge truncate-and-reset: drop @{term \<open>m'\<close>} vertices (bounded, so the stack stays non-empty)
@@ -1356,13 +1357,13 @@ lemma af_push_flow_off:
   "set es \<subseteq> \<E> \<Longrightarrow> flow_invar fl \<Longrightarrow> b \<notin> set es \<Longrightarrow> af_push \<gamma> x vs es ds flip fl = (fl', m') \<Longrightarrow>
      flow_lookup fl' b = flow_lookup fl b"
   by (induction \<gamma> x vs es ds flip fl arbitrary: fl' m' rule: af_push.induct)
-     (auto simp: af_push_arc_def Let_def flow_array.abstract_array_upd flow_upd_invar
+     (auto simp: af_push_arc_def Let_def flow_array.fixed_univ_map_upd flow_upd_invar
            split: prod.splits if_splits)
 
 lemma af_push_arc_flow_off:
   "a \<in> \<E> \<Longrightarrow> flow_invar fl \<Longrightarrow> b \<noteq> a \<Longrightarrow> af_push_arc \<gamma> a dir fl = (fl', f') \<Longrightarrow>
      flow_lookup fl' b = flow_lookup fl b"
-  by (auto simp: af_push_arc_def Let_def flow_array.abstract_array_upd)
+  by (auto simp: af_push_arc_def Let_def flow_array.fixed_univ_map_upd)
 
 lemma af_cancel_seg_flow_off:
   assumes esE: "set es \<subseteq> \<E>" and ae: "a \<in> \<E>"
@@ -1421,7 +1422,7 @@ text \<open>Building blocks for the on-walk (feasibility / bottleneck) half of T
 lemma af_push_arc_at:
   "a \<in> \<E> \<Longrightarrow> flow_invar fl \<Longrightarrow> af_push_arc \<gamma> a dir fl = (fl', f') \<Longrightarrow>
      flow_lookup fl' a = f' \<and> f' = flow_lookup fl a + (if dir then \<gamma> else - \<gamma>)"
-  by (auto simp: af_push_arc_def Let_def flow_array.abstract_array_upd)
+  by (auto simp: af_push_arc_def Let_def flow_array.fixed_univ_map_upd)
 
 lemma af_min_le1: "x \<noteq> - 1 \<Longrightarrow> af_min x y \<le> x" by (auto simp: af_min_def)
 
@@ -2559,7 +2560,7 @@ lemma af_push_arc_ex:
            + (if dir then h \<gamma> else - h \<gamma>) * ((if snd a = v then 1 else 0) - (if fst a = v then 1 else 0))"
 proof -
   have fl'_eq: "flow_lookup fl' = (flow_lookup fl)(a := flow_lookup fl a + (if dir then \<gamma> else - \<gamma>))"
-    using p fi ae by (auto simp: af_push_arc_def Let_def flow_array.abstract_array_upd)
+    using p fi ae by (auto simp: af_push_arc_def Let_def flow_array.fixed_univ_map_upd)
   have happ: "(\<lambda>e. h (flow_lookup fl' e)) = (\<lambda>e. h (flow_lookup fl e))(a := h (flow_lookup fl a) + (if dir then h \<gamma> else - h \<gamma>))"
     by (rule ext) (simp add: fl'_eq h_add)
   have din2: "(\<Sum>e\<in>\<delta>\<^sup>- v. h (flow_lookup fl' e))
@@ -2633,7 +2634,7 @@ lemma af_selfloop_handle_feasible:
   shows "af_cap_feasible (af_flow (af_selfloop_handle st a))"
 proof -
   have upd_feas: "\<And>v. 0 \<le> v \<Longrightarrow> (cap a = - 1 \<or> v \<le> cap a) \<Longrightarrow> af_cap_feasible (flow_upd (af_flow st) a v)"
-    using feas flow_array.abstract_array_upd[OF fi ae] by (auto simp: af_cap_feasible_def)
+    using feas flow_array.fixed_univ_map_upd[OF fi ae] by (auto simp: af_cap_feasible_def)
   from af_selfloop_handle_flow_scases[OF ae, of st] show ?thesis
   proof (elim disjE conjE)
     assume "af_flow (af_selfloop_handle st a) = af_flow st" thus ?thesis using feas by simp
@@ -3872,7 +3873,7 @@ proof -
     apply (rule AF_invar_2I)
     subgoal using vv d by simp
     subgoal using vv le by (cases "af_estack st"; cases "af_dstack st"; cases vs; auto)
-    subgoal for w using vv cpl vni si by (auto simp: state_arr.abstract_array_upd[OF si vV])
+    subgoal for w using vv cpl vni si by (auto simp: state_arr.fixed_univ_map_upd[OF si vV])
     done
   show ?thesis using inv1 inv2 by simp
 qed
@@ -4550,7 +4551,7 @@ lemma AF_inv_initial:
 proof -
   have si': "st_invar (st_upd stt v OnStack)" using st_upd_invar[OF si vV] .
   have lk: "\<And>w. st_lookup (st_upd stt v OnStack) w = (if w = v then OnStack else st_lookup stt w)"
-    using state_arr.abstract_array_upd[OF si vV] by simp
+    using state_arr.fixed_univ_map_upd[OF si vV] by simp
   have "AF_invar_1 (AF_DFS_initial fl oa ia stt v)"
     using fi si' ao ai by (simp add: AF_DFS_initial_def AF_invar_1_def)
   moreover have "AF_invar_2 (AF_DFS_initial fl oa ia stt v)"
@@ -5696,7 +5697,7 @@ proof -
           have cV: "(if dir then snd_exec a else fst_exec a) \<in> \<V>"
             using ae fst_E_V[OF ae] snd_E_V[OF ae] by (cases dir) (auto simp: snd_exec_eq[OF ae] fst_exec_eq[OF ae])
           show ?thesis using updn guard selfloop parent Unseen Fin xne
-            by (auto simp: af_handle_def Let_def state_arr.abstract_array_upd[OF si cV])
+            by (auto simp: af_handle_def Let_def state_arr.fixed_univ_map_upd[OF si cV])
           next
           case OnStack
           obtain fl m' ubd where c: "af_cancel_seg up dn (if dir then snd_exec a else fst_exec a)
@@ -5774,7 +5775,7 @@ proof -
   have si: "st_invar (af_state st)" using i1 by (simp add: AF_invar_1_def)
   from conds obtain v vs where vv: "af_vstack st = v # vs" by (auto elim!: call_cond_elims)
   have vV: "v \<in> \<V>" using iV vv by (auto simp: AF_invar_V_def)
-  show ?thesis using Fin si vv by (simp add: AF_DFS_upd3_def state_arr.abstract_array_upd[OF si vV])
+  show ?thesis using Fin si vv by (simp add: AF_DFS_upd3_def state_arr.fixed_univ_map_upd[OF si vV])
 qed
 
 lemma AF_DFS_finished_mono:
@@ -5943,7 +5944,7 @@ proof -
   proof (cases "st_lookup (af_state st) v = Finished")
     case True
     hence "st_lookup (af_state (AF_DFS_upd3 st)) v = Finished"
-      using si vv by (simp add: AF_DFS_upd3_def vv state_arr.abstract_array_upd[OF si uV])
+      using si vv by (simp add: AF_DFS_upd3_def vv state_arr.fixed_univ_map_upd[OF si uV])
     thus ?thesis by (simp add: af_root_ok_def)
   next
     case notfin: False
@@ -5953,7 +5954,7 @@ proof -
       case True
       hence hv: "hd (af_vstack st) = v" using L by (metis hd_Cons_tl last_ConsL)
       have "st_lookup (af_state (AF_DFS_upd3 st)) (hd (af_vstack st)) = Finished"
-        using vv by (simp add: AF_DFS_upd3_def state_arr.abstract_array_upd[OF si uV])
+        using vv by (simp add: AF_DFS_upd3_def state_arr.fixed_univ_map_upd[OF si uV])
       hence "st_lookup (af_state (AF_DFS_upd3 st)) v = Finished" using hv by simp
       thus ?thesis by (simp add: af_root_ok_def)
     next
@@ -6076,7 +6077,7 @@ proof (unfold AFF_cov_def, intro impI ballI)
     have wfin: "st_lookup (aff_state st) w = Finished" using cov nu0 wi by (auto simp: AFF_cov_def)
     have wne: "w \<noteq> ?v" using wfin vuns by auto
     have p: "st_lookup (af_state ?init) w = Finished"
-      using wfin wne sti by (simp add: AF_DFS_initial_def state_arr.abstract_array_upd[OF sti vV])
+      using wfin wne sti by (simp add: AF_DFS_initial_def state_arr.fixed_univ_map_upd[OF sti vV])
     have "st_lookup (af_state (AF_DFS ?init)) w = Finished"
       using AF_DFS_finished_mono[OF domi mi0, of w] invi p by blast
     thus ?thesis using state_res by simp
@@ -6382,7 +6383,7 @@ proof -
             using updn guard selfloop parent Unseen by (auto simp: af_handle_def Let_def)
           have "st_lookup (af_state (af_handle st a dir)) v =
                   (if v = (if dir then snd_exec a else fst_exec a) then OnStack else st_lookup (af_state st) v)"
-            using h si by (simp add: state_arr.abstract_array_upd[OF si cV])
+            using h si by (simp add: state_arr.fixed_univ_map_upd[OF si cV])
           thus ?thesis using F by (auto split: if_splits)
         next
           case OnStack
@@ -6524,7 +6525,7 @@ proof (unfold AF_invar_exh_def, intro ballI impI)
   have rhi: "in_remaining (af_in_arr st) (hd (af_vstack st)) = {}" using nhi by (simp add: ing.idx_has[OF aii vV])
   have lk: "st_lookup (af_state (AF_DFS_upd3 st)) v =
               (if v = hd (af_vstack st) then Finished else st_lookup (af_state st) v)"
-    using si by (simp add: AF_DFS_upd3_def state_arr.abstract_array_upd[OF si vV])
+    using si by (simp add: AF_DFS_upd3_def state_arr.fixed_univ_map_upd[OF si vV])
   show "out_remaining (af_out_arr (AF_DFS_upd3 st)) v = {}
       \<and> in_remaining (af_in_arr (AF_DFS_upd3 st)) v = {}"
   proof (cases "v = hd (af_vstack st)")
@@ -6599,7 +6600,7 @@ proof -
     fix w assume wV: "w \<in> \<V>" and "st_lookup (af_state ?init) w = Finished"
     hence "st_lookup (st_upd (aff_state st) ?v OnStack) w = Finished" by (simp add: AF_DFS_initial_def)
     hence "st_lookup (aff_state st) w = Finished"
-      using sti by (auto simp: state_arr.abstract_array_upd[OF sti vV] split: if_splits)
+      using sti by (auto simp: state_arr.fixed_univ_map_upd[OF sti vV] split: if_splits)
     thus "out_remaining (af_out_arr ?init) w = {} \<and> in_remaining (af_in_arr ?init) w = {}"
       using E wV by (simp add: AFF_exh_def AF_DFS_initial_def)
   qed
@@ -7175,7 +7176,7 @@ proof (unfold af_rankok_def, intro ballI allI impI)
     and a2: "a2 \<in> \<E>" "af_arc_free (af_flow ?st') a2" "u \<in> {fst a2, snd a2}" "af_hgt ?st' (rk(v := c)) u a2"
   have flow: "af_flow ?st' = af_flow st" by simp
   have lk: "\<And>w. st_lookup (af_state ?st') w = (if w = v then Finished else st_lookup (af_state st) w)"
-    using si by (simp add: state_arr.abstract_array_upd[OF si vV])
+    using si by (simp add: state_arr.fixed_univ_map_upd[OF si vV])
   have hgt_v: "\<And>a. a \<in> \<E> \<Longrightarrow> af_hgt ?st' (rk(v := c)) v a
                  \<Longrightarrow> st_lookup (af_state st) (if fst a = v then snd a else fst a) \<noteq> Finished"
   proof -
@@ -7646,7 +7647,7 @@ proof (unfold af_scanres_def, intro ballI allI impI)
   have ne: "af_vstack st \<noteq> []" using conds by (auto elim!: call_cond_elims)
   have hV: "?v0 \<in> \<V>" using iV ne hd_in_set by (auto simp: AF_invar_V_def)
   have lk: "\<And>w. st_lookup (af_state (AF_DFS_upd3 st)) w = (if w = ?v0 then Finished else st_lookup (af_state st) w)"
-    using si by (simp add: AF_DFS_upd3_def state_arr.abstract_array_upd[OF si hV])
+    using si by (simp add: AF_DFS_upd3_def state_arr.fixed_univ_map_upd[OF si hV])
   have vnv0: "v \<noteq> ?v0" and vos: "st_lookup (af_state st) v = OnStack" using vos' lk by (auto split: if_splits)
   have scan: "af_scanned st a" using scan' by (simp add: AF_DFS_upd3_def af_scanned_def)
   have free: "af_arc_free (af_flow st) a" using free' by (simp add: AF_DFS_upd3_def)
@@ -7793,7 +7794,7 @@ proof (unfold af_pristine1_def, intro ballI impI)
   have hV: "hd (af_vstack st) \<in> \<V>" using iV ne hd_in_set by (auto simp: AF_invar_V_def)
   have lk: "st_lookup (af_state (AF_DFS_upd3 st)) v =
               (if v = hd (af_vstack st) then Finished else st_lookup (af_state st) v)"
-    using si by (simp add: AF_DFS_upd3_def state_arr.abstract_array_upd[OF si hV])
+    using si by (simp add: AF_DFS_upd3_def state_arr.fixed_univ_map_upd[OF si hV])
   have "st_lookup (af_state st) v = Unseen" using un lk by (auto split: if_splits)
   hence "out_iterated (af_out_arr st) v = {} \<and>
          in_iterated (af_in_arr st) v = {}"
@@ -7855,7 +7856,7 @@ proof (unfold af_pristine1_def, intro ballI impI)
             using h by simp
           have "st_lookup (af_state (af_handle st a dir)) v =
                   (if v = (if dir then snd_exec a else fst_exec a) then OnStack else st_lookup (af_state st) v)"
-            using h si by (simp add: state_arr.abstract_array_upd[OF si cV])
+            using h si by (simp add: state_arr.fixed_univ_map_upd[OF si cV])
           hence "st_lookup (af_state st) v = Unseen" using un by (auto split: if_splits)
           thus ?thesis using io pr vV by (auto simp: af_pristine1_def)
         next
@@ -8262,7 +8263,7 @@ proof (unfold af_scanres_def, intro ballI allI impI)
             have esh: "af_estack (af_handle st a dir) = a # af_estack st" using h by simp
             have xV: "?x \<in> \<V>" using ae fst_E_V[OF ae] snd_E_V[OF ae] by (cases dir) auto
             have vlk: "st_lookup (af_state (af_handle st a dir)) v = (if v = ?x then OnStack else st_lookup (af_state st) v)"
-              using h si by (simp add: state_arr.abstract_array_upd[OF si xV])
+              using h si by (simp add: state_arr.fixed_univ_map_upd[OF si xV])
             show ?thesis
             proof (cases "v = ?x")
               case vx: True
@@ -8910,7 +8911,7 @@ proof -
   have bound: "\<forall>u\<in>\<V>. st_lookup (af_state st) u = Finished \<longrightarrow> rk u < c"
     and injh: "inj_on rk {v\<in>\<V>. st_lookup (af_state st) v = Finished}" using vr by (auto simp: af_vrank_def)
   have lk: "\<And>u. st_lookup (af_state (AF_DFS_upd3 st)) u = (if u = ?v then Finished else st_lookup (af_state st) u)"
-    using si by (simp add: AF_DFS_upd3_def state_arr.abstract_array_upd[OF si vV])
+    using si by (simp add: AF_DFS_upd3_def state_arr.fixed_univ_map_upd[OF si vV])
   show ?thesis
   proof (unfold af_vrank_def, intro conjI ballI impI)
     fix u assume uV: "u \<in> \<V>" and un: "st_lookup (af_state (AF_DFS_upd3 st)) u = Finished"
@@ -9153,7 +9154,7 @@ lemma af_pristine1_initial:
 proof (unfold af_pristine1_def, intro ballI impI)
   fix v assume vV: "v \<in> \<V>" and "st_lookup (af_state (AF_DFS_initial fl oa ia stt s)) v = Unseen"
   hence "st_lookup (st_upd stt s OnStack) v = Unseen" by (simp add: AF_DFS_initial_def)
-  hence vun: "st_lookup stt v = Unseen" using si by (auto simp: state_arr.abstract_array_upd[OF si sV] split: if_splits)
+  hence vun: "st_lookup stt v = Unseen" using si by (auto simp: state_arr.fixed_univ_map_upd[OF si sV] split: if_splits)
   thus "out_iterated (af_out_arr (AF_DFS_initial fl oa ia stt s)) v = {} \<and>
         in_iterated (af_in_arr (AF_DFS_initial fl oa ia stt s)) v = {}"
     using prin vV by (simp add: AF_DFS_initial_def)
@@ -9206,7 +9207,7 @@ proof -
   proof -
     fix u assume "st_lookup (af_state (AF_DFS_initial fl oa ia stt s)) u = Finished"
     hence "st_lookup (st_upd stt s OnStack) u = Finished" by (simp add: AF_DFS_initial_def)
-    thus "st_lookup stt u = Finished" using si by (auto simp: state_arr.abstract_array_upd[OF si sV] split: if_splits)
+    thus "st_lookup stt u = Finished" using si by (auto simp: state_arr.fixed_univ_map_upd[OF si sV] split: if_splits)
   qed
   show ?thesis
   proof (unfold af_vrank_def, intro conjI ballI impI)
@@ -9232,7 +9233,7 @@ proof (unfold af_rankok_def, intro ballI allI impI)
     and a1: "a1 \<in> \<E>" "af_arc_free (af_flow ?ini) a1" "v \<in> {fst a1, snd a1}" "af_hgt ?ini rk v a1"
     and a2: "a2 \<in> \<E>" "af_arc_free (af_flow ?ini) a2" "v \<in> {fst a2, snd a2}" "af_hgt ?ini rk v a2"
   have stlk: "st_lookup (af_state ?ini) = (\<lambda>w. if w = s then OnStack else st_lookup (af_state st0) w)"
-    using si st_eq by (auto simp: AF_DFS_initial_def state_arr.abstract_array_upd[OF si sV] st_eq)
+    using si st_eq by (auto simp: AF_DFS_initial_def state_arr.fixed_univ_map_upd[OF si sV] st_eq)
   have vf0: "st_lookup (af_state st0) v = Finished" using vf by (simp add: stlk split: if_split_asm)
   have hgt: "\<And>a. af_hgt ?ini rk v a = af_hgt st0 rk v a"
     using s_un st_eq by (auto simp: af_hgt_def stlk)
@@ -9256,7 +9257,7 @@ proof (unfold af_scanres_def, intro ballI allI impI)
     and free: "af_arc_free (af_flow ?ini) a"
     and farnf: "st_lookup (af_state ?ini) (if fst a = v then snd a else fst a) \<noteq> Finished"
   have stlk: "st_lookup (af_state ?ini) = (\<lambda>w. if w = s then OnStack else st_lookup stt w)"
-    using si by (auto simp: AF_DFS_initial_def state_arr.abstract_array_upd[OF si sV])
+    using si by (auto simp: AF_DFS_initial_def state_arr.fixed_univ_map_upd[OF si sV])
   have vs: "v = s" using vos noos vV by (auto simp: stlk split: if_split_asm)
   let ?far = "if fst a = v then snd a else fst a"
   have farnf': "st_lookup stt ?far \<noteq> Finished" using farnf s_un by (auto simp: stlk split: if_split_asm)

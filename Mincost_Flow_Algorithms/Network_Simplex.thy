@@ -1,10 +1,14 @@
 theory Network_Simplex
-  imports Flow_Theory.Spanning_Tree_Flow Acyclic_Flow Flow_Theory.Cost_Optimality
+  imports Flow_Theory.Spanning_Tree_Flow
+      Flow_Theory.Cost_Optimality
+      Data_Structures.Fixed_Univ_Set_Specs
+      Data_Structures.Fixed_Univ_Map_Specs
+      Data_Structures.Real_Embedding
 begin
 
 text ‹❙‹Tagged variant.› Instead of the two edge sets @{term L} and @{term U} being stored as two
-      separate @{locale abstract_set} values, this development keeps a single
-      @{locale abstract_array} @{term edge_state} that maps every edge to a ∗‹tag› recording its
+      separate @{locale fixed_univ_set} values, this development keeps a single
+      @{locale fixed_univ_map} @{term edge_state} that maps every edge to a ∗‹tag› recording its
       current r\^ole in the spanning-tree structure: @{term InTree} (a tree edge), @{term InL} (at its
       lower bound, i.e. in the former set @{term L}) or @{term InU} (saturated, i.e. in the former set
       @{term U}). The abstract views @{term ns_L_of} / @{term ns_U_of} still denote the very same edge
@@ -90,16 +94,16 @@ section ‹Specification locale for the network simplex algorithm›
 text ‹The specification locale conjoins the cost-flow network (@{locale cost_flow_network}, source
       of the costs @{term ‹𝖼›} and the extended-real capacities @{term ‹𝗎›}), the spanning-tree ADT
       (@{locale arborescense_adt}), and the array-/set-like stores realising the program state:
-      ▪ @{term flow_lookup} — an @{locale abstract_array} mapping every edge to its current flow (a
+      ▪ @{term flow_lookup} — an @{locale fixed_univ_map} mapping every edge to its current flow (a
         @{typ real});
-      ▪ @{term pot_lookup} — an @{locale abstract_array} mapping every vertex to its potential,
+      ▪ @{term pot_lookup} — an @{locale fixed_univ_map} mapping every vertex to its potential,
         represented in the abstract potential-descriptor type @{typ 'p} (reduced costs use the
         separate descriptor type @{typ 'r}; see the two real-descriptor families above);
-      ▪ @{term parent_lookup} — an @{locale abstract_array} over the vertices @{term ‹V - {r}›}
+      ▪ @{term parent_lookup} — an @{locale fixed_univ_map} over the vertices @{term ‹V - {r}›}
         giving, for each vertex, the graph edge to its predecessor on the path to the root, and
-      ▪ @{term dir_lookup} — a boolean @{locale abstract_array} over @{term ‹V - {r}›} recording the
+      ▪ @{term dir_lookup} — a boolean @{locale fixed_univ_map} over @{term ‹V - {r}›} recording the
         orientation of that parent edge;
-      ▪ @{term es_lookup} — an @{locale abstract_array} mapping every edge to its @{typ edge_tag}
+      ▪ @{term es_lookup} — an @{locale fixed_univ_map} mapping every edge to its @{typ edge_tag}
         state: @{term InTree} (in the spanning tree), @{term InL} (zero-flow, the former @{term L}) or
         @{term InU} (saturated, the former @{term U}). The zero-flow and saturated edge sets are the
         verification-only views ‹ns_L_of› / ‹ns_U_of› carved out of @{term ‹ℰ›} by the tag.
@@ -114,9 +118,6 @@ text ‹The specification locale conjoins the cost-flow network (@{locale cost_f
       loop uses.›
 
 locale network_simplex_spec =
-(*  cost_flow_spec where fst = "fst :: 'edge ⇒ 'a"
-  for fst +
-*)
   fixes r :: "'a"
     and sel_select :: "'selector ⇒ 'parr ⇒ 'earr ⇒ ('edge × bool × 'r × 'selector) option"
     and shift_pot :: "'arbor ⇒ 'a ⇒ 'parr ⇒ 'r ⇒ bool ⇒ 'parr"
@@ -459,21 +460,21 @@ locale network_simplex =
   arborescense_adt where V = "𝒱 :: 'a set" and r = "r :: 'a"
       and get_path_pair = get_path_pair
       and swap_edge = swap_edge +
-  flow_arr: abstract_array where K = "ℰ :: 'edge set" and
-      abstract_array_invar = flow_invar and abstract_array_upd = flow_upd and
-      abstract_array_lookup = flow_lookup +
-  pot_arr: abstract_array where K = "𝒱 :: 'a set" and
-      abstract_array_invar = pot_invar and abstract_array_upd = pot_upd and
-      abstract_array_lookup = pot_lookup +
-  parent_arr: abstract_array where K = "𝒱 - {r} :: 'a set" and
-      abstract_array_invar = parent_invar and abstract_array_upd = parent_upd and
-      abstract_array_lookup = parent_lookup +
-  dir_arr: abstract_array where K = "𝒱 - {r} :: 'a set" and
-      abstract_array_invar = dir_invar and abstract_array_upd = dir_upd and
-      abstract_array_lookup = dir_lookup +
-  es_arr: abstract_array where K = "ℰ :: 'edge set" and
-      abstract_array_invar = es_invar and abstract_array_upd = es_upd and
-      abstract_array_lookup = es_lookup
+  flow_arr: fixed_univ_map where K = "ℰ :: 'edge set" and
+      fixed_univ_map_invar = flow_invar and fixed_univ_map_upd = flow_upd and
+      fixed_univ_map_lookup = flow_lookup +
+  pot_arr: fixed_univ_map where K = "𝒱 :: 'a set" and
+      fixed_univ_map_invar = pot_invar and fixed_univ_map_upd = pot_upd and
+      fixed_univ_map_lookup = pot_lookup +
+  parent_arr: fixed_univ_map where K = "𝒱 - {r} :: 'a set" and
+      fixed_univ_map_invar = parent_invar and fixed_univ_map_upd = parent_upd and
+      fixed_univ_map_lookup = parent_lookup +
+  dir_arr: fixed_univ_map where K = "𝒱 - {r} :: 'a set" and
+      fixed_univ_map_invar = dir_invar and fixed_univ_map_upd = dir_upd and
+      fixed_univ_map_lookup = dir_lookup +
+  es_arr: fixed_univ_map where K = "ℰ :: 'edge set" and
+      fixed_univ_map_invar = es_invar and fixed_univ_map_upd = es_upd and
+      fixed_univ_map_lookup = es_lookup
     for fst and snd and 
         flow_invar :: "'farr ⇒ bool" and pot_invar :: "'parr ⇒ bool"
     and parent_invar :: "'pearr ⇒ bool" and dir_invar :: "'darr ⇒ bool"

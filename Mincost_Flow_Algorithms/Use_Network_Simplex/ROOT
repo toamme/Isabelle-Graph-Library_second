@@ -1,0 +1,28 @@
+session "Use_Network_Simplex = "HOL-Library" +
+  options [document = pdf, document_output = "output"]
+
+sessions
+  Mincost_Flow_Algorithms
+
+theories
+  Acyclic_Flow_Instantiation
+  Mincost_Oracle_Certificates
+  Mincost_Oracle_Certificates_Pluggable
+  Mincost_Solver_Reduction
+  Network_Simplex_Initial_Basis
+  Network_Simplex_Initial_Basis_Arb
+  Network_Simplex_Initial_Basis_Code
+  Network_Simplex_Initial_Basis_Selector
+  Network_Simplex_Initial_Basis_Correct
+  Network_Simplex_Init
+  
+  Rooted_Arborescense/Rooted_Arborescense_Defs
+  Rooted_Arborescense/Rooted_Arborescense
+  Rooted_Arborescense/Rooted_Arborescense_Refinement
+  
+  
+  
+
+document_files
+  "root.tex"
+
