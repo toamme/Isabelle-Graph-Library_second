@@ -12,6 +12,7 @@ theories
   Preliminaries
   Residual
   STFlow
+  Spanning_Tree_Flow
   
 
 document_files

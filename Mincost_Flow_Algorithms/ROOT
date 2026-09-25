@@ -18,6 +18,10 @@ theories
   Send_Flow_Time
   Laminar_Family
   Orlins_Time
+  Network_Simplex
+  Network_Simplex_Preservation
+  Network_Simplex_Final
+  Acyclic_Flow
   
 
 document_files

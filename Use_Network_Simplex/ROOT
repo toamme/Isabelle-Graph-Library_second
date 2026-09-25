@@ -1,0 +1,18 @@
+session "Use_Orlins_Algorithm" = "HOL-Library" +
+  options [document = pdf, document_output = "output"]
+
+sessions
+  Mincost_Flow_Algorithms
+  Graph_Algorithms_Dev
+
+theories
+  Instantiation
+  Usage_Pair_Graph
+  Usage_Multigraph
+  Usage_Capacitated
+  Existence_Optflows
+  
+
+document_files
+  "root.tex"
+
