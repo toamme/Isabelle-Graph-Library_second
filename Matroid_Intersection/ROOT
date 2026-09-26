@@ -12,3 +12,12 @@ session "Matroid_Intersection" = "HOL-Data_Structures" +
     Matroid_Intersection_Algorithm
     Compute_Path
     Max_Bipartite_Matching_Matroid
+    
+    Matroid_Weighted_Intersection
+    Matroid_Weighted_Intersection_Algorithm
+    Weighted_Bipartite_Matching_Matroid
+    
+    Matroid_Partitioning
+
+document_files
+  "root.tex"

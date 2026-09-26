@@ -5,7 +5,7 @@ begin
 section \<open>Maximum Cardinality Matroid Intersection Algorithm\<close>
 
 text \<open>This file contains a formalisation of the maximum cardinality matroid intersection algorithm
-given by Korte&Vygen.\<close>
+given by Korte and Vygen.\<close>
 
 record 'sol intersec_state = sol::'sol
 

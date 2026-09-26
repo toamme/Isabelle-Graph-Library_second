@@ -7,8 +7,8 @@ section \<open>Theory for Matroid Intersection\<close>
 
 text \<open>This file contains theory for matroid intersection, including Edmonds' Rank Criterion,
 his Max-Min Equality,
-the auxiliary graph for intersection (see Korte&Vygen),
- augmentation lemmas and a characterisation of optimality (Korte&Vygen).\<close>
+the auxiliary graph for intersection (see Korte and Vygen),
+ augmentation lemmas and a characterisation of optimality (Korte and Vygen).\<close>
 
 lemma exists_smallest_witness: 
   assumes "P x" "fx = f x"
