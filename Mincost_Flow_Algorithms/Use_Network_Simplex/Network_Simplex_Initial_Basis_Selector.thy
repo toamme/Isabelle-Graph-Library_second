@@ -14,13 +14,13 @@ text \<open>We implement the @{locale edge_selector} ADT concretely, following t
 
       The rule proceeds in two phases.  \<^bold>\<open>Minor iteration\<close> (@{text scan_best}) re-prices the cached
       candidate list against the current @{term \<pi>}/@{term es}, drops the edges that are no longer
-      eligible, and returns the most-violating survivor — so a returned edge is always eligible
+      eligible, and returns the most-violating survivor --- so a returned edge is always eligible
       \<^emph>\<open>now\<close>, which is all the ADT demands.  \<^bold>\<open>Major iteration\<close> (@{text scan}) is reached only when the
       cache is exhausted; it sweeps the arc array in blocks from the bookmark, refilling the cache
       (up to @{term max_candidates}) and simultaneously tracking the best edge to return, with a
       ceiling bailout (list full) and a floor bailout (enough fuel, checked at block boundaries).
       If a full sweep of all @{term \<open>m + Kart\<close>} arcs inserts nothing, no eligible edge exists and the
-      selector returns @{term None} — discharging the ADT's @{term None} contract, from which the
+      selector returns @{term None} --- discharging the ADT's @{term None} contract, from which the
       outer loop later derives optimality.\<close>
 
 locale initial_basis_selector =
@@ -53,7 +53,7 @@ definition rc_val :: "(mtag \<times> 'n) list \<Rightarrow> nat \<Rightarrow> re
 text \<open>\<^bold>\<open>Faithfulness of the M-free sign tests.\<close>  The executable eligibility test uses the M-free
       \<open>pval_neg\<close> / \<open>pval_pos\<close>; they agree with the true sign of the abstract reduced
       cost @{term \<open>pval_abstract bigM g\<close>} whenever @{term g} satisfies the reduced-cost invariant
-      @{const rc_invar} — its ordinary part is bounded by @{term \<open>3 * sum_list (map abs cost_list)\<close>},
+      @{const rc_invar} --- its ordinary part is bounded by @{term \<open>3 * sum_list (map abs cost_list)\<close>},
       comfortably below @{term bigM}, so the big-M coefficient alone fixes the sign.  This is where the
       value of @{term bigM} does its work: in the proof, not in the code.\<close>
 
@@ -96,7 +96,7 @@ definition gviol :: "mtag \<times> 'n \<Rightarrow> real" where
 text \<open>\<^bold>\<open>Compute-once evaluation\<close> of an edge.  A single pass reads the tag once and builds the reduced
       cost @{term \<open>red_cost \<pi> e\<close>} once, returning what the two loops need: the eligibility flag (via
       the \<^emph>\<open>M-free\<close> \<open>pval_neg\<close> / \<open>pval_pos\<close>), the @{term in_U} flag, and the reduced-cost
-      descriptor @{term g} itself.  \<^emph>\<open>No abstract value and no @{term bigM} multiply is ever formed\<close> —
+      descriptor @{term g} itself.  \<^emph>\<open>No abstract value and no @{term bigM} multiply is ever formed\<close> ---
       the violation ordering is likewise done M-free by \<open>viol_gt\<close> on the descriptors.  It is the
       executable counterpart of @{const eligible} / @{const ent_in_U} / @{const red_cost}, tied to them
       by @{text evaluate_eq}.\<close>
@@ -105,7 +105,7 @@ text \<open>\<^bold>\<open>Compute-once evaluation\<close> of an edge.  A single
 text \<open>@{const evaluate} short-circuits: for a self-loop it returns @{term False} \<^emph>\<open>without\<close> pricing
       the edge (no @{const red_cost}), so its three projections are: the eligibility flag and the
       @{const ent_in_U} flag always, but the reduced-cost descriptor only on the non-self-loop
-      (equivalently, eligible) branch — which is the only branch where the loop ever reads it.\<close>
+      (equivalently, eligible) branch --- which is the only branch where the loop ever reads it.\<close>
 
 lemma evaluate_elig: "fst (evaluate es \<pi> e) = eligible es \<pi> e"
   by (simp add: evaluate_def eligible_def red_cost_def Let_def split: edge_tag.split)
@@ -202,9 +202,9 @@ lemma bok_better_keep:
 text \<open>\<^bold>\<open>Minor iteration\<close>, in a single pass over the live prefix @{term \<open>take len a\<close>} of the backing
       array @{term a}.  We walk an index @{term i} (against the pointer @{term len}, never against
       @{term \<open>length a\<close>}); a still-eligible entry is kept, priced once, offered to the running best,
-      and @{term i} advances; an ineligible (dud) entry is removed by \<^emph>\<open>swap-with-last\<close> — write the
+      and @{term i} advances; an ineligible (dud) entry is removed by \<^emph>\<open>swap-with-last\<close> --- write the
       last live entry @{term \<open>a ! (len - 1)\<close>} into slot @{term i} and drop the pointer, \<^emph>\<open>without\<close>
-      advancing @{term i} — i.e. the \<open>O(1)\<close> in-place deletion
+      advancing @{term i} --- i.e. the \<open>O(1)\<close> in-place deletion
       @{text \<open>a[i] := a[len - 1]; len := len - 1\<close>}.  The backing list keeps its length (the vacated
       slot @{term \<open>len - 1\<close>} is just left behind the pointer); the result is the same array with the
       pointer moved and the most-violating survivor.\<close>
@@ -213,7 +213,7 @@ text \<open>\<^bold>\<open>Minor iteration\<close>, in a single pass over the li
 text \<open>\<^bold>\<open>Specification of the minor iteration.\<close>  From any live prefix, the single pass returns an
       array of unchanged capacity whose new live prefix is no longer than and contained in the old
       one, the running best stays @{const bok} (so a \<^emph>\<open>found\<close> result is a genuine eligible edge of the
-      prefix), the \<^emph>\<open>found\<close> flag is monotone, and — crucially for the @{term None} certificate — if the
+      prefix), the \<^emph>\<open>found\<close> flag is monotone, and --- crucially for the @{term None} certificate --- if the
       pass finds nothing then it has emptied the prefix (@{term \<open>rl = i\<close>}, i.e. @{term \<open>rl = 0\<close>} from
       the start pointer @{term \<open>i = 0\<close>}).  Distinctness plays no role.\<close>
 
@@ -283,11 +283,11 @@ text \<open>One straight sweep with three counters: @{term fuel} arcs remain to 
       tracks @{term \<open>length cand\<close>} in \<open>O(1)\<close> so the ceiling/floor tests never re-measure the list.
       We refill up to @{term max_candidates} (ceiling) and stop pulling new blocks once the pointer
       reaches @{term min_candidates} (floor, checked only at boundaries).  An inserted edge is
-      \<^emph>\<open>pushed at the pointer\<close> — @{text \<open>a[len] := cur; len := len + 1\<close>}, the @{const list_update}
-      @{term \<open>a[len := cur]\<close>} — overwriting the stale slot rather than growing the list, so the
+      \<^emph>\<open>pushed at the pointer\<close> --- @{text \<open>a[len] := cur; len := len + 1\<close>}, the @{const list_update}
+      @{term \<open>a[len := cur]\<close>} --- overwriting the stale slot rather than growing the list, so the
       backing array keeps its capacity and nothing is allocated.  The bookmark advances cyclically by a
-      \<^emph>\<open>conditional reset\<close> @{term \<open>if cur + 1 = mc then 0 else cur + 1\<close>} rather than a modulo — a
-      compare instead of a division — which coincides with @{term \<open>(cur + 1) mod mc\<close>} on every state
+      \<^emph>\<open>conditional reset\<close> @{term \<open>if cur + 1 = mc then 0 else cur + 1\<close>} rather than a modulo --- a
+      compare instead of a division --- which coincides with @{term \<open>(cur + 1) mod mc\<close>} on every state
       reached from a legal bookmark @{term \<open>cur < mc\<close>}.  The arc count @{term mc} (always @{term marc})
       is threaded as a \<^emph>\<open>fixed loop parameter\<close>, so the wrap bound is read from a register each iteration
       rather than re-deriving the locale constant @{term marc} (hence never re-running @{term build_tree}).
@@ -342,7 +342,7 @@ proof (induction es pt mc fuel bpos cur a len best arbitrary: cur2 a2 len2 best2
 qed
 
 text \<open>\<^bold>\<open>The @{term None} certificate of the major iteration.\<close>  If the sweep returns with nothing
-      found, then it consumed its whole fuel with no eligible arc \<^emph>\<open>anywhere\<close> on the cyclic run — the
+      found, then it consumed its whole fuel with no eligible arc \<^emph>\<open>anywhere\<close> on the cyclic run --- the
       precondition @{term \<open>\<not> fst best \<longrightarrow> len = 0\<close>} (no insert without a find) rules out the
       ceiling/floor bail-outs.\<close>
 
@@ -486,7 +486,7 @@ text \<open>Try the cache first; on a hit keep the pruned survivors (bookmark un
       swept without finding an eligible edge.\<close>
 
 
-text \<open>The selector invariant records only structural facts about the state — it cannot mention
+text \<open>The selector invariant records only structural facts about the state --- it cannot mention
       @{term \<pi>} (the ADT invariant sees the selector alone), which is exactly why the minor iteration
       re-validates every cached edge before returning it.  The range bound is stated about the
       \<^emph>\<open>live prefix\<close> @{term \<open>take (sel_len sel) (sel_arr sel)\<close>} (its members are genuine arcs, so a
@@ -513,7 +513,7 @@ text \<open>The remaining ADT obligation.  The two selector theorems above are s
       potential is zero.  Under it the coefficient of every potential lies in @{term \<open>{- 1, 0, 1}\<close>} and
       its ordinary part is bounded by @{term \<open>sum_list (map abs cost_list)\<close>}; the clamped tag arithmetic
       is then \<^emph>\<open>faithful\<close> because the reduced-cost coefficient never leaves @{term \<open>{- 2 .. 2}\<close>} (an
-      artificial edge always has the coefficient-zero root as one endpoint, ruling out \<open>\<pm> 3\<close>).\<close>
+      artificial edge always has the coefficient-zero root as one endpoint, ruling out \<open>\<plusminus> 3\<close>).\<close>
 
 lemma pval_plus_faithful_coeff: "- 2 \<le> of_mtag (fst p) + of_mtag (fst g) \<Longrightarrow> of_mtag (fst p) + of_mtag (fst g) \<le> 2 \<Longrightarrow> pval_abstract bigM (pval_plus p g) = pval_abstract bigM p + pval_abstract bigM g"
   unfolding pval_abstract_def pval_plus_def tag_add_def by (simp add: of_mtag_mtag_of algebra_simps h_add)
@@ -616,7 +616,7 @@ proof -
 qed
 
 text \<open>Every augmented edge (@{term \<open>e < marc\<close>}) has both endpoints in the arborescence carrier
-      @{term Varb} — real endpoints in @{term \<open>set vs_list\<close>} (@{thm fst_snd_vs}), artificial endpoints
+      @{term Varb} --- real endpoints in @{term \<open>set vs_list\<close>} (@{thm fst_snd_vs}), artificial endpoints
       in @{term \<open>insert vcount (set vs_list)\<close>} (@{thm build_tree_tail_sub}). Hence the pricing only ever
       reads potentials at vertices where the good-potential invariant is known.\<close>
 
@@ -1017,20 +1017,20 @@ interpretation NS: network_simplex
   subgoal premises p by (rule swap_edge_axiom1[OF p(1) p(2) p(3) p(4) p(5) p(6) p(7)[simplified NSg_verts_Varb] p(8)[simplified NSg_verts_Varb]])
   subgoal premises p by (rule swap_edge_axiom2[OF p(1) p(2) p(3) p(4) p(5) p(6) p(7)[simplified NSg_verts_Varb] p(8)[simplified NSg_verts_Varb]])
   subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>flow upd\<close>
-  subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>flow upd_invar\<close>
+  subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>flow upd\_invar\<close>
   subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>pot upd\<close>
-  subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>pot upd_invar\<close>
+  subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>pot upd\_invar\<close>
   subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>parent upd\<close>
-  subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>parent upd_invar\<close>
+  subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>parent upd\_invar\<close>
   subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>dir upd\<close>
-  subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>dir upd_invar\<close>
+  subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>dir upd\_invar\<close>
   subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>es upd\<close>
-  subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>es upd_invar\<close>
-  subgoal by auto \<comment> \<open>fst_exec\<close>
-  subgoal by auto \<comment> \<open>snd_exec\<close>
-  subgoal by auto \<comment> \<open>cap sentinel: (cap = -1) \<longleftrightarrow> (\<u> = \<infinity>)\<close>
+  subgoal by (auto simp: NSg_verts_Varb nth_fun_list_update) \<comment> \<open>es upd\_invar\<close>
+  subgoal by auto \<comment> \<open>fst\_exec\<close>
+  subgoal by auto \<comment> \<open>snd\_exec\<close>
+  subgoal by auto \<comment> \<open>cap sentinel: (cap = -1) {\isasymlongleftrightarrow} ({\isasymu} = {\isasyminfinity})\<close>
   subgoal by auto \<comment> \<open>cap value on the non-sentinel branch\<close>
-  subgoal using cap_all_nonneg by auto \<comment> \<open>cap validity: 0 \<le> cap \<or> cap = -1\<close>
+  subgoal using cap_all_nonneg by auto \<comment> \<open>cap validity: 0 {\isasymle} cap {\isasymor} cap = -1\<close>
   subgoal premises p for sel \<pi> es e in_U \<gamma> sel'
   proof -
     have ok: "pot_ok \<pi>" using p(3)[simplified NSg_verts_Varb] p(4) by (simp add: pot_ok_def)
@@ -1084,8 +1084,8 @@ text \<open>The concrete starting basis discharges five of the ten @{locale netw
       (store invariant and @{thm arb_invar_Sarb}), the selector seed @{const init_sel}, the flow/edge
       partition fit (@{thm build_tree_tail_content} together with the real-edge status lemmas), and the
       potential fit (@{thm build_tree_rc_zero} together with @{thm build_tree_root_pot}). The remaining
-      five — @{term \<open>NS.pot_valid\<close>}, the @{term \<open>NS.isbflow\<close>}, the spanning-tree partition, strong
-      feasibility and the tree correspondence — need additional carried invariants and are left as
+      five --- @{term \<open>NS.pot_valid\<close>}, the @{term \<open>NS.isbflow\<close>}, the spanning-tree partition, strong
+      feasibility and the tree correspondence --- need additional carried invariants and are left as
       \<^emph>\<open>sorry\<close> for now.\<close>
 
 lemma NS_V_Varb: "NS.\<V> = Varb" using NSg_verts_Varb by simp
@@ -1158,7 +1158,7 @@ lemma NSinit_sel_invar: "sel_invar_impl init_sel"
   using num_edges_gtr_0 by (simp add: sel_invar_impl_def init_sel_def marc_def)
 
 text \<open>Obligation 7 (\<open>flow_fits_spanning_tree_partition\<close>): an @{const InL} edge carries no flow
-      and an @{const InU} edge is saturated at a finite capacity — real edges by their status
+      and an @{const InU} edge is saturated at a finite capacity --- real edges by their status
       characterisation, artificial edges by @{thm build_tree_tail_content}.\<close>
 
 lemma slook: "e < m + Kart \<Longrightarrow> nth state_all e = state_all ! e"
@@ -1847,7 +1847,7 @@ proof (rule ballI)
 qed
 
 
-subsection \<open>Obligation 10 (init_tree_corr): the parent edges realise the abstract arborescence\<close>
+subsection \<open>Obligation 10 (init\_tree\_corr): the parent edges realise the abstract arborescence\<close>
 
 text \<open>Every non-root tree vertex's parent edge realises its tree edge (endpoints \<open>{v, ds_prnt bt ! v}\<close>,
       correctly oriented by the direction flag), the finished parent-edge set has exactly the abstract
@@ -2057,20 +2057,20 @@ text \<open>Extending @{term NS} with the concrete starting basis produced by @{
       parent/direction maps @{term \<open>ds_par (build_tree acyc_flow)\<close>} / @{term \<open>ds_dir (build_tree acyc_flow)\<close>}, the edge-state
       array @{const state_all} and the selector seed @{const init_sel}. Because @{term NS} already
       discharges every \<open>network_simplex_spec\<close> axiom, \<open>unfold_locales\<close> leaves only the 10
-      @{locale network_simplex_init} obligations. Seven are now proved — the trivial store invariant,
+      @{locale network_simplex_init} obligations. Seven are now proved --- the trivial store invariant,
       the tree invariant @{thm arb_invar_Sarb}, the selector seed (@{thm NSinit_sel_invar}), the
       flow/edge-partition fit (@{thm NSinit_flow_fits}), the potential fit (@{thm NSinit_pot_fits}),
       strong feasibility (@{thm NSinit_strict}) and the tree correspondence (@{thm NSinit_tree_corr}).
       The remaining three (the store validity @{term \<open>NS.pot_valid\<close>}, the \<open>b\<close>-flow and the
       spanning-tree partition) each need extra carried invariants and are left as \<^emph>\<open>sorry\<close> for now.\<close>
 
-subsection \<open>Validity of the initial potentials (obligation 2 / init_pot_valid)\<close>
+subsection \<open>Validity of the initial potentials (obligation 2 / init\_pot\_valid)\<close>
 
 text \<open>The built potential is a valid network-simplex potential: it satisfies the store-length
-      invariant and, at every vertex, the good-potential certificate good_pot_val_c together with
-      the descriptor bound pv_invar. The certificate is obtained from a closed form of the
-      potential as a signed sum of tree-path edge costs (pot_repr), proved by well-founded
-      induction along the parent relation; distinctness of the path edges (par_inj) keeps the
+      invariant and, at every vertex, the good-potential certificate good\_pot\_val\_c together with
+      the descriptor bound pv\_invar. The certificate is obtained from a closed form of the
+      potential as a signed sum of tree-path edge costs (pot\_repr), proved by well-founded
+      induction along the parent relation; distinctness of the path edges (par\_inj) keeps the
       cost sums honest, and exactly one artificial (root-incident) edge sits at the top of each
       path, which is what bounds the root-incident count by one.\<close>
 
@@ -2509,12 +2509,12 @@ proof -
   ultimately show ?thesis by (simp add: NS.pot_valid_def)
 qed
 
-subsection \<open>Towards the spanning-tree partition (obligation 9 / init_partition): the edge tags\<close>
+subsection \<open>Towards the spanning-tree partition (obligation 9 / init\_partition): the edge tags\<close>
 
 text \<open>The parent edges are exactly the InTree-tagged edges. The easy inclusion (a parent edge is
-      InTree) is here: an interior parent edge is a free real edge (build_tree_par_edge), a component
-      root's parent edge is an artificial tree edge tagged InTree (build_tree_crext). Every edge is
-      tagged with one of the three tags (state_total). The reverse inclusion (an InTree edge is a
+      InTree) is here: an interior parent edge is a free real edge (build\_tree\_par\_edge), a component
+      root's parent edge is an artificial tree edge tagged InTree (build\_tree\_crext). Every edge is
+      tagged with one of the three tags (state\_total). The reverse inclusion (an InTree edge is a
       parent edge) is the free-edge coverage theorem, still owed.\<close>
 
 lemma state_par_InTree:
@@ -2578,7 +2578,7 @@ proof
 qed
 
 text \<open>Four of the seven still-open @{locale network_simplex_init} obligations are the store-length
-      invariants; they are immediate from the array sizes (flow_all / state_all have length m + Kart;
+      invariants; they are immediate from the array sizes (flow\_all / state\_all have length m + Kart;
       the vertex-indexed arrays have length Suc vcount, and every vertex name is below vcount).\<close>
 
 lemma NSinit_flow_invar: "\<forall>k\<in>{0..<m + Kart}. k < length flow_all" by (simp add: length_flow_all)
@@ -2594,20 +2594,20 @@ lemma NSinit_dir_invar: "\<forall>v\<in>Varb - {vcount}. v < length (ds_dir (bui
 section \<open>Total correctness of the solver\<close>
 
 text \<open>The final statement about solve, phrased entirely in terms of the original network: the
-      original_network sublocales, whose edge set is 0 ..< m, whose capacities and costs are read off
-      capacity_list and cost_list, and whose balance is b_lookup. Neither the Kart artificial edges
+      original\_network sublocales, whose edge set is 0 ..< m, whose capacities and costs are read off
+      capacity\_list and cost\_list, and whose balance is b\_lookup. Neither the Kart artificial edges
       nor the big-M costs occur anywhere below; they are an internal device of the search, and the
       three verdicts speak only about the problem the caller posed.
 
-      Optimum carries a flow on the m original edges that is a minimum-cost b_lookup-flow
-      (original_network.is_Opt): feasible, and no feasible flow is cheaper.
+      Optimum carries a flow on the m original edges that is a minimum-cost b\_lookup-flow
+      (original\_network.is\_Opt): feasible, and no feasible flow is cheaper.
 
-      Infeasible certifies that the original network admits no b_lookup-flow at all, not merely that
+      Infeasible certifies that the original network admits no b\_lookup-flow at all, not merely that
       this run failed to find one.
 
-      Neg_inf_cycle certifies neg_infty_cycle: a directed closed walk of original arcs, each of
+      Neg\_inf\_cycle certifies neg\_infty\_cycle: a directed closed walk of original arcs, each of
       infinite capacity, whose total cost is negative, so the objective is unbounded below. This is
-      the verdict of the acyclifier (acyc_flow_opt = None) and of an unbounded loop return alike;
+      the verdict of the acyclifier (acyc\_flow\_opt = None) and of an unbounded loop return alike;
       both are sound for the same reason.
 
       Note the asymmetry that makes the Infeasible case meaningful: it is a statement about every
@@ -2624,11 +2624,11 @@ abbreviation neg_infty_cycle :: bool where
 
 subsection \<open>Bridging the executable orchestrator to the verified loop\<close>
 
-text \<open>solve runs NS.ns_loop_impl from the state assembled out of the concrete reader
-      tree_st art_tree, whereas NSinit reasons about NS.ns_loop from the abstract Sarb. The two trees
-      are the same record: Sarb is tree_st of art_tree once Vseen and Varb are unfolded. So the two
+text \<open>solve runs NS.ns\_loop\_impl from the state assembled out of the concrete reader
+      tree\_st art\_tree, whereas NSinit reasons about NS.ns\_loop from the abstract Sarb. The two trees
+      are the same record: Sarb is tree\_st of art\_tree once Vseen and Varb are unfolded. So the two
       starting states coincide, and the executable twin agrees with the specification loop on the
-      domain, which NSinit.network_simplex_correct(1) supplies.\<close>
+      domain, which NSinit.network\_simplex\_correct(1) supplies.\<close>
 
 lemma Sarb_tree_st: "Sarb = tree_st art_tree"
   by (simp add: Sarb_def tree_st_def Sprnt_def sprnt_st_def Sthrd_def sthrd_st_def
@@ -2636,8 +2636,8 @@ lemma Sarb_tree_st: "Sarb = tree_st art_tree"
 
 
 
-text \<open>The loop always leaves notyetterm behind: it stops only at NS.ns_optimal or
-      NS.ns_unbounded_upd, which set the flag to success resp. unbounded. This is what upgrades
+text \<open>The loop always leaves notyetterm behind: it stops only at NS.ns\_optimal or
+      NS.ns\_unbounded\_upd, which set the flag to success resp. unbounded. This is what upgrades
       "not unbounded" to success in the two feasible branches.\<close>
 
 lemma ns_loop_terminates:
@@ -2663,11 +2663,11 @@ qed
 
 subsection \<open>The acyclifier's None verdict is an original negative infinite-capacity cycle\<close>
 
-text \<open>make_acyclic_none_unbounded is reused verbatim. Its balance premise af_feasible b f0 is
-      schematic in b, since af_feasible takes the balance as an argument rather than reading a locale
-      parameter. So although flow_list is only assumed capacity-feasible (flow_nonneg, flow_le_cap)
-      and is not a b_lookup-flow, we may instantiate b with flow_list's own balance and the premise
-      becomes vacuous. No change to Acyclic_Flow is needed.\<close>
+text \<open>make\_acyclic\_none\_unbounded is reused verbatim. Its balance premise af\_feasible b f0 is
+      schematic in b, since af\_feasible takes the balance as an argument rather than reading a locale
+      parameter. So although flow\_list is only assumed capacity-feasible (flow\_nonneg, flow\_le\_cap)
+      and is not a b\_lookup-flow, we may instantiate b with flow\_list's own balance and the premise
+      becomes vacuous. No change to Acyclic\_Flow is needed.\<close>
 
 lemma acyc_none_neg_cycle:
   assumes "acyc_flow_opt = None" shows neg_infty_cycle
@@ -2693,13 +2693,13 @@ proof -
   show neg_infty_cycle unfolding has_neg_infty_cycle_def using cw c2 sD inf by blast
 qed
 
-subsection \<open>An augmented \<infinity>-cycle is already an original \<infinity>-cycle\<close>
+subsection \<open>An augmented {\isasyminfinity}-cycle is already an original {\isasyminfinity}-cycle\<close>
 
-text \<open>Every artificial edge carries a finite capacity: tail_edge_ok_build_tree pins it to
-      art_tree_cap subj or art_flow subj, both non-negative, hence never the -1 sentinel that decodes
+text \<open>Every artificial edge carries a finite capacity: tail\_edge\_ok\_build\_tree pins it to
+      art\_tree\_cap subj or art\_flow subj, both non-negative, hence never the -1 sentinel that decodes
       to an infinite capacity. So a cycle all of whose arcs have infinite capacity cannot touch the
       artificial part, and on the original part the endpoint, cost and capacity arrays agree by
-      fst_all_real, snd_all_real, cap_all_real and cost_all_real. The artificial device therefore
+      fst\_all\_real, snd\_all\_real, cap\_all\_real and cost\_all\_real. The artificial device therefore
       cannot manufacture an unboundedness verdict of its own.\<close>
 
 lemma cap_all_art_fin:
@@ -2728,13 +2728,13 @@ proof -
 qed
 
 text \<open>Note. The simplifier calls below are deliberately "simp only". Under the NS interpretation
-      the endpoint bridge NS.fst_exec_eq instantiates to
+      the endpoint bridge NS.fst\_exec\_eq instantiates to
 
-        e : {0..<m+Kart} ==> fst_all ! e = (if e < m + Kart then fst_all ! e else ...)
+        e : {0..<m+Kart} ==> fst\_all ! e = (if e < m + Kart then fst\_all ! e else ...)
 
-      whose right-hand side contains its own left-hand side. As a [simp] rule it rewrites fst_all ! e
-      to itself forever, so any plain simp on a goal mentioning fst_all ! e or snd_all ! e with
-      e < m + Kart dischargeable diverges. The same holds for NS.snd_exec_eq. Declaring the two
+      whose right-hand side contains its own left-hand side. As a [simp] rule it rewrites fst\_all ! e
+      to itself forever, so any plain simp on a goal mentioning fst\_all ! e or snd\_all ! e with
+      e < m + Kart dischargeable diverges. The same holds for NS.snd\_exec\_eq. Declaring the two
       [simp del] removes the loop, but the fallout on existing proofs has not been measured, so the
       workaround here is local: unfold with simp only and discharge the conditions by hand.\<close>
 
@@ -2796,28 +2796,28 @@ subsection \<open>The unbounded verdict\<close>
 subsection \<open>The big-M transfer \<^emph>\<open>(still owed)\<close>\<close>
 
 text \<open>The two feasible verdicts both rest on transferring the augmented optimum
-      NSinit.network_simplex_correct(3) back to the original network. This is the classical big-M
-      argument, and it is the only part of solve_correct not yet discharged.
+      NSinit.network\_simplex\_correct(3) back to the original network. This is the classical big-M
+      argument, and it is the only part of solve\_correct not yet discharged.
 
-      aug_opt_zero_art_orig_opt: if the augmented optimum loads no artificial edge it restricts to an
-      original b_lookup-flow, and it is optimal there because every original b_lookup-flow extends to
+      aug\_opt\_zero\_art\_orig\_opt: if the augmented optimum loads no artificial edge it restricts to an
+      original b\_lookup-flow, and it is optimal there because every original b\_lookup-flow extends to
       an augmented one of equal cost (put 0 on the artificial edges, which is feasible at the root
-      because b_lookup vcount = 0). This direction needs no bound on bigM.
+      because b\_lookup vcount = 0). This direction needs no bound on bigM.
 
-      aug_opt_nonzero_art_infeasible: the converse, and the hard one. Suppose an original
-      b_lookup-flow f existed and extend it by 0 to an augmented f'. Then g optimal gives
-      C_aug g <= C_aug f' = C_orig f, and C_aug g = C_orig g + bigM * t where t is the total
-      artificial flow. To contradict t > 0 one needs a lower bound on C_orig g in terms of C_orig f
+      aug\_opt\_nonzero\_art\_infeasible: the converse, and the hard one. Suppose an original
+      b\_lookup-flow f existed and extend it by 0 to an augmented f'. Then g optimal gives
+      C\_aug g <= C\_aug f' = C\_orig f, and C\_aug g = C\_orig g + bigM * t where t is the total
+      artificial flow. To contradict t > 0 one needs a lower bound on C\_orig g in terms of C\_orig f
       and t, i.e.
 
-        C_orig f - C_orig g <= t * sum_list (map abs cost_list).
+        C\_orig f - C\_orig g <= t * sum\_list (map abs cost\_list).
 
       Note what this is and is not. Restricted to the original edges g is a b'-flow for a balance b'
       that differs from b only at the artificial endpoints, with total deviation at most 2*t; the
       displayed bound is therefore a *sensitivity* (Lipschitz) statement about the minimum-cost
       function as the balance is perturbed, not a statement about any single path or cycle. It has to
       be proved by decomposing f - g (restricted to the original edges) into paths and cycles, the
-      paths carrying at most t units in total; flowcycle_decomposition in Flow_Theory/Decomposition.thy
+      paths carrying at most t units in total; flowcycle\_decomposition in Flow\_Theory/Decomposition.thy
       is the intended starting point.
 
       Two traps to record, both of which cost a wrong sketch here already.
@@ -2834,16 +2834,16 @@ text \<open>The two feasible verdicts both rest on transferring the augmented op
       argument has to go through the aggregate sensitivity bound above.
 
       Both lemmas are stated on the abstract flow g of the augmented network; the theorem below feeds
-      them NS.ns_flow_of (NS.ns_loop NSinit.init_state) and the artificial-edge test that solve
+      them NS.ns\_flow\_of (NS.ns\_loop NSinit.init\_state) and the artificial-edge test that solve
       performs.\<close>
 
 text \<open>The loop carries its invariant to the terminal state, so the returned flow array is still long
       enough to be truncated at m. Only the two recursive branches do any work: the terminal ones just
-      set the return flag, and ns_invar does not mention that field.
+      set the return flag, and ns\_invar does not mention that field.
 
-      The simp del below is not optional. Under the NS interpretation NS.fst_exec_eq and
-      NS.snd_exec_eq are [simp] rules whose right-hand side contains their own left-hand side (see the
-      note further down), and unfolding ns_invar_tree_def exposes fst_all ! ... , at which point a
+      The simp del below is not optional. Under the NS interpretation NS.fst\_exec\_eq and
+      NS.snd\_exec\_eq are [simp] rules whose right-hand side contains their own left-hand side (see the
+      note further down), and unfolding ns\_invar\_tree\_def exposes fst\_all ! ... , at which point a
       plain simp diverges.\<close>
 
 lemma ns_invar_ret: "NS.ns_invar (s\<lparr>return := r\<rparr>) = NS.ns_invar s"
@@ -2883,10 +2883,10 @@ qed
 
 text \<open>Supporting facts for the transfer between the augmented and original networks. They all rest on
       the same two observations: on the original edges 0 ..< m the augmented arrays coincide with the
-      input lists (fst_all_real, snd_all_real, cap_all_real, cost_all_real), and a flow that is zero on
+      input lists (fst\_all\_real, snd\_all\_real, cap\_all\_real, cost\_all\_real), and a flow that is zero on
       the artificial edges m ..< m + Kart contributes nothing there. Several proofs carry
-      "note [simp del] = NS.fst_exec_eq NS.snd_exec_eq" because those two rewrite fst_all ! e /
-      snd_all ! e to themselves under the NS interpretation (see the note further down).\<close>
+      "note [simp del] = NS.fst\_exec\_eq NS.snd\_exec\_eq" because those two rewrite fst\_all ! e /
+      snd\_all ! e to themselves under the NS interpretation (see the note further down).\<close>
 
 lemma delta_plus_orig: "original_network.delta_plus v = NS.delta_plus v \<inter> {0..<m}"
   and delta_minus_orig: "original_network.delta_minus v = NS.delta_minus v \<inter> {0..<m}"
@@ -2961,7 +2961,7 @@ proof -
 qed
 
 text \<open>An augmented flow restricts to an original flow: dropping the (unused) artificial edges keeps
-      capacity-compliance and, by ex_agree at every original vertex, the balances.\<close>
+      capacity-compliance and, by ex\_agree at every original vertex, the balances.\<close>
 
 lemma isuflow_restrict:
   assumes "NS.isuflow g"
@@ -2994,7 +2994,7 @@ qed
 
 text \<open>Conversely an original flow extends to an augmented one by putting zero on the artificial edges.
       Capacity holds (artificial capacities are non-negative), the balances hold at every original
-      vertex, and at the root because b_lookup vcount = 0. The cost is unchanged.\<close>
+      vertex, and at the root because b\_lookup vcount = 0. The cost is unchanged.\<close>
 
 lemma orig_ex_ext:
   "original_network.ex (\<lambda>e. if e < m then f e else 0) v = original_network.ex f v"
@@ -3135,7 +3135,7 @@ qed
 text \<open>A distinct residual arc list living in the augmented residual graph, containing at least one
       reverse artificial arc and no forward artificial arc, has strictly negative residual cost: each
       reverse artificial arc contributes -bigM, while the original arcs together contribute at most
-      2 * sum_list (map abs cost_list) in absolute value, and bigM dominates that.\<close>
+      2 * sum\_list (map abs cost\_list) in absolute value, and bigM dominates that.\<close>
 
 lemma neg_res_cost:
   assumes dist: "distinct cs"
@@ -3243,7 +3243,7 @@ proof (rule notI)
         intro: sum_pos2[of NS.\<EE> "B k" d] NS.finite_\<EE>)
   qed
   have supp_ne: "rf.support d \<noteq> {}" using BkSupp by auto
-  \<comment> \<open>no forward artificial arc is in the support: g \<ge> 0 and ef is zero there\<close>
+  \<comment> \<open>no forward artificial arc is in the support: g {\isasymge} 0 and ef is zero there\<close>
   have noFart: "\<And>k'. m \<le> k' \<Longrightarrow> k' < m + Kart \<Longrightarrow> F k' \<notin> rf.support d"
   proof -
     fix k' assume a1: "m \<le> k'" and a2: "k' < m + Kart"
@@ -3306,7 +3306,7 @@ proof (rule notI)
   thus False using NS.min_cost_flow_no_augcycle[OF opt] by blast
 qed
 
-text \<open>original_network.is_Opt only reads the edges 0 ..< m, so truncating the augmented flow with
+text \<open>original\_network.is\_Opt only reads the edges 0 ..< m, so truncating the augmented flow with
       take m does not change it.\<close>
 
 lemma is_Opt_take:
@@ -3327,7 +3327,7 @@ qed
 subsection \<open>Total correctness of solve\<close>
 
 text \<open>Toward free-edge coverage (obligation 9, the reverse inclusion). Under acyclicity the acyclified
-      flow has no closed pre-path of distinct free arcs (flow_no_free_cycle). The engine below packages
+      flow has no closed pre-path of distinct free arcs (flow\_no\_free\_cycle). The engine below packages
       that as: any closed walk of distinct free real edges is impossible. Coverage will feed it the
       cycle formed by an uncovered free edge together with the interior tree path between its endpoints.\<close>
 
@@ -3362,10 +3362,10 @@ qed
 
 subsection \<open>Free-edge coverage: the scan-completeness invariant of the DFS (obligation 9, core)\<close>
 
-text \<open>scan_complete tracks that every free edge already scanned from a vertex has its far endpoint
+text \<open>scan\_complete tracks that every free edge already scanned from a vertex has its far endpoint
       seen: for a stack frame, the edges before its cursor; for a finished (seen, off-stack) vertex,
-      all of its edges. It needs no acyclicity — it is pure DFS scan structure — and is preserved by
-      each build_dfs step. At the end (empty stack) it says every free neighbour of every vertex is
+      all of its edges. It needs no acyclicity --- it is pure DFS scan structure --- and is preserved by
+      each build\_dfs step. At the end (empty stack) it says every free neighbour of every vertex is
       seen, which is what lets an uncovered free edge be closed into a free cycle for the engine.\<close>
 
 definition out_scanned_seen :: "'n dfs_state \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
@@ -3926,12 +3926,12 @@ qed
 
 subsection \<open>Free-edge coverage: ancestor extraction and the walk-builder\<close>
 
-text \<open>Two reusable pieces toward the coverage theorem. First, from stk_prnt_inv (the stack is a parent
-      vchain) a vertex on the stack is a pstep-ancestor of the top — this is what the merged invariant's
-      ancinv conjunct uses at dfs_discover. Second, chain_redge turns a tree edge into the residual arc
-      oriented from child to parent, and chain_redge_props certifies it is a free real edge of the
-      original residual graph with the right endpoints — the atom the walk-builder assembles into a
-      pstep-chain prepath for free_walk_no_cycle.\<close>
+text \<open>Two reusable pieces toward the coverage theorem. First, from stk\_prnt\_inv (the stack is a parent
+      vchain) a vertex on the stack is a pstep-ancestor of the top --- this is what the merged invariant's
+      ancinv conjunct uses at dfs\_discover. Second, chain\_redge turns a tree edge into the residual arc
+      oriented from child to parent, and chain\_redge\_props certifies it is a free real edge of the
+      original residual graph with the right endpoints --- the atom the walk-builder assembles into a
+      pstep-chain prepath for free\_walk\_no\_cycle.\<close>
 
 lemma vchain_pstep_reach:
   assumes "vchain (ds_prnt s) (v # vs)"
@@ -4045,12 +4045,12 @@ proof -
   qed
 qed
 
-text \<open>prepath plumbing: original_network is only a flow_network_spec, so the flow_network-level
-      prepath_intros are unavailable; op_prepath_single/cons rebuild the single-arc and cons introduction
-      rules from prepath_def and awalk_Cons_iff over the UNIV pair-graph. The walk-builder then turns a
-      pstep-chain u \<leadsto>* w to a real ancestor w into an interior free-real prepath from u to w (chain_redge
-      per step, oriented child\<rightarrow>parent), tracking that its residual arcs are exactly the parent edges of
-      the chain vertices — hence distinct (par_inj) and never equal to an uncovered edge.\<close>
+text \<open>prepath plumbing: original\_network is only a flow\_network\_spec, so the flow\_network-level
+      prepath\_intros are unavailable; op\_prepath\_single/cons rebuild the single-arc and cons introduction
+      rules from prepath\_def and awalk\_Cons\_iff over the UNIV pair-graph. The walk-builder then turns a
+      pstep-chain u {\isasymleadsto}* w to a real ancestor w into an interior free-real prepath from u to w (chain\_redge
+      per step, oriented child{\isasymrightarrow}parent), tracking that its residual arcs are exactly the parent edges of
+      the chain vertices --- hence distinct (par\_inj) and never equal to an uncovered edge.\<close>
 
 lemma op_tvp: "original_network.to_vertex_pair e = (original_network.fstv e, original_network.sndv e)"
   by (cases e) (auto simp add: original_network.make_pair_def)
@@ -4115,7 +4115,7 @@ next
     using crp[THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1] .
   have cr_sv: "original_network.sndv (chain_redge a) = b"
     using crp[THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1] bpar by simp
-  \<comment> \<open>freshness: ds_par a is not among edges of any chain from b\<close>
+  \<comment> \<open>freshness: ds\_par a is not among edges of any chain from b\<close>
   have fresh_helper: "\<And>y. y \<in> Vseen \<Longrightarrow> (b,y) \<in> ?P\<^sup>* \<Longrightarrow> ds_par ?bt ! y \<noteq> ds_par ?bt ! a"
   proof -
     fix y assume yseen: "y \<in> Vseen" and by_: "(b,y) \<in> ?P\<^sup>*"
@@ -4199,10 +4199,10 @@ qed
 
 subsection \<open>Block completeness: every free edge sits in its owner's CSR scan block\<close>
 
-text \<open>Block soundness (free_out_edges_block) + size (scW_out) do not by themselves say a \<^emph>\<open>specific\<close>
+text \<open>Block soundness (free\_out\_edges\_block) + size (scW\_out) do not by themselves say a \<^emph>\<open>specific\<close>
       free edge occupies a slot of its owner's block. We track block \<^emph>\<open>content\<close> as a fold invariant
-      (scW_out_ct / scW_in_ct: slot \<open>out_lo!v + i\<close> holds the i-th free edge with tail v in [0..<m]-order),
-      reusing sc_block_disj for the scatter write; the corollaries free_out/in_edge_in_block give the
+      (scW\_out\_ct / scW\_in\_ct: slot \<open>out_lo!v + i\<close> holds the i-th free edge with tail v in [0..<m]-order),
+      reusing sc\_block\_disj for the scatter write; the corollaries free\_out/in\_edge\_in\_block give the
       completeness the covinv finished-vertex contradiction needs.\<close>
 
 lemma mem_test:
@@ -4562,10 +4562,10 @@ qed
 subsection \<open>Comparability of free-edge endpoints (covinv) and its discover-step maintenance\<close>
 
 text \<open>covinv: any free real edge whose both endpoints are seen has pstep-comparable endpoints (one is a
-      tree-ancestor of the other). Its only non-trivial maintenance is at dfs_discover: a newly seen w
-      and an already-seen free-neighbour a of it must be comparable. free_neighbor_on_stack shows a is on
-      the stack (a finished a would, by scan_complete + block-completeness, already have seen w); then
-      stk_ancestor makes a an ancestor of the stack top v, and w becomes v's child, so (w,a)\<in>pstep*.\<close>
+      tree-ancestor of the other). Its only non-trivial maintenance is at dfs\_discover: a newly seen w
+      and an already-seen free-neighbour a of it must be comparable. free\_neighbor\_on\_stack shows a is on
+      the stack (a finished a would, by scan\_complete + block-completeness, already have seen w); then
+      stk\_ancestor makes a an ancestor of the stack top v, and w becomes v's child, so (w,a){\isasymin}pstep*.\<close>
 
 lemma is_free_classify: "e < m \<Longrightarrow> is_free acyc_flow e \<Longrightarrow> classify acyc_flow e = InTree"
   by (simp add: is_free_def edge_state_nth)
@@ -4775,10 +4775,10 @@ proof -
   show ?thesis using covinv_cong[OF e2[symmetric] e3[symmetric] ci] e1 by simp
 qed
 
-text \<open>Threading covinv (jointly with dfs_inv and scan_complete, which its discover-step needs) through
-      build_dfs, open_tree_component (the component-root seed adds no comparability obligation: a seen
-      free-neighbour of the fresh root would, by free_neighbor_on_stack + the empty stack, be a
-      contradiction), and the two phase folds, giving build_tree_covinv.\<close>
+text \<open>Threading covinv (jointly with dfs\_inv and scan\_complete, which its discover-step needs) through
+      build\_dfs, open\_tree\_component (the component-root seed adds no comparability obligation: a seen
+      free-neighbour of the fresh root would, by free\_neighbor\_on\_stack + the empty stack, be a
+      contradiction), and the two phase folds, giving build\_tree\_covinv.\<close>
 
 lemma build_dfs_covinv_aux:
   assumes dom: "build_dfs_dom (fl, s)"
@@ -4848,7 +4848,7 @@ proof -
   have seent: "ds_seen t = (ds_seen s)[c := True]" by (simp add: t_def Let_def)
   have prntt: "ds_prnt t = (ds_prnt s)[c := vcount]" by (simp add: t_def Let_def)
   have stkt: "ds_stk t = [(c, out_lo ! c, in_lo ! c)]" by (simp add: t_def Let_def)
-  \<comment> \<open>dfs_inv of the seed (same block as open_tree_component_inv)\<close>
+  \<comment> \<open>dfs\_inv of the seed (same block as open\_tree\_component\_inv)\<close>
   have invt: "dfs_inv acyc_flow t"
     unfolding t_def dfs_inv_def
     apply (intro conjI)
@@ -5043,9 +5043,9 @@ qed
 subsection \<open>Free-edge coverage: every free real edge is a tree (parent) edge\<close>
 
 text \<open>The payoff of covinv + the walk-builder + the acyclicity engine: an uncovered free real edge e,
-      with both endpoints seen (build_tree_spans) and pstep-comparable (build_tree_covinv), would close a
+      with both endpoints seen (build\_tree\_spans) and pstep-comparable (build\_tree\_covinv), would close a
       free residual cycle (the tree chain between its endpoints plus e), contradicting acyclicity. Hence
-      e is a parent edge. Needs acyclic_flow (nth acyc_flow), delivered on the Some branch by acyc_of_some.\<close>
+      e is a parent edge. Needs acyclic\_flow (nth acyc\_flow), delivered on the Some branch by acyc\_of\_some.\<close>
 
 lemma redge_in_E: "original_network.oedge a < m \<Longrightarrow> a \<in> original_network.\<EE>"
   by (cases a) (auto simp: original_network.\<EE>_def)
@@ -5136,13 +5136,13 @@ qed
 
 subsection \<open>Artificial-edge reverse coverage: every artificial InTree edge is a component-root's edge\<close>
 
-text \<open>art_owned: for every emitted artificial slot k with tag InTree there is a component root c
+text \<open>art\_owned: for every emitted artificial slot k with tag InTree there is a component root c
       (\<open>ds_prnt c = vcount\<close>) whose parent edge is exactly that slot (\<open>ds_par c = m + k\<close>). This is the
-      reverse of cr_ext_inv and completes InTree \<subseteq> T for the artificial range. Threaded like the forward
-      cr_ext machinery: build_dfs adds no InTree artificial edge and freezes seen roots
-      (build_dfs_seen_frozen — the forward field-freeze proved here), open_tree_component installs the new
-      root's witness, emit_U_edge only adds an InU edge, and the two phase folds carry it with the same
-      ds_nxt \<le> length vs_list bound (card of a seen-vertex witness set).\<close>
+      reverse of cr\_ext\_inv and completes InTree {\isasymsubseteq} T for the artificial range. Threaded like the forward
+      cr\_ext machinery: build\_dfs adds no InTree artificial edge and freezes seen roots
+      (build\_dfs\_seen\_frozen --- the forward field-freeze proved here), open\_tree\_component installs the new
+      root's witness, emit\_U\_edge only adds an InU edge, and the two phase folds carry it with the same
+      ds\_nxt {\isasymle} length vs\_list bound (card of a seen-vertex witness set).\<close>
 
 lemma bd_upd1_seen_frozen:
   assumes wf: "dfs_wf s" and c: "bd_call1_conds fl s" and sx: "ds_seen s ! x"
@@ -5722,8 +5722,8 @@ qed
 subsection \<open>Towards @{text init_bflow}: excess decomposition of the assembled flow\<close>
 
 text \<open>The augmented excess of @{const flow_all} splits into a real part and an artificial part. On the
-      real edges @{term \<open>e < m\<close>} the assembled flow is @{const acyc_flow}, so — since the augmented and
-      original in/out-edge sets agree there (@{thm delta_minus_orig} / @{thm delta_plus_orig}) — the real
+      real edges @{term \<open>e < m\<close>} the assembled flow is @{const acyc_flow}, so --- since the augmented and
+      original in/out-edge sets agree there (@{thm delta_minus_orig} / @{thm delta_plus_orig}) --- the real
       part is exactly \<open>original_network.ex (h \<circ> nth acyc_flow) v\<close>. The artificial part is the signed
       flow on the artificial in/out edges of @{term v}; identifying it with @{term \<open>imbalance ! v\<close>} (and,
       with @{thm make_acyclic_ex}, \<open>original_network.ex (h \<circ> nth acyc_flow) v = h (excess ! v)\<close>) is the
@@ -5785,7 +5785,7 @@ text \<open>The artificial in/out edge-sums at @{term v} reindex to sums over th
       @{term \<open>k < Kart\<close>}: edge @{term \<open>m + k\<close>} is the \<open>k\<close>-th artificial edge, carrying
       @{term \<open>ds_aflw (build_tree acyc_flow) ! k\<close>} (@{thm flow_all_art}). The membership rewrites
       @{text dm_art_iff}/@{text dp_art_iff} strip the augmented endpoint functions down to the plain
-      arrays (the \<open>fst_exec\<close>/\<open>snd_exec\<close> simp rules must be disabled throughout — they are
+      arrays (the \<open>fst_exec\<close>/\<open>snd_exec\<close> simp rules must be disabled throughout --- they are
       self-referential and loop on any \<open>fst_all ! e\<close> / \<open>snd_all ! e\<close>).\<close>
 
 lemma dm_art_iff: "e \<in> NS.delta_minus v \<inter> {m..<m+Kart} \<longleftrightarrow> (m \<le> e \<and> e < m+Kart \<and> snd_all ! e = v)"
@@ -5868,8 +5868,8 @@ subsection \<open>Towards @{text init_bflow}: the artificial excess accumulator\
 
 text \<open>@{term \<open>aex s v\<close>} is the artificial-edge contribution to @{term v}'s excess in state @{term s}:
       the signed per-slot flow over the slots already emitted (@{term \<open>k < ds_nxt s\<close>}). Each emission
-      — @{const emit_U_edge} or the seed of @{const open_tree_component} (the enclosed @{const build_dfs}
-      freezes the artificial arrays, @{thm build_dfs_art}) — changes @{term \<open>aex s v\<close>} by exactly
+      --- @{const emit_U_edge} or the seed of @{const open_tree_component} (the enclosed @{const build_dfs}
+      freezes the artificial arrays, @{thm build_dfs_art}) --- changes @{term \<open>aex s v\<close>} by exactly
       @{term \<open>- imbalance ! v\<close>} at the processed vertex and @{term \<open>imbalance ! v\<close>} at the root, so over
       a whole phase-1 sweep the increments accumulate as one @{const sum_list}. The @{term E}-witness
       (@{term \<open>ds_nxt s = card E\<close>}) carries the @{term \<open>ds_nxt s < length vs_list\<close>} bound the emission
@@ -6021,8 +6021,8 @@ next
 qed
 
 text \<open>The accumulator reaches its target already after phase 1 (every imbalanced vertex is opened
-      or gets its @{const emit_U_edge}, hence seen), and phase 2 only opens the remaining — balanced,
-      hence zero-flow — vertices, so it leaves @{const aex} unchanged; the final @{const ds_lsuc}
+      or gets its @{const emit_U_edge}, hence seen), and phase 2 only opens the remaining --- balanced,
+      hence zero-flow --- vertices, so it leaves @{const aex} unchanged; the final @{const ds_lsuc}
       touch-up is irrelevant. Thus each real vertex's artificial excess is exactly
       @{term \<open>- imbalance ! w\<close>}.\<close>
 
@@ -6323,14 +6323,14 @@ proof -
 qed
 
 text \<open>\<^emph>\<open>Pass A's excess for an arbitrary flow.\<close>  @{const excess} is defined as the excess component of
-      @{term \<open>passA flow_list\<close>} — the \<^emph>\<open>frozen\<close> input flow — but the executable pipeline runs Pass A on
+      @{term \<open>passA flow_list\<close>} --- the \<^emph>\<open>frozen\<close> input flow --- but the executable pipeline runs Pass A on
       the \<^emph>\<open>acyclified\<close> flow instead.  The three lemmas below generalise @{thm excess_nth} /
       @{thm excess_is_orig_ex} from @{term flow_list} to any @{term fl} (the underlying fold lemma
       @{thm passA_fold_exc} is already flow-generic), and then close the loop: since the acyclifier
       preserves every vertex's excess (@{thm orig_ex_acyc_eq_excess}) and @{term h} is injective
       (@{thm h_eq_iff}), running Pass A on @{const acyc_flow} yields \<^emph>\<open>literally\<close> @{const excess}.
-      This is what lets the imperative refinement identify its in-place excess array — computed from
-      the acyclified flow — with the functional @{const imbalance}, which is anchored to
+      This is what lets the imperative refinement identify its in-place excess array --- computed from
+      the acyclified flow --- with the functional @{const imbalance}, which is anchored to
       @{const excess}.\<close>
 
 lemma passA_exc_len: "length (fst (snd (passA fl))) = Suc vcount"
@@ -6574,11 +6574,11 @@ qed
 
 subsection \<open>Acyclicity of the acyclified flow on the Some branch (architecture keystone)\<close>
 
-text \<open>On the branch where the acyclifier returns a flow (acyc_flow_opt = Some), that flow is genuinely
-      acyclic: make_acyclic_correct_unconditional certifies it, the freshly-built counting-sort CSRs
-      have nothing iterated yet (csr_lo = csr_cur), and the vertex list abstracts to exactly the vertex
+text \<open>On the branch where the acyclifier returns a flow (acyc\_flow\_opt = Some), that flow is genuinely
+      acyclic: make\_acyclic\_correct\_unconditional certifies it, the freshly-built counting-sort CSRs
+      have nothing iterated yet (csr\_lo = csr\_cur), and the vertex list abstracts to exactly the vertex
       set. This is the hypothesis under which the initial-basis interpretation's acyclicity-dependent
-      obligations (free-edge coverage / init_partition) become provable; it is discharged at the use
+      obligations (free-edge coverage / init\_partition) become provable; it is discharged at the use
       site, inside solve on the Some branch.\<close>
 
 lemma csr_fresh_scatter: "csr_iterated (build_csr_scatter nn key es dflt) u = {}"
@@ -6689,7 +6689,7 @@ proof -
 qed
 
 text \<open>Obligation (\<open>init_selfloop\<close>): a self-loop of the initial basis carries the cost-directed
-      bound the acyclifier fixes — zero flow when @{term \<open>0 \<le> \<c>\<close>}, saturation when @{term \<open>\<c> < 0\<close>}.
+      bound the acyclifier fixes --- zero flow when @{term \<open>0 \<le> \<c>\<close>}, saturation when @{term \<open>\<c> < 0\<close>}.
       Artificial edges are not self-loops, so only the real edges contribute, discharged by
       @{thm acyc_flow_selfloop}; feasibility rules out the infinite-capacity negative case.\<close>
 

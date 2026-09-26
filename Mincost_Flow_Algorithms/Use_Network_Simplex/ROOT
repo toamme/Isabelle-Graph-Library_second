@@ -1,8 +1,12 @@
-session "Use_Network_Simplex = "HOL-Library" +
+session Use_Network_Simplex = "HOL-Library" +
   options [document = pdf, document_output = "output"]
 
 sessions
   Mincost_Flow_Algorithms
+  
+directories 
+  Rooted_Arborescense
+  Refinements
 
 theories
   Acyclic_Flow_Instantiation
@@ -14,15 +18,13 @@ theories
   Network_Simplex_Initial_Basis_Code
   Network_Simplex_Initial_Basis_Selector
   Network_Simplex_Initial_Basis_Correct
-  Network_Simplex_Init
+  Network_Simplex_Int
   
-  Rooted_Arborescense/Rooted_Arborescense_Defs
-  Rooted_Arborescense/Rooted_Arborescense
-  Rooted_Arborescense/Rooted_Arborescense_Refinement
-  
-  
-  
+  "Rooted_Arborescense/Rooted_Arborescense_Defs"
+  "Rooted_Arborescense/Rooted_Arborescense"
+  "Rooted_Arborescense/Rooted_Arborescense_Refinement"
+
+
 
 document_files
   "root.tex"
-

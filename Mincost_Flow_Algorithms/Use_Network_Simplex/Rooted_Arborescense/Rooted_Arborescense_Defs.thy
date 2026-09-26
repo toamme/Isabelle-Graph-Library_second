@@ -263,7 +263,7 @@ partial_function (tailrec) subtree_fold ::
           else subtree_fold S stop (the (thrd S u)) f acc'))"
 
 text \<open>The @{term iterate_root_opposed} operation of the arborescence ADT: fold @{term f} over every
-      node whose (unique) path to the root passes through @{term v} — i.e. over the subtree of
+      node whose (unique) path to the root passes through @{term v} --- i.e. over the subtree of
       @{term v}, in thread (preorder) order.\<close>
 definition iterate_root_opposed_impl ::
   "'a ndtree \<Rightarrow> 'a \<Rightarrow> ('a \<Rightarrow> 'acc \<Rightarrow> 'acc) \<Rightarrow> 'acc \<Rightarrow> 'acc" where
@@ -272,8 +272,8 @@ definition iterate_root_opposed_impl ::
 section \<open>The pair-of-paths (join) search\<close>
 
 text \<open>Find the join (lowest common ancestor) of @{term u} and @{term v} by repeatedly lifting
-      whichever endpoint currently sits in the smaller subtree — equivalently the deeper one, since
-      @{const snum} strictly increases towards the root — to its parent, until the two pointers meet.
+      whichever endpoint currently sits in the smaller subtree --- equivalently the deeper one, since
+      @{const snum} strictly increases towards the root --- to its parent, until the two pointers meet.
       The nodes lifted on the @{term u}-side and the @{term v}-side, recorded bottom-up and then
       reversed, are the two branch paths from @{term u} and @{term v} up to (but excluding) the join.\<close>
 partial_function (tailrec) join_paths_loop ::

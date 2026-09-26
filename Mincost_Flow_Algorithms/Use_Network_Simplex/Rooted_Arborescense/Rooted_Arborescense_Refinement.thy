@@ -485,7 +485,7 @@ lemma ndtree_cond_upd_snum[sep_heap_rules]:
    <\<lambda>_. ndtree_assn V (S\<lparr>snum := (if c then (snum S)(u := snum S u + d) else snum S)\<rparr>) Ti>"
   by (cases c) (sep_auto simp: fun_upd_idem)+
 
-text \<open>Updating a reverse-thread cell (partial-map,  "w \<mapsto> u"); needs @{term "w \<in> V"} (domain)
+text \<open>Updating a reverse-thread cell (partial-map,  "w {\isasymmapsto} u"); needs @{term "w \<in> V"} (domain)
       and @{term "u \<in> V"} (range, so the @{term 0}-encoding stays faithful).\<close>
 lemma ndtree_rel_upd_rvth:
   assumes A: "ndtree_rel V S pl thl rl ll sl al" and w: "w \<in> V" and u: "u \<in> V"

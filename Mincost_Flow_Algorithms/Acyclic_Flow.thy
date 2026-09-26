@@ -222,7 +222,7 @@ record ('v, 'farr, 'sarr, 'vvit, 'arr) AF_state =
 
 subsection \<open>Setup for automation\<close>
 
-text \<open>The proof follows the  Directed_Set_Graphs.Pair_Graph_Specs-based DFS template
+text \<open>The proof follows the  \<^verbatim>\<open>Directed_Set_Graphs.Pair_Graph_Specs\<close>-based DFS template
       (@{file \<open>../Set_Graphs/Graph_Algorithms/DFS.thy\<close>} and
        @{file \<open>../Set_Graphs/Graph_Algorithms/DFS_Cycles_Aux.thy\<close>}): the recursion is split into
       branch-condition and update functions, invariants are stated with paired
@@ -466,7 +466,7 @@ text \<open>Cost-directed normalisation of a self-loop arc @{term a} (@{term \<o
       unit cost prefers without disturbing feasibility: a negative-cost loop is filled to its capacity
       @{term \<open>cap a\<close>} (a negative-cost loop of \emph{infinite} capacity certifies the instance unbounded),
       and \<^emph>\<open>every non-negative-cost loop is emptied\<close>, flow set to @{term 0}.  Emptying a zero-cost loop is
-      cost-neutral and keeps the flow acyclic, so this needs no residual-room test — the positive- and
+      cost-neutral and keeps the flow acyclic, so this needs no residual-room test --- the positive- and
       zero-cost cases coincide.  Unlike the old @{const af_cancel_seg} on-empty-segment treatment this
       fires on \emph{every} scanned self-loop, not only the free ones, so the final flow is
       self-loop-normalised (\<open>\<c> a \<ge> 0 \<Longrightarrow> flow 0\<close>, \<open>\<c> a < 0 \<Longrightarrow> flow cap\<close>) regardless of the starting bound.\<close>
@@ -562,7 +562,7 @@ text \<open>The inner recursion is split into three recursive branches -- advanc
       arc (\<open>T-out\<close>), advance along an ingoing one (\<open>T-in\<close>), or backtrack (\<open>T-pop\<close>) -- and one return
       branch (empty stack). The six-way dispatch inside @{const af_handle} lives entirely inside the
       update functions of the two advancing branches, exactly as neighbour selection lives inside
-       DFS_upd1 in the DFS template.\<close>
+       \<^verbatim>\<open>DFS_upd1\<close> in the DFS template.\<close>
 
 definition "AF_DFS_call_1_conds st =
    (\<not> af_unbounded st \<and>
@@ -1139,9 +1139,9 @@ qed
 
 text \<open>The single-step preservation of Themes A and B now depends on the range invariants (an updated
       edge/vertex must lie in the edge/vertex set for the length-preserving arrays to register the write),
-      so Themes A and B are preserved jointly. The combined single-step lemmas AF_invar_12_holds_1/2/3
+      so Themes A and B are preserved jointly. The combined single-step lemmas \<^verbatim>\<open>AF_invar_12_holds_1/2/3\<close>
       live below (after Theme E1 supplies the fact that the scanned arc lies in the edge set); the
-      whole-loop lift is AF_inv_holds.\<close>
+      whole-loop lift is \<^verbatim>\<open>AF_inv_holds\<close>.\<close>
 
 
 subsection \<open>Theme B --- stack bookkeeping\<close>
@@ -1342,7 +1342,7 @@ lemma AF_invar_2_in_arr[simp]: "AF_invar_2 (st\<lparr>af_in_arr := X\<rparr>) = 
   by (simp add: AF_invar_2_def)
 
 text \<open>The single-step lifts of Theme B to the three DFS steps, together with those of Theme A, are the
-      combined lemmas AF_invar_12_holds_1/2/3 proved below (Theme E1 first supplies the fact that the
+      combined lemmas \<^verbatim>\<open>AF_invar_12_holds_1/2/3\<close> proved below (Theme E1 first supplies the fact that the
       scanned arc lies in the edge set).\<close>
 
 
@@ -4749,7 +4749,7 @@ text \<open>The outer loop, the inner DFS and the segment handler all touch @{co
       operations leave unchanged is preserved by the whole procedure.  Instantiated downstream (in the
       CSR setting) with the edge / lower-bound / upper-bound selectors, which the concrete cursor
       operations preserve, this shows the acyclifier returns the graph arrays with their static CSR
-      structure intact — only the cursor moves.\<close>
+      structure intact --- only the cursor moves.\<close>
 
 lemma af_reset_unsee_seg_out_proj:
   assumes "\<And>G v. proj (out_reset G v) = proj G"
@@ -5582,8 +5582,8 @@ proof (rule acyclic_flowI)
 qed
 
 text \<open>The converse bridge, used when consuming acyclicity: a \emph{free} arc admits strictly positive
-      residual capacity in both directions (forward @{term \<open>\<u> a - f a\<close>} — positive because either the
-      capacity is infinite or the flow is below it — and backward @{term \<open>f a\<close>} — positive because the
+      residual capacity in both directions (forward @{term \<open>\<u> a - f a\<close>} --- positive because either the
+      capacity is infinite or the flow is below it --- and backward @{term \<open>f a\<close>} --- positive because the
       flow is strictly positive). Hence a closed pre-path of free arcs is augmenting in both directions,
       which an @{const acyclic_flow} forbids.\<close>
 
@@ -7129,7 +7129,7 @@ qed
 text \<open>The finish-order invariant J' (\<open>af_rankok\<close>): every finished vertex has at most one free
       arc to a strictly-later-finished (higher-rank) vertex --- its DFS-tree parent edge. A vertex
       counts as ``later'' if it is not yet finished (\<open>af_hgt\<close>), so the invariant makes sense at
-      every step. Terminally (all finished) it says every finished vertex has \<le>1 free arc to a
+      every step. Terminally (all finished) it says every finished vertex has $\leq 1$ free arc to a
       higher-rank vertex, which is the certificate that the free graph is a forest.
 
       A first ingredient: a cancellation only ever removes free arcs (MONO), so it preserves J' --- with
@@ -7137,7 +7137,7 @@ text \<open>The finish-order invariant J' (\<open>af_rankok\<close>): every fini
       J' for a vertex \emph{at its pop}: exhaustion means it scanned every arc in the incarnation that
       pops, MONO makes those arcs free already at scan time, and a free back-edge to an ancestor would
       have truncated (dropped) the reader --- contradicting that this is the incarnation that pops. So
-      every free-at-pop arc is a tree/parent edge, giving \<le>1 to a higher rank, with no self-healing.\<close>
+      every free-at-pop arc is a tree/parent edge, giving $\leq 1$ to a higher rank, with no self-healing.\<close>
 
 definition "af_hgt st rk v a \<longleftrightarrow>
   (st_lookup (af_state st) (if fst a = v then snd a else fst a) \<noteq> Finished
@@ -7153,7 +7153,7 @@ text \<open>The pop case of J' (the crux). Assume every free arc incident to the
       whose far endpoint is not yet finished is @{term v}'s parent arc (@{term \<open>hd (af_estack st)\<close>}) ---
       the fact the running scan-resolution invariant will supply, following from exhaustion, MONO, and
       the truncation behaviour. Then stamping @{term v} with the current clock preserves @{const af_rankok}:
-      for @{term v} itself all higher-rank free arcs coincide with the parent arc (so \<le>1), and for a
+      for @{term v} itself all higher-rank free arcs coincide with the parent arc (so $\leq 1$), and for a
       previously-finished vertex the ``higher'' status of each of its arcs is unchanged (a neighbour that
       was on the stack, hence counted as later, becomes finished with strictly larger rank).\<close>
 

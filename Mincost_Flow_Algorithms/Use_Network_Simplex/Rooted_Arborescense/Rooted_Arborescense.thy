@@ -184,7 +184,7 @@ text \<open>
   entering arc inside the detached subtree, @{term j} (@{text v_in}) is its new parent, @{term p}
   (@{text u_out}) is the top of the detached subtree (lower endpoint of the leaving arc), and
   @{term jn} (@{text join}) is the apex of the pivot cycle.  Rooted-wise this \<^emph>\<open>reverses the
-  parent pointers along the path @{term i} \<dots> @{term p}\<close> and re-attaches @{term i} below
+  parent pointers along the path @{term i} {\isasymdots} @{term p}\<close> and re-attaches @{term i} below
   @{term j}.
 
   The thread surgery below is a direct port of LEMON's \<open>updateTreeStructure\<close>: every step is
@@ -207,7 +207,7 @@ definition ancestors :: "('a \<rightharpoonup> 'a) \<Rightarrow> 'a \<Rightarrow
 
 text \<open>The executable ancestor walk @{const anc_list} / @{const ancestors} computes exactly the
       logical root-path @{const follow}.  This is the bridge that lets the geometry of the pivot
-      (stated with @{const follow}) be discharged for the code-level  join_of.\<close>
+      (stated with @{const follow}) be discharged for the code-level  join\_of.\<close>
 
 lemma anc_list_acc:
   assumes "parent_spec T"
@@ -299,7 +299,7 @@ lemma takeWhile_holds: "x \<in> set (takeWhile P xs) \<Longrightarrow> P x"
 
 text \<open>Consecutive nodes of a root-path are parent-linked: in @{term "follow T v"} every node's
       successor is its parent.  This turns the root-path list into an explicit parent chain
-     (s 0, s 1, \<dots>) (the path @{text P} the stem induction ranges over).\<close>
+     (s 0, s 1, {\isasymdots}) (the path @{text P} the stem induction ranges over).\<close>
 lemma follow_nth_Suc:
   assumes ps: "parent_spec T" and lt: "Suc t < length (follow T v)"
   shows "T (follow T v ! t) = Some (follow T v ! Suc t)"
@@ -330,7 +330,7 @@ proof -
   qed
 qed
 
-text \<open>Converse of @{thm follow_nth_Suc} (the \<section>15.2 "out-edge" engine): a @{const parent_spec}
+text \<open>Converse of @{thm follow_nth_Suc} (the {\isasymsection}15.2 "out-edge" engine): a @{const parent_spec}
       function that chains through a list (consecutive links) and is @{term None} at the last node
       realises that list as @{const follow} from its head.  Used to pin the final thread to its
       explicit preorder list.\<close>
@@ -401,7 +401,7 @@ qed
 
 text \<open>@{text P}/@{text D1} (the path the stem induction ranges over): if @{term p} lies on
       @{term i}'s root-path then there is an explicit injective parent chain
-      (s 0 = i, \<dots>, s k = p) whose nodes are exactly the prefix of @{term "follow T i"}
+      (s 0 = i, {\isasymdots}, s k = p) whose nodes are exactly the prefix of @{term "follow T i"}
       up to @{term p}.\<close>
 lemma follow_path:
   assumes ps: "parent_spec T" and pin: "p \<in> set (follow T i)"
@@ -583,7 +583,7 @@ qed
 
 text \<open>A tree root-path stays inside @{term V}: every ancestor of a node in @{term V} is itself in
       @{term V} (the parent map's range is contained in @{term "dVs = V"}).  This lets the abstract
-      path of @{thm follow_path} be located in @{term V} for  block_nest/the stem setup.\<close>
+      path of @{thm follow_path} be located in @{term V} for  block\_nest/the stem setup.\<close>
 lemma follow_subset_V:
   assumes rinv: "rooted_arborescense_invar r V T" and vV: "v \<in> V"
   shows "set (follow T v) \<subseteq> V"
@@ -671,7 +671,7 @@ qed
 
 text \<open>Two prefixes of a distinct list are comparable, and set-inclusion fixes which: if @{term as}
       and @{term bs} are both prefixes of a distinct @{term ys} and @{term "set as \<subseteq> set bs"} then
-      @{term as} is a prefix of @{term bs}.  This turns "subtree @{term c} \<subseteq> subtree @{term v}"
+      @{term as} is a prefix of @{term bs}.  This turns "subtree @{term c} {\isasymsubseteq} subtree @{term v}"
       into "block @{term c} sits contiguously inside block @{term v}".\<close>
 lemma prefix_mono_set:
   assumes dist: "distinct ys" and ea: "as @ as' = ys" and eb: "bs @ bs' = ys"
@@ -968,7 +968,7 @@ proof -
   thus ?thesis by auto
 qed
 
-text \<open>The block-nesting in the shape consumed by the stem induction (\<section>14.3 @{text block_nest}): the
+text \<open>The block-nesting in the shape consumed by the stem induction ({\isasymsection}14.3 @{text block_nest}): the
       block of @{term v} opens with @{term v} itself, then contains the whole block of a subtree
       node @{term c} contiguously.  @{term v} heads the block because @{term "hd (block S v) = v"}
       and @{term "v \<noteq> c = hd (block S c)"}.\<close>
@@ -1076,10 +1076,10 @@ paragraph \<open>The loops, as tail-recursive functions over the maps (they clim
 
 
 text \<open>Base case of the stem loop: when the current stem node has reached @{term p} the loop returns
-      its state unchanged.  This is the guard-hit equation the stem induction (\<section>13.5) terminates on;
+      its state unchanged.  This is the guard-hit equation the stem induction ({\isasymsection}13.5) terminates on;
       the recursive step is @{thm stem_loop.simps} with the guard taken false.\<close>
 
-text \<open>Generic engine for the @{text thrd_inv} unfolding (\<section>13.4): an external @{const fun_upd}
+text \<open>Generic engine for the @{text thrd_inv} unfolding ({\isasymsection}13.4): an external @{const fun_upd}
       on a key not written by a fold of @{const fun_upd}s commutes inside the fold.\<close>
 lemma fold_upd_commute:
   "x \<notin> (g ` set xs) \<Longrightarrow>
@@ -1121,7 +1121,7 @@ qed
 
 
 text \<open>@{const dirty_pass} edits only @{const rvth} (it terminates, being a @{const foldl}); the other
-      four record fields pass through unchanged.  This pins @{term "thrd (St)"} (the final thread, \<section>15.2)
+      four record fields pass through unchanged.  This pins @{term "thrd (St)"} (the final thread, {\isasymsection}15.2)
       to @{term "thrd Ss"} and leaves @{const prnt}/@{const lsuc}/@{const snum} as the decoration loops find them.\<close>
 lemma dirty_pass_unchanged:
   "thrd (dirty_pass S drt) = thrd S
@@ -1146,7 +1146,7 @@ lemmas dirty_pass_lsuc[simp] = dirty_pass_unchanged[THEN conjunct2, THEN conjunc
 lemmas dirty_pass_snum[simp] = dirty_pass_unchanged[THEN conjunct2, THEN conjunct2, THEN conjunct2]
 
 text \<open>@{const dirty_pass} rebuilds @{const rvth} by a left fold over @{term ds}: each node @{term u}
-      with @{term "thrd S u = Some w"} contributes term "w \<mapsto> u" (last write wins).\<close>
+      with @{term "thrd S u = Some w"} contributes term "w {\isasymmapsto} u" (last write wins).\<close>
 lemma dirty_pass_rvth_fold:
   "rvth (dirty_pass S ds) = foldl (\<lambda>R u. case thrd S u of None \<Rightarrow> R | Some w \<Rightarrow> R(w \<mapsto> u)) (rvth S) ds"
 proof (induction ds arbitrary: S)
@@ -1201,13 +1201,13 @@ lemmas [code] =
   stem_loop.simps stem_num_loop.simps last_vin_loop.simps
   last_vout_loop.simps succ_vin_loop.simps succ_vout_loop.simps
 
-text \<open>The five decoration loops (\<section>15.4) each climb the \<^emph>\<open>fixed\<close> parent map @{term P} (they never
+text \<open>The five decoration loops ({\isasymsection}15.4) each climb the \<^emph>\<open>fixed\<close> parent map @{term P} (they never
       touch @{const prnt}), so when @{term P} is a @{const parent_spec} they terminate, and each
       preserves every record field except the one it recomputes (@{const lsuc} resp. @{const snum}).
-      In particular all five leave @{const thrd}, @{const prnt}, @{const rvth} unchanged — this pins
-      the final thread (and reverse-thread before @{const dirty_pass}) for the \<section>15.2 "out-edge" closed
+      In particular all five leave @{const thrd}, @{const prnt}, @{const rvth} unchanged --- this pins
+      the final thread (and reverse-thread before @{const dirty_pass}) for the {\isasymsection}15.2 "out-edge" closed
       form.  The shared proof is well-founded induction along the parent chain from @{term u}
-      (@{thm follow_dom_ps}), exactly as in  stem_loop_effect.\<close>
+      (@{thm follow_dom_ps}), exactly as in  stem\_loop\_effect.\<close>
 lemma stem_num_loop_fields:
   assumes ps: "parent_spec P"
   shows "prnt S = P \<longrightarrow>
@@ -2340,11 +2340,11 @@ proof -
 qed
 
 
-subsection \<open>The stem reversal as a closed-form invariant (\<section>13)\<close>
+subsection \<open>The stem reversal as a closed-form invariant ({\isasymsection}13)\<close>
 
 text \<open>The path-reversal loop @{const stem_loop} is a @{command partial_function}, so it has no
       generated induction rule.  We fix the pivot data in a locale and characterise the loop's
-      effect by a well-founded induction on the variant @{term "k - m"} (\<section>13.5).  The state after
+      effect by a well-founded induction on the variant @{term "k - m"} ({\isasymsection}13.5).  The state after
       @{term m} body iterations is pinned down field-by-field by @{term "Istem m"}: every map is
       @{term "S0"}'s map overlaid (@{text "++"}, highest priority last) with the edits made so far.\<close>
 
@@ -2372,7 +2372,7 @@ definition out :: "nat \<Rightarrow> 'a option" where
   "out t = thrd S0 (lsuc S0 (s t))"
 
 text \<open>@{term "lsx t"}: the loop's running @{text lsx} pointer at step @{term t} (the last node of
-      the block already threaded), in closed form (\<section>12.0).\<close>
+      the block already threaded), in closed form ({\isasymsection}12.0).\<close>
 definition lsx :: "nat \<Rightarrow> 'a" where
   "lsx t = (if t = 0 then lsuc S0 i
             else if lsuc S0 (s t) = lsuc S0 (s (t-1)) then the (rvth S0 (s (t-1)))
@@ -2386,10 +2386,10 @@ definition drt :: "nat \<Rightarrow> 'a list" where "drt m = j # map lsx [0..<m]
 text \<open>@{term "bef t"}: the thread-predecessor (in @{term S0}) of @{term "s t"}.\<close>
 definition bef :: "nat \<Rightarrow> 'a" where "bef t = the (rvth S0 (s t))"
 
-text \<open>The thread map after @{term m} iterations, as a fold of @{const fun_upd}s: the j \<mapsto> i
-      seam at the bottom, then the bridge (BR) links "bef t \<mapsto> out t (a delete when
-      @{term "out t = None"}), then the up-links (UP) "lsx t \<mapsto> s (Suc t)" applied last so
-      they win on the single colliding key (\<section>12.3a).\<close>
+text \<open>The thread map after @{term m} iterations, as a fold of @{const fun_upd}s: the j {\isasymmapsto} i
+      seam at the bottom, then the bridge (BR) links "bef t {\isasymmapsto} out t (a delete when
+      @{term "out t = None"}), then the up-links (UP) "lsx t {\isasymmapsto} s (Suc t)" applied last so
+      they win on the single colliding key ({\isasymsection}12.3a).\<close>
 definition thrd_inv :: "nat \<Rightarrow> ('a \<rightharpoonup> 'a)" where
   "thrd_inv m =
      fold (\<lambda>t T. T(lsx t \<mapsto> s (Suc t))) [0..<m]
@@ -2401,7 +2401,7 @@ text \<open>The reverse-thread edits actually installed during the loop (the def
       The loop sets the reverse-thread of @{term "out t"} to @{term "bef t"} on each iteration, so on
       a colliding key (two stem nodes sharing a last-successor, hence the same @{term "out t"}) the
       later write wins.  We therefore reverse the association list before @{const map_of} (which keeps
-      the first occurrence), making the closed form last-write-wins to match the loop (\<section>13.4).\<close>
+      the first occurrence), making the closed form last-write-wins to match the loop ({\isasymsection}13.4).\<close>
 definition revBR :: "nat \<Rightarrow> ('a \<rightharpoonup> 'a)" where
   "revBR m = map_of (rev (map (\<lambda>t. (the (out t), bef t)) (filter (\<lambda>t. out t \<noteq> None) [0..<m])))"
 
@@ -2419,13 +2419,13 @@ definition Sfin :: "'a ndtree" where
   "Sfin = \<lparr> prnt = prnt S0 ++ REV k, thrd = thrd_inv k,
             rvth = rvth S0 ++ revBR k, lsuc = lsuc S0, snum = snum S0 \<rparr>"
 
-text \<open>@{term "Istem m S"} pins every field, so the state at @{term "m = k"} is unique (\<section>13.1).\<close>
+text \<open>@{term "Istem m S"} pins every field, so the state at @{term "m = k"} is unique ({\isasymsection}13.1).\<close>
 lemma Istem_unique:
   assumes "Istem k S" shows "S = Sfin"
   using assms by (cases S) (simp add: Istem_def Sfin_def)
 
 text \<open>The live parent edge: at the head @{term "s m"} the reversal has not yet fired, so the parent
-      is still @{term S0}'s (\<section>13.2 @{text live_prnt}).\<close>
+      is still @{term S0}'s ({\isasymsection}13.2 @{text live_prnt}).\<close>
 lemma live_prnt:
   assumes "m < k" "Istem m S" shows "prnt S (s m) = Some (s (Suc m))"
 proof -
@@ -2446,7 +2446,7 @@ lemma thrd_inv_0: "thrd_inv 0 = (thrd S0)(j \<mapsto> i)"
 lemma revBR_0: "revBR 0 = Map.empty" by (simp add: revBR_def)
 lemma REV_0: "REV 0 = Map.empty" by (simp add: REV_def)
 
-text \<open>Entry: after the initial j mapped to Some i thread edit, @{term "Istem 0"} holds (\<section>13.6).\<close>
+text \<open>Entry: after the initial j mapped to Some i thread edit, @{term "Istem 0"} holds ({\isasymsection}13.6).\<close>
 lemma Istem_0: "Istem 0 (S0\<lparr>thrd := (thrd S0)(j \<mapsto> i)\<rparr>)"
   by (simp add: Istem_def thrd_inv_0 revBR_0 REV_0)
 
@@ -2471,11 +2471,11 @@ qed
 
 end
 
-text \<open>The locality (geometry) facts the induction quotes directly (\<section>13.2/\<section>14): the out-nodes are
+text \<open>The locality (geometry) facts the induction quotes directly ({\isasymsection}13.2/{\isasymsection}14): the out-nodes are
       disjoint from the stem, the bridge key is not an up-link key, the out-nodes are distinct, and
-      a genuinely new last-successor is untouched by the edits.  Per \<section>14 these are consequences of
+      a genuinely new last-successor is untouched by the edits.  Per {\isasymsection}14 these are consequences of
       @{const arb_invar} plus the pivot preconditions (clause J etc.); they are assumed here so the
-      stem induction (\<section>13.3--13.6) can be developed in isolation.\<close>
+      stem induction ({\isasymsection}13.3--13.6) can be developed in isolation.\<close>
 locale stem_setup_geom = stem_setup +
   assumes out_notin_stem: "\<And>t. t < k \<Longrightarrow> out t \<noteq> None \<Longrightarrow> the (out t) \<notin> s ` {..k}"
       and bef_notin_lsx:  "\<And>m. m < k \<Longrightarrow> bef m \<notin> lsx ` {..m}"
@@ -2485,7 +2485,7 @@ locale stem_setup_geom = stem_setup +
                            \<and> lsuc S0 (s (Suc m)) \<noteq> j"
 begin
 
-text \<open>At the head @{term "s m"} the reverse thread still agrees with @{term S0} (\<section>13.2 @{text live_rvth}).\<close>
+text \<open>At the head @{term "s m"} the reverse thread still agrees with @{term S0} ({\isasymsection}13.2 @{text live_rvth}).\<close>
 lemma live_rvth:
   assumes "m \<le> k" "Istem m S" shows "rvth S (s m) = rvth S0 (s m)"
 proof -
@@ -2607,8 +2607,8 @@ next
   qed
 qed
 
-text \<open>The thread map gains the up-link "lsx m \<mapsto> s (Suc m)" and the bridge
-     "bef m := out m"; this is exactly the two edits the loop body performs (\<section>13.4 thrd3).\<close>
+text \<open>The thread map gains the up-link "lsx m {\isasymmapsto} s (Suc m)" and the bridge
+     "bef m := out m"; this is exactly the two edits the loop body performs ({\isasymsection}13.4 thrd3).\<close>
 lemma thrd_inv_Suc:
   assumes mk: "m < k"
   shows "thrd_inv (Suc m) = ((thrd_inv m)(lsx m \<mapsto> s (Suc m)))(bef m := out m)"
@@ -2650,7 +2650,7 @@ proof -
   finally show ?thesis .
 qed
 
-text \<open>Seam/look-ahead (\<section>13.3 + the @{text aft'} computation): the body's next @{text aft} pointer
+text \<open>Seam/look-ahead ({\isasymsection}13.3 + the @{text aft'} computation): the body's next @{text aft} pointer
       @{term "thrd S3 (lsx (Suc m))"} reads off as @{term "out (Suc m)"}.  Two cases: a coinciding
       last-successor (the bridge edit reads it back) or a genuinely new one (untouched).\<close>
 lemma aft_lookup:
@@ -2676,7 +2676,7 @@ next
   thus ?thesis using lsxA outA by simp
 qed
 
-text \<open>Lemma B (\<section>13.4): one body iteration takes @{term "Istem m"} to @{term "Istem (Suc m)"}.
+text \<open>Lemma B ({\isasymsection}13.4): one body iteration takes @{term "Istem m"} to @{term "Istem (Suc m)"}.
       The three edits become the @{term "t = m"} terms of @{const thrd_inv}/@{const revBR}/@{const REV}.\<close>
 lemma body_pres:
   assumes mk: "m < k" and IS: "Istem m S"
@@ -2752,7 +2752,7 @@ qed
 
 text \<open>One unfolding of the loop equation: from a head at @{term "s m"} (with @{term "Istem m"}) the
       body produces the canonical @{term "Suc m"} state @{term S3} (= @{thm body_pres}) and arguments,
-      reducing the recursion to its tail (\<section>13.5 step).  Combines guard-false, the seam @{thm aft_lookup},
+      reducing the recursion to its tail ({\isasymsection}13.5 step).  Combines guard-false, the seam @{thm aft_lookup},
       and the @{text lsx'} computation.\<close>
 lemma stem_loop_step:
   assumes mk: "m < k" and IS: "Istem m S"
@@ -2795,7 +2795,7 @@ proof -
     using key lsxeq afteq nxt by (simp add: s_pred_def drt_def)
 qed
 
-text \<open>The inductive lemma (\<section>13.5): from @{term "Istem m"}, the loop runs to the unique final state
+text \<open>The inductive lemma ({\isasymsection}13.5): from @{term "Istem m"}, the loop runs to the unique final state
       @{const Sfin} and returns the @{term "m = k"} pointers, by well-founded induction on @{term "k - m"}.\<close>
 lemma stem_loop_effect:
   "m \<le> k \<Longrightarrow> Istem m S \<Longrightarrow>
@@ -2819,7 +2819,7 @@ next
     by simp
 qed
 
-text \<open>Entry/hand-off (\<section>13.6): instantiated at @{term "m = 0"} with the loop's initial arguments,
+text \<open>Entry/hand-off ({\isasymsection}13.6): instantiated at @{term "m = 0"} with the loop's initial arguments,
       matching the @{const update_tree} call.\<close>
 corollary stem_loop_init:
   "stem_loop (S0\<lparr>thrd := (thrd S0)(j \<mapsto> i)\<rparr>) i j (lsuc S0 i) (thrd S0 (lsuc S0 i)) [j] p
@@ -2829,7 +2829,7 @@ corollary stem_loop_init:
 
 end
 
-text \<open>Discharging the @{locale stem_setup_geom} locality assumptions (\<section>14) inside the bare
+text \<open>Discharging the @{locale stem_setup_geom} locality assumptions ({\isasymsection}14) inside the bare
       @{locale stem_setup}: the out-nodes/bridge keys really are off the stem and the up-link
       keys, as consequences of @{const arb_invar} and the path (clause J / block geometry).\<close>
 context stem_setup begin
@@ -2838,7 +2838,7 @@ lemma pst: "parent_spec (thrd S0)" and ppt: "parent_spec (prnt S0)"
   using arb unfolding arb_invar_def by (auto simp: rooted_arborescense_invar_def)
 
 text \<open>Every stem node lies in @{term V} (when the stem is non-trivial): interior nodes are in
-      @{term "dom (prnt S0)"}, the top node @{term p} is a parent value, both "\<subseteq> V".\<close>
+      @{term "dom (prnt S0)"}, the top node @{term p} is a parent value, both "{\isasymsubseteq} V".\<close>
 lemma sV:
   assumes tk: "t \<le> k" and k0: "0 < k" shows "s t \<in> V"
 proof -
@@ -2887,7 +2887,7 @@ proof -
 qed
 
 text \<open>The stem is a @{const prnt}-ancestor chain: @{term "s b"} is on the root-path of @{term "s a"}
-      for "a \<le> b \<le> k".\<close>
+      for "a {\isasymle} b {\isasymle} k".\<close>
 lemma stem_chain: "b \<le> k \<Longrightarrow> a \<le> b \<Longrightarrow> s b \<in> set (follow (prnt S0) (s a))"
 proof (induction "b - a" arbitrary: a)
   case 0
@@ -2904,7 +2904,7 @@ next
   ultimately show ?case by simp
 qed
 
-text \<open>@{text out_notin_stem} (\<section>14): the out-node of @{term "s t"} (the thread node spliced out after
+text \<open>@{text out_notin_stem} ({\isasymsection}14): the out-node of @{term "s t"} (the thread node spliced out after
       its block) is not a stem node --- below @{term "s t"} it is outside the block; above it the
       ancestors precede @{term "s t"} in the thread.\<close>
 lemma geom_out_notin_stem:
@@ -2949,7 +2949,7 @@ proof -
 qed
 
 text \<open>@{term "bef m"} is the thread-predecessor of @{term "s m"} (an interior stem node, so
-      "\<noteq> r" and threaded in @{term S0}).\<close>
+      "{\isasymnoteq} r" and threaded in @{term S0}).\<close>
 lemma bef_pred:
   assumes mk: "m < k"
   shows "thrd S0 (bef m) = Some (s m)" and "s m \<noteq> r" and "bef m \<in> V" and "s m \<in> V"
@@ -2992,7 +2992,7 @@ lemma bef_inj:
   assumes ak: "a < k" and bk: "b < k" and ab: "a \<noteq> b" shows "bef a \<noteq> bef b"
   using bef_pred(1)[OF ak] bef_pred(1)[OF bk] inj ak bk ab by (auto simp: inj_on_eq_iff)
 
-text \<open>@{text bef_notin_lsx} (\<section>14): the bridge key @{term "bef m"} is not an up-link key.  A non-colliding
+text \<open>@{text bef_notin_lsx} ({\isasymsection}14): the bridge key @{term "bef m"} is not an up-link key.  A non-colliding
       @{term "lsx t"} (@{term "t \<le> m"}) is @{term "lsuc S0 (s t)"}, inside @{term "s t"}'s block hence
       inside @{term "s m"}'s (subtree monotonicity) --- where @{term "bef m"} is not; a colliding one is
       @{term "bef (t-1)"}, distinct from @{term "bef m"} by injectivity.\<close>
@@ -3036,7 +3036,7 @@ qed
 
 text \<open>The out-node disjointness extended to the top of the stem (@{term "t \<le> k"}, including
       @{term "t = k"} where @{term "s k = p"}): the node after a subtree is outside the stem.  Used
-      to keep the genuinely-new last-successor off the bridge/up-link keys in  geom_outnode_fresh.\<close>
+      to keep the genuinely-new last-successor off the bridge/up-link keys in  geom\_outnode\_fresh.\<close>
 lemma out_notin_stem_le:
   assumes tk: "t \<le> k" and k0: "0 < k" and outNN: "out t \<noteq> None"
   shows "the (out t) \<notin> s ` {..k}"
@@ -3077,12 +3077,12 @@ proof -
   thus ?thesis using wval by simp
 qed
 
-text \<open>@{text outnode_fresh} (\<section>14): a genuinely new last-successor @{term "lsuc S0 (s (Suc m))"} (i.e.
-      "\<noteq> lsuc S0 (s m)") is untouched by the edits so far --- not an up-link key
+text \<open>@{text outnode_fresh} ({\isasymsection}14): a genuinely new last-successor @{term "lsuc S0 (s (Suc m))"} (i.e.
+      "{\isasymnoteq} lsuc S0 (s m)") is untouched by the edits so far --- not an up-link key
       (@{const lsx}), not a bridge key (@{const bef}), and not @{term j}.  The @{const bef}/collision
       cases use that its thread-successor would be a stem node (impossible by @{thm out_notin_stem_le});
       the new-block case uses @{thm block_nest} (it lies in the tail @{term Q} beyond @{term "s m"}'s
-      block);  "\<noteq> j" uses the no-cycle precondition @{thm jnotp} (it is in @{term p}'s subtree).\<close>
+      block);  "{\isasymnoteq} j" uses the no-cycle precondition @{thm jnotp} (it is in @{term p}'s subtree).\<close>
 lemma geom_outnode_fresh:
   assumes mk: "m < k" and fresh: "lsuc S0 (s (Suc m)) \<noteq> lsuc S0 (s m)"
   shows "lsuc S0 (s (Suc m)) \<notin> lsx ` {..m}
@@ -3197,19 +3197,19 @@ qed
 
 end
 
-text \<open>Discharge: every @{locale stem_setup} is a @{locale stem_setup_geom}.  The three \<section>14 locality
+text \<open>Discharge: every @{locale stem_setup} is a @{locale stem_setup_geom}.  The three {\isasymsection}14 locality
       obligations now hold from @{const arb_invar}, the path, and the no-cycle precondition
-      @{thm stem_setup.jnotp} alone, so the whole \<section>13 stem-loop development is available unconditionally.\<close>
+      @{thm stem_setup.jnotp} alone, so the whole {\isasymsection}13 stem-loop development is available unconditionally.\<close>
 sublocale stem_setup \<subseteq> stem_setup_geom
   using geom_out_notin_stem geom_bef_notin_lsx geom_outnode_fresh
   by unfold_locales blast+
 
-subsection \<open>Clause A: the new parent map is a rooted arborescence (output side, \<section>15.5)\<close>
+subsection \<open>Clause A: the new parent map is a rooted arborescence (output side, {\isasymsection}15.5)\<close>
 
-text \<open>The new parent map reverses the stem path  "i = s 0, \<dots>, s k = p" to
-       "p \<rightarrow> s (k-1) \<rightarrow> \<dots> \<rightarrow> s 0 = i \<rightarrow> j", i.e. it is @{term "prnt S0"} overwritten with
-      "s t \<mapsto> s_pred t" for every @{term "t \<le> k"} (= @{term "prnt S0 ++ REV k"} plus the
-      top edit  "p \<mapsto> s_pred k").  Clause A is proved by replaying this as @{term "k+1"}
+text \<open>The new parent map reverses the stem path  "i = s 0, {\isasymdots}, s k = p" to
+       "p {\isasymrightarrow} s (k-1) {\isasymrightarrow} {\isasymdots} {\isasymrightarrow} s 0 = i {\isasymrightarrow} j", i.e. it is @{term "prnt S0"} overwritten with
+      "s t {\isasymmapsto} s\_pred t" for every @{term "t \<le> k"} (= @{term "prnt S0 ++ REV k"} plus the
+      top edit  "p {\isasymmapsto} s\_pred k").  Clause A is proved by replaying this as @{term "k+1"}
       single-edge swaps (@{thm rooted_arborescense_swap_parents}) \<^emph>\<open>bottom-up\<close> (@{term i} first):
       each step re-parents @{term "s m"} to @{term "s_pred m"}, which is legal because @{term "s m"}
       is never an ancestor of @{term "s_pred m"} in the partially-reversed tree.  The load-bearing
@@ -3302,7 +3302,7 @@ proof
 qed
 
 text \<open>The bottom-up swap sequence: @{term "Wseq m"} is @{term "prnt S0"} after re-parenting
-       "s 0, \<dots>, s (m-1)" (each  "s t \<mapsto> s_pred t").  @{term "Wseq (Suc k)"} is the
+       "s 0, {\isasymdots}, s (m-1)" (each  "s t {\isasymmapsto} s\_pred t").  @{term "Wseq (Suc k)"} is the
       fully-reversed new parent map.\<close>
 definition Wseq :: "nat \<Rightarrow> ('a \<rightharpoonup> 'a)" where
   "Wseq m = fold (\<lambda>t T. T(s t \<mapsto> s_pred t)) [0..<m] (prnt S0)"
@@ -3367,7 +3367,7 @@ text \<open>The heart of clause A: each bottom-up swap preserves the rooted-arbo
       induction: the invariant gives @{const parent_spec} for the legality check of the next swap
       (@{term "s m"} is fresh on the path: not among @{term "s ` {..<m}"} by injectivity, nor an
       ancestor of @{term j} by @{thm stem_notin_follow_j}); the path equation is maintained because
-      the new edge "s m \<mapsto> s_pred m" does not touch the existing path (@{thm follow_upd_fresh}).\<close>
+      the new edge "s m {\isasymmapsto} s\_pred m" does not touch the existing path (@{thm follow_upd_fresh}).\<close>
 lemma Wseq_step:
   "m \<le> Suc k \<Longrightarrow>
      rooted_arborescense_invar r V (Wseq m)
@@ -3447,7 +3447,7 @@ proof -
 qed
 
 text \<open>The bottom-up swap sequence is exactly the closed-form @{term "prnt S0 ++ REV m"} used by the
-      stem invariant (\<section>13), so the two developments agree on the parent map.\<close>
+      stem invariant ({\isasymsection}13), so the two developments agree on the parent map.\<close>
 lemma Wseq_eq_REV: "m \<le> Suc k \<Longrightarrow> Wseq m = prnt S0 ++ REV m"
 proof (induction m)
   case 0 thus ?case by (simp add: Wseq_0 REV_0)
@@ -3461,8 +3461,8 @@ next
   finally show ?case .
 qed
 
-text \<open>The fully-reversed new parent map (= @{term "prnt Sp"} in @{const update_tree}): the \<section>13 stem
-      map @{term "prnt S0 ++ REV k"} with the top edit  "p \<mapsto> s_pred k".\<close>
+text \<open>The fully-reversed new parent map (= @{term "prnt Sp"} in @{const update_tree}): the {\isasymsection}13 stem
+      map @{term "prnt S0 ++ REV k"} with the top edit  "p {\isasymmapsto} s\_pred k".\<close>
 lemma newprnt_eq: "Wseq (Suc k) = (prnt S0 ++ REV k)(p \<mapsto> s_pred k)"
 proof -
   show ?thesis using Wseq_eq_REV[of "Suc k"] REV_Suc_le[of k] pathk by simp
@@ -3619,7 +3619,7 @@ qed
 
 text \<open>The explicit list realised by the reversed parent chain from p: the reversed stem
       s k, ..., s 0 followed by j's old root-path.  Re-derives the list step
-      (Wseq_step only exposes the set) so the num loop's walk can be pinned to the stem.\<close>
+      (Wseq\_step only exposes the set) so the num loop's walk can be pinned to the stem.\<close>
 lemma Wseq_follow_list:
   "m \<le> Suc k \<Longrightarrow> follow (Wseq m) (s_pred m) = map s (rev [0..<m]) @ follow (prnt S0) j"
 proof (induction m)
@@ -3849,7 +3849,7 @@ lemma inep_aux: assumes kpos: "0 < k" shows "i \<noteq> p"
 text \<open>Closed form of the @{const prnt} field of @{const update_tree} in the reversal branch:
       the decoration loops and @{const dirty_pass} all leave @{const prnt} untouched (they climb the
       fixed parent map, a @{const parent_spec} by @{thm clauseA}), so the only edit is @{term Sp}'s
-       "p \<mapsto> s_pred k".\<close>
+       "p {\isasymmapsto} s\_pred k".\<close>
 lemma update_tree_prnt:
   assumes kpos: "0 < k"
   shows "prnt (update_tree S0 i j p jn) = (prnt S0 ++ REV k)(p \<mapsto> s_pred k)"
@@ -4147,7 +4147,7 @@ proof -
 qed
 
 text \<open>The pivot re-parents @{term i} to @{term j} (the second conclusion of the correctness theorem),
-      in the reversal branch: the reversed stem map carries the base link from s 0 (= i) to s_pred 0 (= j).\<close>
+      in the reversal branch: the reversed stem map carries the base link from s 0 (= i) to s\_pred 0 (= j).\<close>
 lemma update_tree_prnt_i:
   assumes kpos: "0 < k"
   shows "prnt (update_tree S0 i j p jn) i = Some j"
@@ -4164,7 +4164,7 @@ proof -
   finally show ?thesis .
 qed
 
-text \<open>Clause-I foundations (the descendant-set transformation, \<section>17.7).  A node outside the moved
+text \<open>Clause-I foundations (the descendant-set transformation, {\isasymsection}17.7).  A node outside the moved
       block @{term "block S0 p"} keeps its old root-path (its old ancestors contain no stem node); the
       root @{term i} of the reversed block attaches to @{term j} (its new root-path is @{term i} then
       @{term j}'s old path); hence @{term i}'s new subtree is contained in the moved block.\<close>
@@ -5295,7 +5295,7 @@ proof
   show "snum (update_tree S0 i j p jn) v = card (children (prnt (update_tree S0 i j p jn)) v)" using update_tree_snum[OF kpos] snum_card_match[OF kpos jneq vV] update_tree_prnt[OF kpos] by simp
 qed
 
-text \<open>Untouched-edge fact (the backbone of the \<section>15.2 out-edge case table): at any key outside the
+text \<open>Untouched-edge fact (the backbone of the {\isasymsection}15.2 out-edge case table): at any key outside the
       override set @{term "lsx ` {..k} \<union> bef ` {..<k} \<union> {j, the (rvth S0 p)}"} the final thread
       agrees with @{term "thrd S0"} --- the @{const thrd_inv} folds and the two splices touch only
       those keys.\<close>
@@ -5313,10 +5313,10 @@ qed
 
 end
 
-subsection \<open>OUT-edge (\<section>15.2): the final thread realises the new preorder list\<close>
+subsection \<open>OUT-edge ({\isasymsection}15.2): the final thread realises the new preorder list\<close>
 
 text \<open>The out-edge analysis re-opens @{locale stem_setup} (now with @{thm last_follow_root} in scope)
-      to characterise final_thrd as the successor map of an explicit list edit of the old
+      to characterise final\_thrd as the successor map of an explicit list edit of the old
       thread @{term "follow (thrd S0) r"}.\<close>
 context stem_setup begin
 
@@ -5391,9 +5391,9 @@ proof -
   show ?thesis using that[OF AB predA succB] by auto
 qed
 
-subsubsection \<open>The new preorder block \<open>newblock\<close> (\<section>15.1)\<close>
+subsubsection \<open>The new preorder block \<open>newblock\<close> ({\isasymsection}15.1)\<close>
 
-text \<open>Along the stem the blocks nest (\<section>1): @{term "block S0 (s (Suc m))"} contains @{term "block S0
+text \<open>Along the stem the blocks nest ({\isasymsection}1): @{term "block S0 (s (Suc m))"} contains @{term "block S0
       (s m)"} contiguously, framed by the "side" children-blocks @{text P}/@{text Q}.\<close>
 lemma block_stem_decomp_ex:
   assumes "m < k"
@@ -5428,7 +5428,7 @@ proof -
   thus ?thesis unfolding defQ_def by (rule someI_ex)
 qed
 
-text \<open>The contribution of a stem node (\<section>1): @{term "contrib 0 = block S0 i"} (the bottom subtree, kept
+text \<open>The contribution of a stem node ({\isasymsection}1): @{term "contrib 0 = block S0 i"} (the bottom subtree, kept
       whole); for @{term "m \<ge> 1"} the node @{term "s m"} followed by its side-blocks @{term "defP
       (m-1) @ defQ (m-1)"} (its nested stem child @{term "s (m-1)"} excised).   newblock is
       the new preorder of the detached set: the contributions concatenated bottom-up.\<close>
@@ -5493,7 +5493,7 @@ text \<open>@{const newblock} is distinct: same length as @{term "block S0 p"} a
 lemma newblock_distinct: "distinct newblock"
   using newblock_set block_p_distinct newblock_len by (simp add: distinct_card card_distinct)
 
-subsubsection \<open>The target list \<open>newlist\<close> as an explicit list edit (\<section>15.2)\<close>
+subsubsection \<open>The target list \<open>newlist\<close> as an explicit list edit ({\isasymsection}15.2)\<close>
 
 text \<open>Pin the detached block as a concrete contiguous slice of the old thread: @{term alpha} is the
       prefix before @{term p}, @{term beta} the suffix after @{term "block S0 p"}.\<close>
@@ -5906,7 +5906,7 @@ proof
   thus False using bef_in_block_p[of m] j_notin_block_p by simp
 qed
 
-text \<open>The base  "j \<mapsto> i" thread edit survives both @{const thrd_inv} folds (their keys @{const
+text \<open>The base  "j {\isasymmapsto} i" thread edit survives both @{const thrd_inv} folds (their keys @{const
       lsx}/@{const bef} avoid @{term j}), so @{term "thrd_inv k j = Some i"}.\<close>
 lemma thrd_inv_j:
   assumes kpos: "0 < k" shows "thrd_inv k j = Some i"
@@ -5943,7 +5943,7 @@ proof -
   thus ?thesis using c0 ne hdi by (simp add: hd_append)
 qed
 
-text \<open>Consecutive nodes of the old thread are @{const thrd}-linked (the \<section>15.2 out-edge engine
+text \<open>Consecutive nodes of the old thread are @{const thrd}-linked (the {\isasymsection}15.2 out-edge engine
       applied to @{term S0}); the base for reading off the surviving edges in @{const holed}.\<close>
 lemma oldlist_link:
   assumes "Suc t < length (follow (thrd S0) r)"
@@ -6230,8 +6230,8 @@ proof
   thus False using qin bin eq by auto
 qed
 
-text \<open>Seam-source identification (\<section>12.0): the loop's up-link pointer @{term "lsx t"} is exactly the
-      last node of contribution @{term t}, so the up-links "lsx t \<mapsto> s (Suc t)" are precisely
+text \<open>Seam-source identification ({\isasymsection}12.0): the loop's up-link pointer @{term "lsx t"} is exactly the
+      last node of contribution @{term t}, so the up-links "lsx t {\isasymmapsto} s (Suc t)" are precisely
       the @{const contrib}-boundary edges of @{const newblock}.\<close>
 lemma lsx_last_contrib:
   assumes "t \<le> k" shows "lsx t = last (contrib t)"
@@ -6316,7 +6316,7 @@ proof -
   thus ?thesis using ak bk ab by (metis linorder_neqE_nat)
 qed
 
-text \<open>The up-links survive to step @{term k}: the edge term "lsx t \<mapsto> s (Suc t)" installed at
+text \<open>The up-links survive to step @{term k}: the edge term "lsx t {\isasymmapsto} s (Suc t)" installed at
       step @{term t} is never overwritten by a later up-link (@{thm lsx_inj_le}) or bridge
       (@{thm bef_notin_lsx}).\<close>
 lemma thrd_inv_up_aux:
@@ -6359,7 +6359,7 @@ lemma thrd_inv_up:
   assumes "t < k" shows "thrd_inv k (lsx t) = Some (s (Suc t))"
   by (rule thrd_inv_up_aux[OF assms order.refl])
 
-text \<open>No stem node is the root (interior stem nodes have parents; term "s k = p \<noteq> r").\<close>
+text \<open>No stem node is the root (interior stem nodes have parents; term "s k = p {\isasymnoteq} r").\<close>
 
 text \<open>Each contribution is distinct (a segment of the distinct @{const newblock}).\<close>
 lemma contrib_distinct: assumes "t \<le> k" shows "distinct (contrib t)"
@@ -6440,7 +6440,7 @@ proof
   qed
 qed
 
-text \<open>The bridge (hole) edges survive to step @{term k}: the edge  "bef m \<mapsto> out m" installed
+text \<open>The bridge (hole) edges survive to step @{term k}: the edge  "bef m {\isasymmapsto} out m" installed
       at step @{term m} is never overwritten by a later up-link (@{thm bef_notin_lsx_all}) or bridge
       (@{thm bef_inj}).\<close>
 lemma thrd_inv_br_aux:
@@ -8410,13 +8410,13 @@ proof -
   show ?thesis using P1 P2 P3 P4 by (auto simp: ft pt)
 qed
 
-text \<open>\<^bold>\<open>Clause J assembly (task#4)\<close>: the full clause J follows from the contiguity half
+text \<open>\<^bold>\<open>Clause J assembly\<close>: the full clause J follows from the contiguity half
       (@{thm clauseJ_contig}) and the pointwise \<open>lsuc = last block\<close> property (hypothesis @{text lsuc_last}).
       The continuation matches because @{term "follow (thrd (update_tree S0 i j p jn)) v = pre @ suf"} is a
       thread chain: if @{term "suf = []"} then @{thm follow_last_None} gives @{text "thrd (last pre) = None"},
       else @{thm thread_link} gives @{text "thrd (last pre) = Some (hd suf)"} and @{thm follow_append_ps}
       that @{term suf} is the follow-list of @{term "hd suf"}.  Reduces clause J to the single remaining
-      obligation @{text lsuc_last} (task#3).\<close>
+      obligation @{text lsuc_last}.\<close>
 lemma clauseJ_from_lsuc:
   assumes kpos: "0 < k" and jneq: "jn = join_of (prnt S0) i j"
     and jnp: "jn \<in> set (follow (prnt S0) p)" and pjn: "p \<noteq> jn"
@@ -9028,7 +9028,7 @@ qed
 text \<open>\<^bold>\<open>Uniqueness of the block boundary\<close>: in a thread @{term "follow (thrd S) v = pre @ suf"}, the last
       node of the contiguous prefix @{term pre} is the \<^emph>\<open>unique\<close> node of @{term pre} whose thread-successor
       leaves @{term "set pre"} (every earlier node is followed inside @{term pre}).  This reduces the
-      pointwise \<open>lsuc = last block\<close> obligation (task#3) to two geometric facts about the field value
+      pointwise \<open>lsuc = last block\<close> obligation to two geometric facts about the field value
       @{term "lsuc S v"}: that it lies in @{term v}'s subtree, and that its successor exits that subtree.\<close>
 lemma succ_exits_is_last:
   assumes psF: "parent_spec (thrd S)"
@@ -9059,7 +9059,7 @@ proof (rule ccontr)
   thus False using exit yin by simp
 qed
 
-text \<open>\<^bold>\<open>Stem-region geometry for the pointwise-\<open>lsuc\<close> half (task#3)\<close>.  For a stem node the new
+text \<open>\<^bold>\<open>Stem-region geometry for the pointwise-\<open>lsuc\<close> half\<close>.  For a stem node the new
       \<open>lsuc\<close> value is @{term "lsx k"}; these lemmas supply the two @{thm succ_exits_is_last} obligations for
       that value: (i) @{term "lsx k"} lies in every stem node's new subtree (@{text stem_desc_lsxk}); and
       (ii) its thread-successor @{term "final_thrd (lsx k)"} leaves @{term "set (block S0 p)"}, which
@@ -9144,7 +9144,7 @@ next
   ultimately show ?thesis using holed_set by auto
 qed
 
-text \<open>\<^bold>\<open>IN-chain-region geometry for the pointwise-\<open>lsuc\<close> half (task#3)\<close>.  An \<^emph>\<open>IN-chain\<close> node
+text \<open>\<^bold>\<open>IN-chain-region geometry for the pointwise-\<open>lsuc\<close> half\<close>.  An \<^emph>\<open>IN-chain\<close> node
       @{term v} (an ancestor of @{term j} with @{term "lsuc S0 v = j"}) also gets new \<open>lsuc\<close> value
       @{term "lsx k"}: its old subtree ended at @{term j}, and the moved block is spliced right after
       @{term j}, so the new rightmost descendant is @{term "last newblock = lsx k"}.  Its new subtree is
@@ -9223,7 +9223,7 @@ next
   qed
 qed
 
-text \<open>\<^bold>\<open>OUT-chain-region geometry for the pointwise-\<open>lsuc\<close> half (task#3)\<close>.  An \<^emph>\<open>OUT-chain\<close> node
+text \<open>\<^bold>\<open>OUT-chain-region geometry for the pointwise-\<open>lsuc\<close> half\<close>.  An \<^emph>\<open>OUT-chain\<close> node
       @{term v} is a strict ancestor of @{term p} off the @{term j}-path whose old subtree ended in the
       moved block (@{term "lsuc S0 v = lsuc S0 p"}); the surgery removes @{term "block S0 p"} from its
       subtree, so the new \<open>lsuc\<close> becomes the block's thread-predecessor @{term "the (rvth S0 p)"} (\<open>old_rev\<close>).
@@ -9308,7 +9308,7 @@ proof -
   qed
 qed
 
-text \<open>\<^bold>\<open>Untouched-region geometry for the pointwise-\<open>lsuc\<close> half (task#3)\<close>.  A node whose \<open>lsuc\<close> is
+text \<open>\<^bold>\<open>Untouched-region geometry for the pointwise-\<open>lsuc\<close> half\<close>.  A node whose \<open>lsuc\<close> is
       not rewritten by any loop keeps value @{term "lsuc S0 v"}.  @{text children_newprnt_supseteq}: any old
       descendant off the moved block stays a new descendant (@{thm follow_newprnt_off_block}); so the old
       last descendant, if outside @{term "block S0 p"}, is still in the new subtree (@{text untouched_i_desc},
@@ -9364,7 +9364,7 @@ text \<open>\<open>ii_exit\<close> half for the untouched region.  If the old la
       rewritten by any loop (it is off the moved block and \<^emph>\<open>fresh\<close>), then @{term "final_thrd (lsuc S0 v)"}
       equals its old successor (@{thm final_thrd_fresh}), which by @{thm succ_lsuc_exits_block} leaves
       @{term "children (prnt S0) v"}; and it cannot fall into @{term "block S0 p"} (else @{term "lsuc S0 v"}
-      would be  old_rev or itself in the block, @{thm pred_in_block_p}).  As @{term "children ((prnt
+      would be  old\_rev or itself in the block, @{thm pred_in_block_p}).  As @{term "children ((prnt
       S0 ++ REV k)(p \<mapsto> s_pred k)) v \<subseteq> children (prnt S0) v \<union> set (block S0 p)"} (@{thm children_newprnt_decomp}),
       the successor leaves the new subtree.\<close>
 lemma untouched_ii_exit:
@@ -9468,7 +9468,7 @@ proof -
   thus ?thesis by (simp add: bef_def)
 qed
 
-text \<open>\<^bold>\<open>Clause J, pointwise-lsuc half (task#3), for all v\<close>: the algorithm-computed
+text \<open>\<^bold>\<open>Clause J, pointwise-lsuc half, for all v\<close>: the algorithm-computed
       last-successor equals the geometric rightmost descendant in the new tree, discharging @{text lsuc_last}
       of @{thm clauseJ_from_lsuc}.  Region case-split (stem / IN-chain / OUT-chain / block-internal / untouched),
       reduced via @{text succ_exits_is_last} (re-proved inline as \<open>sel\<close>) to two facts: the value lies in
@@ -10467,7 +10467,7 @@ proof -
   show ?thesis using orne aw by (simp add: rvth_pre_def Let_def)
 qed
 
-text \<open>The \<section>12.5 BR/UP collision: when @{term "defQ t = []"} the bridge source @{term "bef t"} coincides
+text \<open>The {\isasymsection}12.5 BR/UP collision: when @{term "defQ t = []"} the bridge source @{term "bef t"} coincides
       with the up-link key @{term "lsx (Suc t)"} (so it is a dirty node when @{term "Suc t < k"}, or
       @{term "lsx k"} when @{term "Suc t = k"}); hence a non-dirty @{term "bef t"} (other than @{term "lsx k"})
       has @{term "defQ t \<noteq> []"} and its BR edge survives into @{const final_thrd}.\<close>
@@ -10933,7 +10933,7 @@ end
 
 context stem_setup begin
 
-subsection \<open>Degenerate branch (\<open>i = p\<close>, \<open>k = 0\<close>): the simple subtree move (\<section>15.6)\<close>
+subsection \<open>Degenerate branch (\<open>i = p\<close>, \<open>k = 0\<close>): the simple subtree move ({\isasymsection}15.6)\<close>
 
 text \<open>When the entering node coincides with the detached-subtree root (\<open>i = p\<close>), @{const update_tree}
       takes its @{text "Sa/Sb/Sc/Sd"} simple-move branch: no stem reversal, the whole subtree of
@@ -10941,7 +10941,7 @@ text \<open>When the entering node coincides with the detached-subtree root (\<o
       @{term "update_tree S0 p j p jn"} (the \<open>i\<close>-slot instantiated to @{term p}), so the definition's
       @{text "if i = p"} is always true, independently of the locale stem @{term s}/@{term k}.  They are
       discharged into the top lemma by interpreting @{locale stem_setup} with the trivial stem
-      @{term "k = 0"}.  (\<section>0.5 Tier-3: this branch reuses only the @{text kpos}-free machinery.)\<close>
+      @{term "k = 0"}.  ({\isasymsection}0.5 Tier-3: this branch reuses only the @{text kpos}-free machinery.)\<close>
 
 text \<open>IP-0: field closed forms of the move.  The degenerate tree is @{term "(prnt S0)(p \<mapsto> j)"}, a
       single-edge swap of @{term p}'s parent to @{term j}, legal since @{term "p \<notin> set (follow (prnt S0) j)"}
@@ -11299,7 +11299,7 @@ qed
 text \<open>IP-2 assembly: the moved thread is @{const parent_spec} and realises @{const movlist} starting at
       @{term r} (clauses B and D).  Two cases: the shortcut (@{term "thrd S0 j = Some p"}), where the thread
       is unchanged and @{const movlist} equals the old thread; and the splice, via the generic engine
-      @{thm follow_eq_of_chain} on @{thm movlist_link} and movlist_last_None (below).\<close>
+      @{thm follow_eq_of_chain} on @{thm movlist_link} and movlist\_last\_None (below).\<close>
 
 lemma last_movlist_nil:
   assumes "tl (dropWhile (\<lambda>x. x \<noteq> j) holed) = []"
@@ -13439,11 +13439,11 @@ qed
 
 end
 
-text \<open>The assembly bridge (\<section>14): @{const arb_invar} together with the four pivot preconditions yield
+text \<open>The assembly bridge ({\isasymsection}14): @{const arb_invar} together with the four pivot preconditions yield
       an interpretation of @{locale stem_setup}.  The path @{term s}, @{term k} comes from
       @{thm follow_path}; the no-cycle precondition @{thm stem_setup.jnotp} from @{thm no_cycle}
       (both @{term i} and @{term j} reach the root @{term r}, so @{thm last_follow_root} supplies its
-      @{text lst} hypothesis).  Thus the whole \<section>13 stem-loop result applies to the actual pivot.\<close>
+      @{text lst} hypothesis).  Thus the whole {\isasymsection}13 stem-loop result applies to the actual pivot.\<close>
 lemma pivot_stem_setup:
   assumes arb: "arb_invar r V S0"
       and iV: "i \<in> V" and jV: "j \<in> V"
@@ -13712,7 +13712,7 @@ qed
 text \<open>The core loop invariant: @{const join_paths_loop} climbs the two parent chains to the join
       @{term j} (any common ancestor supplied as parameter), accumulating on each side exactly the
       strictly-below-@{term j} prefix of that root-path.  Proved by strong induction on the combined
-      length of the two remaining root-paths; the guard "j \<in> set (follow (prnt S) \<dots>)" and the
+      length of the two remaining root-paths; the guard "j {\isasymin} set (follow (prnt S) {\isasymdots})" and the
       disjointness of the two prefixes are maintained, and @{thm snum_proper_anc_lt} guarantees the
       join node is never lifted.\<close>
 lemma join_paths_loop_eval:

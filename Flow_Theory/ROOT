@@ -3,6 +3,7 @@ session "Flow_Theory" = "HOL-Library" +
 
 sessions
   Directed_Set_Graphs
+  Spanning_Trees
 
 theories
   Augmentation

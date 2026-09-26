@@ -219,7 +219,7 @@ next
 next
   fix C :: "'e edge_csr" and i :: nat
   assume inv: "csr_invar C" and iK: "i \<in> K"
-  \<comment> \<open>has \<longleftrightarrow> remaining nonempty\<close>
+  \<comment> \<open>has {\isasymlongleftrightarrow} remaining nonempty\<close>
   show "csr_has C i \<longleftrightarrow> csr_remaining C i \<noteq> {}"
     by (auto simp: csr_has_def csr_remaining_def csr_seg_rm_def)
 next
@@ -1115,7 +1115,7 @@ subsection \<open>The counting-sort constructor and its correctness\<close>
 text \<open>Tight two-pass build: the counts \<open>ct\<close> and their prefix sums \<open>p\<close> are computed \<^emph>\<open>once\<close>; the block
       starts \<open>lo = butlast p\<close> serve simultaneously as the scatter's initial write cursor and as the
       record's \<open>lo\<close>/\<open>cur\<close> fields, so nothing beyond the four stored arrays (\<open>edges\<close>, \<open>lo\<close>, \<open>hi\<close>, \<open>cur\<close>)
-      persists and the edge list is swept exactly twice — once by \<open>ct\<close> (count) and once by the scatter
+      persists and the edge list is swept exactly twice --- once by \<open>ct\<close> (count) and once by the scatter
       \<open>fold\<close>. The intermediate counts/prefix-sum arrays are the inherent working memory of a counting
       sort and touch only the length-\<open>n\<close> key range, never re-scanning the edges.\<close>
 

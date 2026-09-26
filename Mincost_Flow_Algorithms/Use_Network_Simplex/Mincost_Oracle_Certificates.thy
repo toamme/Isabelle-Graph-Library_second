@@ -1,8 +1,8 @@
 section \<open>An untrusted min-cost-flow oracle and its certificates\<close>
 
 text \<open>The middle stage of the solver pipeline.  The DIMACS reduction of \<open>Mincost_Solver_Reduction\<close>
-      turns an instance into the library's standard format — capacities only, non-negative flow, the
-      balance met exactly, a lonely vertex only where the balance is zero — and this theory takes
+      turns an instance into the library's standard format --- capacities only, non-negative flow, the
+      balance met exactly, a lonely vertex only where the balance is zero --- and this theory takes
       such an instance and hands it
       to an \<^emph>\<open>external, untrusted\<close> solver.  That solver returns one of the three possible verdicts
       \<^emph>\<open>together with a certificate\<close>, which a checker (to come) validates.  Only if the check fails
@@ -10,8 +10,8 @@ text \<open>The middle stage of the solver pipeline.  The DIMACS reduction of \<
 
       The point of the arrangement is that \<^emph>\<open>nothing whatever is assumed about the oracle\<close>.  It is a
       fixed function of the right type and that is all: the type pins the \<^emph>\<open>format\<close> of what comes
-      back, and every other property — that the flow has the right length, that it respects the
-      capacities, that the cut is a set of vertices, that the cycle is a cycle — is the checker's job
+      back, and every other property --- that the flow has the right length, that it respects the
+      capacities, that the cut is a set of vertices, that the cycle is a cycle --- is the checker's job
       to establish.  In particular the proof locale below carries assumptions about the \<^emph>\<open>instance\<close>
       only, never about @{term oracle_solve}.\<close>
 
@@ -54,7 +54,7 @@ subsection \<open>The oracle's answer\<close>
 
 text \<open>The three verdicts, each with the certificate that witnesses it.
 
-      \<^item> @{text OracleOptimum}: a primal-dual pair — the flow, indexed by arc, and the node
+      \<^item> @{text OracleOptimum}: a primal-dual pair --- the flow, indexed by arc, and the node
         potentials, indexed by vertex name like the balance list.  The dual is what makes the
         optimality check a single linear scan of the reduced costs rather than a search for a
         negative residual cycle.  It also carries @{text oa_mode}, the scale \<open>Mn\<close> the potentials were
@@ -64,7 +64,7 @@ text \<open>The three verdicts, each with the certificate that witnesses it.
       \<^item> @{text OracleInfeasible}: a cut whose demand exceeds the capacity crossing it, given as an
         \<^emph>\<open>indicator over the vertices\<close> --- one cell per vertex name, indexed like the balance list
         and like the potentials, a cell being non-zero exactly when its vertex lies in the cut.
-      \<^item> @{text OracleUnbounded}: a cycle, given as a list of \<^emph>\<open>arc indices\<close> — the shape
+      \<^item> @{text OracleUnbounded}: a cycle, given as a list of \<^emph>\<open>arc indices\<close> --- the shape
         @{const has_neg_infty_cycle} quantifies over, so that the check is its introduction rule.
 
       Only the potentials carry \<^emph>\<open>quantities\<close>, and only they are of the instance's numeric type: a
@@ -125,8 +125,8 @@ subsection \<open>The code locale\<close>
 
 text \<open>Assumption-free, and therefore the locale the executable material lives in: it fixes the
       instance data, fixes the oracle, and defines the instance record that is passed to it together
-      with the answer that comes back.  The reading of the format — which arcs and vertices there
-      are, how a capacity is decoded, how the endpoints and the balance of a vertex are looked up —
+      with the answer that comes back.  The reading of the format --- which arcs and vertices there
+      are, how a capacity is decoded, how the endpoints and the balance of a vertex are looked up ---
       is defined here too, since the checker will need all of it and none of it needs an assumption.
 
       The embedding @{term h} into the reals is \<^emph>\<open>not\<close> a parameter here: it is a proof device with no
@@ -188,7 +188,7 @@ text \<open>Ported from the SML mock \<open>ns_tree_benchmark/adaptor/lemon_ns_c
       \<^emph>\<open>false\<close>; here the lengths are checked first, because @{const nth} past the end is not an
       error but an unspecified value, and a checker that consults one has proved nothing.  And where
       the mock tests @{term \<open>cap e < 0\<close>} for an uncapacitated arc, we test the sentinel
-      @{term \<open>cap e = - 1\<close>} — the same thing on any instance satisfying the format, and the
+      @{term \<open>cap e = - 1\<close>} --- the same thing on any instance satisfying the format, and the
       convention the rest of the development uses.
 
       \<^emph>\<open>How the sweeps are written.\<close>  A list here is an array: @{const nth} is a load and
@@ -244,7 +244,7 @@ definition rc_of :: "'n list \<Rightarrow> nat \<Rightarrow> 'n" where
   "rc_of pot e = cost_list ! e + pot ! (fst_list ! e) - pot ! (snd_list ! e)"
 
 text \<open>Primal feasibility of one arc together with complementary slackness on it: a strictly positive
-      reduced cost forces the arc empty, a strictly negative one forces it saturated — and therefore
+      reduced cost forces the arc empty, a strictly negative one forces it saturated --- and therefore
       forces it to be capacitated at all, an uncapacitated arc of negative reduced cost being exactly
       the unbounded case.\<close>
 
@@ -257,7 +257,7 @@ definition arc_ok_opt :: "'n list \<Rightarrow> 'n list \<Rightarrow> nat \<Righ
 
 text \<open>The net out-flow of every vertex, scattered in one arc sweep into a list indexed by vertex
       name.  The head is updated first and read back by the tail update, so a self-loop cancels
-      instead of counting twice — the same order the reduction's pass uses.\<close>
+      instead of counting twice --- the same order the reduction's pass uses.\<close>
 
 definition net_out :: "'n list \<Rightarrow> 'n list" where
   "net_out fl =
@@ -271,7 +271,7 @@ text \<open>\<^emph>\<open>Optimality.\<close>  The certificate is a primal-dual
       that arc's flow into the accumulator @{const net_out} would have built.  Both need the
       endpoints and both need the flow, so a fused step loads each of the five cells of an arc once
       and never returns to it.  The head is written first and read back by the tail update, so a
-      self-loop cancels instead of counting twice — the order @{const net_out} and the reduction's
+      self-loop cancels instead of counting twice --- the order @{const net_out} and the reduction's
       own pass use.
 
       The loads are staged rather than taken all at once, because a @{text let} is strict: the flow
@@ -301,10 +301,10 @@ definition check_optimum :: "'n list \<Rightarrow> 'n list \<Rightarrow> bool" w
   "check_optimum fl pot =
      (length fl = m \<and> length pot = Suc n \<and> opt_loop fl pot 0 m (replicate (Suc n) 0))"
 
-text \<open>\<^emph>\<open>\<epsilon>-optimality.\<close>  A weaker, cheaper-to-produce optimality certificate: a cost-scaling oracle's
+text \<open>\<^emph>\<open>{\isasymepsilon}-optimality.\<close>  A weaker, cheaper-to-produce optimality certificate: a cost-scaling oracle's
       own potentials, at the end of its last phase, already satisfy this without the correction pass
-      \<open>check_optimum\<close> would otherwise force.  Rather than the exact trichotomy — an empty arc has
-      non-negative reduced cost, a saturated one non-positive, an interior one exactly zero — every
+      \<open>check_optimum\<close> would otherwise force.  Rather than the exact trichotomy --- an empty arc has
+      non-negative reduced cost, a saturated one non-positive, an interior one exactly zero --- every
       residual arc need only clear a fixed slack of one unit once its reduced cost is scaled by a
       global factor \<open>M\<close>: \<open>M \<sqdot> rc(e) \<ge> -1\<close> if the arc is not fully saturated (so it may still take
       flow), and \<open>M \<sqdot> rc(e) \<le> 1\<close> if it carries flow already (so it may still give flow back). An arc
@@ -361,7 +361,7 @@ definition check_optimum_dispatch :: "checker_mode \<Rightarrow> 'n list \<Right
                               else check_optimum fl pot))"
 
 text \<open>\<^emph>\<open>Unboundedness.\<close>  The certificate is a list of arc indices; the four conjuncts are exactly the
-      premises of @{thm [source] has_neg_infty_cycleI} — non-empty, closed, inside the arc set, and
+      premises of @{thm [source] has_neg_infty_cycleI} --- non-empty, closed, inside the arc set, and
       of negative total cost with every arc uncapacitated.  The cost is summed with @{const foldr},
       in the shape @{const has_neg_infty_cycle} uses.\<close>
 
@@ -431,7 +431,7 @@ definition cut_capacity :: "nat list \<Rightarrow> 'n" where
   "cut_capacity S = sum_list (map (\<lambda>e. capacity_list ! e) (filter (leaves_cut S) [0..<m]))"
 
 text \<open>The arc sweep again does both of its jobs at once: an arc that leaves @{term S} either
-      disqualifies the cut, being uncapacitated, or contributes its capacity to the total — one test
+      disqualifies the cut, being uncapacitated, or contributes its capacity to the total --- one test
       of the endpoints, one load of the capacity, and nothing is selected into a list first.  The
       capacity is loaded once and then either disqualifies the cut or is added, never both.
 
@@ -457,7 +457,7 @@ definition check_infeasible :: "nat list \<Rightarrow> bool" where
      (length S = Suc n \<and> cut_loop S 0 m 0 (demand_loop S 0 (Suc n) 0))"
 
 text \<open>The dispatcher: each verdict is checked against its own certificate.  Nothing else about the
-      answer is trusted, so a rejected certificate says nothing about the instance — only that this
+      answer is trusted, so a rejected certificate says nothing about the instance --- only that this
       oracle run is unusable and the verified solver must be called instead.\<close>
 
 definition check_answer :: "'n oracle_answer \<Rightarrow> bool" where
@@ -560,7 +560,7 @@ text \<open>The instance format, and nothing else.  The assumptions are exactly 
       it, since an arc needs an endpoint.
 
       \<^emph>\<open>There is deliberately no assumption on @{term oracle_solve}.\<close>  It may return anything of its
-      type — a flow of the wrong length, a cut that is not a set of vertices, a ``cycle'' that is not
+      type --- a flow of the wrong length, a cut that is not a set of vertices, a ``cycle'' that is not
       closed, or an answer that is simply wrong.  Soundness of the pipeline must therefore come from
       the checker alone, and that is the whole point: the oracle can be an arbitrary external
       program.\<close>
@@ -1138,7 +1138,7 @@ next
   case VUnbounded thus ?thesis using vok by(simp add: verdict_ok_dispatch_def verdict_ok_def)
 qed
 
-text \<open>\<^emph>\<open>The \<epsilon>-slack check, unconditionally.\<close>  None of \<open>h_of_nat\<close>, \<open>opt_loop_eps_props\<close>,
+text \<open>\<^emph>\<open>The {\isasymepsilon}-slack check, unconditionally.\<close>  None of \<open>h_of_nat\<close>, \<open>opt_loop_eps_props\<close>,
       \<open>check_optimum_eps_flow\<close> or \<open>scaled_rc_eps_h\<close> needs \<open>cost_integer\<close> --- only the step turning a
       scaled slack bound into exact optimality (\<open>check_optimum_eps_sound\<close>, in \<open>mcf_oracle_eps\<close>,
       alongside \<open>check_optimum_dispatch_sound\<close> and everything built on it) does.\<close>
@@ -1382,7 +1382,7 @@ text \<open>The oracle alone decides nothing: a rejected certificate leaves the 
       flow to the cleanup --- and \<open>solve\<close> applies it to the oracle's answer.  \<open>orc_answer\<close> occurs
       once, so the external solver runs once whichever branch is taken.\<close>
 
-text \<open>\<^emph>\<open>\<epsilon>-optimality is sound too, given integer costs.\<close>  The one hypothesis
+text \<open>\<^emph>\<open>{\isasymepsilon}-optimality is sound too, given integer costs.\<close>  The one hypothesis
       \<open>optimality_from_scaled_potentials\<close> needs beyond what \<open>mcf_oracle\<close> already assumes is that arc
       costs are integers --- automatic in the concrete pipeline, where \<open>'n\<close> is \<open>int\<close> and
       \<open>h = of_int\<close>, but not provable for an arbitrary \<open>real_embedding\<close>, so it is a genuinely

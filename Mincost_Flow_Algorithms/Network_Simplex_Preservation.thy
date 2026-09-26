@@ -3,14 +3,14 @@ theory Network_Simplex_Preservation
 begin
 
 text \<open>\<^bold>\<open>Unique-path characterisation of an arborescence.\<close> A finite graph in which every vertex is
-      joined to the designated root @{term r} by \<^emph>\<open>exactly one\<close> simple (vertex-disjoint) path — more
-      precisely, any two vertices are joined by a unique distinct walk — is a rooted spanning
+      joined to the designated root @{term r} by \<^emph>\<open>exactly one\<close> simple (vertex-disjoint) path --- more
+      precisely, any two vertices are joined by a unique distinct walk --- is a rooted spanning
       arborescence. This is the bridge from the \<open>arborescense_adt\<close> axioms (which supply exactly
       the unique-distinct-walk property, \<open>general(3)\<close>) to the graph-library predicate
       \<open>graph_abs.arborescence\<close> used by \<open>spanning_tree_partition\<close>. Connectivity of the
       root component follows from existence of the walks; acyclicity follows from uniqueness, via
       \<open>graph_abs.decycle_edge_path\<close>: a cycle through an edge \<open>{a,b}\<close> yields a second
-      distinct \<open>b\<close>–\<open>a\<close> walk avoiding that edge, contradicting the unique walk given by the edge.\<close>
+      distinct \<open>b\<close>--\<open>a\<close> walk avoiding that edge, contradicting the unique walk given by the edge.\<close>
 
 lemma unique_walks_arborescence:
   assumes gi: "graph_invar G"
@@ -68,9 +68,9 @@ qed
 
 section \<open>Preservation of the loop invariants and the termination measure\<close>
 
-text \<open>For each of the two \<^emph>\<open>recursive\<close> branches of @{const network_simplex_spec.ns_loop} — the
+text \<open>For each of the two \<^emph>\<open>recursive\<close> branches of @{const network_simplex_spec.ns_loop} --- the
       degenerate flip @{const network_simplex_spec.ns_flip} (@{term \<open>leaving = None\<close>}, KV's
-      @{term \<open>e = e0\<close>}) and the full pivot @{const network_simplex_spec.ns_pivot} — we prove that the
+      @{term \<open>e = e0\<close>}) and the full pivot @{const network_simplex_spec.ns_pivot} --- we prove that the
       loop invariant @{const network_simplex.ns_invar} is preserved and that a lexicographic
       termination measure strictly decreases. The two terminal branches
       (@{const network_simplex_spec.ns_optimal}, @{const network_simplex_spec.ns_unbounded_upd}) only
@@ -80,7 +80,7 @@ text \<open>For each of the two \<^emph>\<open>recursive\<close> branches of @{c
       functions. Following the design notes, each auxiliary function has a \<^emph>\<open>single\<close> bundled lemma
       stating all the properties its callers consume under one shared set of hypotheses, so the
       recursive-case proofs can reuse the whole lemma context in one step. The informal arguments these
-      lemmas discharge are \<section>0–\<section>4 of \<open>Network_Simplex_Design_Notes.md\<close>; the lexicographic measure is
+      lemmas discharge are \S{}0--\S{}4 of \<open>Network_Simplex_Design_Notes.md\<close>; the lexicographic measure is
       that file's ``Termination'' section.\<close>
 
 context network_simplex
@@ -248,7 +248,7 @@ next
   thus ?case using snoc.hyps mb snoc.prems by (auto simp: Let_def split: if_splits)
 qed
 
-subsection \<open>Residual signs (\<section>0)\<close>
+subsection \<open>Residual signs (\S{}0)\<close>
 
 text \<open>Under @{const ns_invar} every residual is non-negative or the @{term \<open>- 1\<close>} infinity sentinel:
       the backward residual is the (non-negative) flow, and the forward residual is \<open>cap - f \<ge> 0\<close>
@@ -393,7 +393,7 @@ proof -
   qed
 qed
 
-text \<open>When the selector fires, the entering edge is a real @{term L}/@{term U} edge — hence a graph edge
+text \<open>When the selector fires, the entering edge is a real @{term L}/@{term U} edge --- hence a graph edge
       that is not (yet) a tree edge.\<close>
 
 lemma ns_select_SomeD:
@@ -454,13 +454,13 @@ proof
   thus False using singleton_not_dblton[OF dbl] by blast
 qed
 
-subsection \<open>Auxiliary bundles (\<section>4)\<close>
+subsection \<open>Auxiliary bundles (\S{}4)\<close>
 
 text \<open>Throughout this subsection @{term s} is the pre-step state with @{term \<open>ns_invar s\<close>}, the
       selector has fired (@{term \<open>ns_select s = Some (e, in_U, \<gamma>, sel')\<close>}), and @{term p1}, @{term p2}
       are the two tree paths @{term \<open>get_path_pair (spanning_tree s) (fst e) (snd e) = (p1, p2)\<close>}.\<close>
 
-text \<open>\<^bold>\<open>\<section>4.1 Path/array alignment\<close> — the linchpin. The \<open>get_path_pair\<close> specification names an
+text \<open>\<^bold>\<open>\S{}4.1 Path/array alignment\<close> --- the linchpin. The \<open>get_path_pair\<close> specification names an
       apex @{term a} and a shared tail @{term p3}; the consequence used downstream is that consecutive
       path vertices are parent-linked (@{const par_vx} of one is the next), that the two paths are
       disjoint, and that @{const par_edge} is injective on their union (H1). The degenerate case
@@ -545,7 +545,7 @@ proof -
   qed
 qed
 
-text \<open>The general walk-successor fact used through \<section>4.1 and again in \<section>4.3/\<section>4.5: on \<^emph>\<open>any\<close> distinct walk
+text \<open>The general walk-successor fact used through \S{}4.1 and again in \S{}4.3/\S{}4.5: on \<^emph>\<open>any\<close> distinct walk
       to the root, the successor of a non-root vertex is its @{const par_vx}. Applied to a spine
       @{term \<open>P @ a # p3\<close>} it gives both the interior links (successor inside @{term P}) and the apex link
       @{term \<open>par_vx s (last P) = a\<close>}. Proof: the suffix from position @{term i} is, by @{thm general(3)},
@@ -591,10 +591,10 @@ proof -
   thus "par_vx s (W ! i) = W ! Suc i" using hsu by simp
 qed
 
-text \<open>\<^bold>\<open>\<section>4.6 @{const bottleneck}-return facts\<close> for the pivot branch: the leaving child @{term v} lies on
+text \<open>\<^bold>\<open>\S{}4.6 @{const bottleneck}-return facts\<close> for the pivot branch: the leaving child @{term v} lies on
       the spine @{term P} it was scanned from, is a non-root vertex, its parent edge is the leaving
       tree edge @{term e0}, and the entering edge @{term e} is not yet a tree edge. The positivity fact
-      from \<section>0 (no up-side residual is @{term 0}, so an up-side leaving edge forces @{term \<open>\<delta> > 0\<close>}) is
+      from \S{}0 (no up-side residual is @{term 0}, so an up-side leaving edge forces @{term \<open>\<delta> > 0\<close>}) is
       bundled here too.\<close>
 
 lemma mininf_snd_of_neq_fst: "mininf (x::'n) y \<noteq> x \<Longrightarrow> mininf x y = y"
@@ -696,7 +696,7 @@ proof -
   thus "up_side \<Longrightarrow> 0 < \<delta>" by blast
 qed
 
-text \<open>\<^bold>\<open>\<section>4.2 Conservation (circulation)\<close>. For @{term \<open>\<delta> > 0\<close>} the flow produced by
+text \<open>\<^bold>\<open>\S{}4.2 Conservation (circulation)\<close>. For @{term \<open>\<delta> > 0\<close>} the flow produced by
       @{const augment_flow} is a @{term \<delta>}-scaled unit circulation around the fundamental circuit: it
       leaves every vertex balance unchanged, hence stays a @{term b}-flow, and every circuit edge is
       pushed by at most its own residual so the capacity bounds are kept. This is the whole of
@@ -1055,7 +1055,7 @@ next
 qed
 
 text \<open>Capacity infrastructure: the exact per-edge value after the fold (accumulation form, no
-      distinctness), specialised — via @{const par_edge} injectivity — to ``touched once'' and
+      distinctness), specialised --- via @{const par_edge} injectivity --- to ``touched once'' and
       ``untouched''.\<close>
 
 lemma fold_flow_upd_lookup:
@@ -1929,8 +1929,8 @@ proof -
     using augment_flow_cost[OF inv sel pp bn dne] .
 qed
 
-text \<open>\<^bold>\<open>\<section>4.4 Shift set and cut\<close>. @{term shift_pot} adds @{term \<gamma>} (signed) over exactly the moved
-      subtree \<open>S\<close> — the component of @{term v} in \<open>(V, T - {e0})\<close>, which excludes @{term r}. Every tree
+text \<open>\<^bold>\<open>\S{}4.4 Shift set and cut\<close>. @{term shift_pot} adds @{term \<gamma>} (signed) over exactly the moved
+      subtree \<open>S\<close> --- the component of @{term v} in \<open>(V, T - {e0})\<close>, which excludes @{term r}. Every tree
       edge other than \<open>e0\<close> has both ends on one side of the cut (its reduced cost is unchanged), \<open>e0\<close> is
       the unique old crossing edge, and @{term e} is the new crossing edge whose reduced cost the shift
       zeroes. Together with \<open>\<pi> r = 0\<close> preserved this is @{const ns_invar_pot_fits} for the pivot.\<close>
@@ -2173,7 +2173,7 @@ proof -
 qed
 
 text \<open>A signed edge-cost sum given by two \<^emph>\<open>distinct\<close> edge lists (with at most one root edge across
-      both) is admissible — the packaging rule for @{const good_pot_val}.\<close>
+      both) is admissible --- the packaging rule for @{const good_pot_val}.\<close>
 
 lemma good_pot_valI_list:
   assumes "set Al \<subseteq> \<E>" "set Dl \<subseteq> \<E>" "distinct Al" "distinct Dl"
@@ -2184,7 +2184,7 @@ lemma good_pot_valI_list:
   by (intro exI[of _ "set Al"] exI[of _ "set Dl"]) (simp add: sum_list_distinct_conv_sum_set)
 
 
-text \<open>\<^bold>\<open>\<section>4.3 \<open>swap_edge\<close> basis exchange\<close>. Instantiating the ADT axiom through \<section>4.1 and \<section>4.6:
+text \<open>\<^bold>\<open>\S{}4.3 \<open>swap_edge\<close> basis exchange\<close>. Instantiating the ADT axiom through \S{}4.1 and \S{}4.6:
       swapping the leaving edge @{term \<open>e0 = par_edge s v\<close>} for the entering edge @{term e} preserves
       \<open>arborescense_invar\<close> and realises the abstract exchange \<open>absT - {e0} \<union> {e}\<close>.\<close>
 
@@ -2264,7 +2264,7 @@ proof -
     using swap2 by (simp only: remE uvaxE)
 qed
 
-text \<open>\<^bold>\<open>\<section>4.5 \<open>reparent\<close> correctness\<close>. Re-parenting reverses the spine \<open>hd P \<dots> v\<close>: off-spine
+text \<open>\<^bold>\<open>\S{}4.5 \<open>reparent\<close> correctness\<close>. Re-parenting reverses the spine \<open>hd P \<dots> v\<close>: off-spine
       vertices keep their parent data, spine vertices inherit their predecessor's old edge with flipped
       orientation, and the resulting parent/direction arrays project onto the new tree \<open>swap_edge \<dots>\<close>.
       Presented (with the result pair bound to @{term parr}, @{term darr}) as the two array invariants
@@ -2376,10 +2376,10 @@ proof (rule inj_onI)
   qed
 qed
 
-text \<open>\<^bold>\<open>\<section>4.5 pointwise re-parenting.\<close> Walking the spine, @{const reparent_walk} rewrites exactly the
+text \<open>\<^bold>\<open>\S{}4.5 pointwise re-parenting.\<close> Walking the spine, @{const reparent_walk} rewrites exactly the
       prefix up to @{term v}: off-spine parents are untouched, and the undirected edges over the spine
       collapse to the entering edge @{term e} (or the predecessor's edge) plus the predecessors' old
-      edges — the ownership shift by one vertex. Proved by induction on the walked list.\<close>
+      edges --- the ownership shift by one vertex. Proved by induction on the walked list.\<close>
 
 lemma reparent_walk_char:
   "\<lbrakk>distinct ws; v \<in> set ws; parent_invar parr0; set ws \<subseteq> \<V> - {r}\<rbrakk>
@@ -2487,10 +2487,10 @@ next
   qed
 qed
 
-text \<open>\<^bold>\<open>Abstract admissibility (\<section>4.4b).\<close> The reusable core, purely on the abstract layer (edge set
+text \<open>\<^bold>\<open>Abstract admissibility (\S{}4.4b).\<close> The reusable core, purely on the abstract layer (edge set
       \<open>T\<close>, real potential \<open>\<pi>\<close>): for \<^emph>\<open>any\<close> spanning-tree partition and any potential fitting it, every
-      vertex potential \<open>\<pi> v\<close> is the signed cost-sum along \<open>v\<close>'s (distinct) tree path to \<open>r\<close> — telescoped
-      via \<open>zt\<close> over the walk's consecutive pairs, each mapped to its unique directed tree edge (\<open>de\<close>) —
+      vertex potential \<open>\<pi> v\<close> is the signed cost-sum along \<open>v\<close>'s (distinct) tree path to \<open>r\<close> --- telescoped
+      via \<open>zt\<close> over the walk's consecutive pairs, each mapped to its unique directed tree edge (\<open>de\<close>) ---
       and the only path edge touching \<open>r\<close> is the first, so \<open>\<pi> v\<close> is @{const good_pot_val}.\<close>
 
 lemma potential_fits_imp_good:
@@ -2662,8 +2662,8 @@ proof -
   qed
 qed
 
-text \<open>\<^bold>\<open>New potential fits the new tree (\<section>4.4c, abstract).\<close> The \<^emph>\<open>explicit real\<close> potential
-      \<open>\<lambda>u. ns_pot_of s u + (if u\<in>S then \<plusminus>\<gamma> else 0)\<close> fits the pivoted tree \<open>T − {e0} \<union> {e}\<close> — this is the
+text \<open>\<^bold>\<open>New potential fits the new tree (\S{}4.4c, abstract).\<close> The \<^emph>\<open>explicit real\<close> potential
+      \<open>\<lambda>u. ns_pot_of s u + (if u\<in>S then \<plusminus>\<gamma> else 0)\<close> fits the pivoted tree \<open>T - {e0} \<union> {e}\<close> --- this is the
       \<open>shift_pot_props\<close> cut argument (\<open>cut_4c\<close>, \<open>crosse\<close>) on the plain mathematical function, so
       the \<open>abschar\<close> step is definitional and no \<open>shift_pot\<close> / descriptor is involved.\<close>
 
@@ -2779,12 +2779,12 @@ proof -
   show "potential_fits_spanning_tree_partition r (ns_tree_edges s - {par_edge s v} \<union> {e}) ?pi" using pdfits by (simp add: pd_def)
 qed
 
-text \<open>\<^bold>\<open>Guard discharge (\<section>4.4a).\<close> For every vertex \<open>u\<close> of the moved subtree \<open>S\<close>, the shifted
-      value \<open>ns_pot_of s u \<plusminus> reduced_cost e\<close> equals \<open>u\<close>'s tree-path cost sum in the swapped tree —
-      a signed edge-cost sum touching the root exactly once — hence @{const good_pot_val}.
+text \<open>\<^bold>\<open>Guard discharge (\S{}4.4a).\<close> For every vertex \<open>u\<close> of the moved subtree \<open>S\<close>, the shifted
+      value \<open>ns_pot_of s u \<plusminus> reduced_cost e\<close> equals \<open>u\<close>'s tree-path cost sum in the swapped tree ---
+      a signed edge-cost sum touching the root exactly once --- hence @{const good_pot_val}.
       This is exactly the precondition of the potential-descriptor axioms at each @{term shift_pot}
-      application. The proof is the compose: the swapped tree \<open>T' = ns_tree_edges s − {e0} \<union> {e}\<close> is an
-      arborescence (\<open>swap_edge_pivot\<close>, with \<open>L' = \<E> − T'\<close>, \<open>U' = {}\<close>), the explicit potential fits it
+      application. The proof is the compose: the swapped tree \<open>T' = ns_tree_edges s - {e0} \<union> {e}\<close> is an
+      arborescence (\<open>swap_edge_pivot\<close>, with \<open>L' = \<E> - T'\<close>, \<open>U' = {}\<close>), the explicit potential fits it
       (\<open>expl_fits\<close>), so \<open>potential_fits_imp_good\<close> gives \<open>good_pot_val (\<pi>'_expl u)\<close>, and \<open>\<pi>'_expl u = the
       shifted value\<close> for \<open>u \<in> S\<close>.\<close>
 
@@ -3482,9 +3482,9 @@ definition "ns_less s' s \<longleftrightarrow>
 *)
 subsection \<open>Recursive-case preservation and decrease\<close>
 
-text \<open>\<^bold>\<open>Flip branch\<close> (\<section>2). @{const ns_flip} augments the flow along the whole circuit, toggles @{term e}
+text \<open>\<^bold>\<open>Flip branch\<close> (\S{}2). @{const ns_flip} augments the flow along the whole circuit, toggles @{term e}
       between @{term L} and @{term U}, and leaves the tree, potentials and parent/direction arrays
-      untouched. Every invariant survives; strong feasibility (\<section>2, the delicate part) holds because no
+      untouched. Every invariant survives; strong feasibility (\S{}2, the delicate part) holds because no
       edge changes orientation and the branch's strict @{term \<open>mu > \<delta>\<close>} protects the up-side. The
       measure drops via the flow cost when @{term \<open>\<delta> > 0\<close>} and via the violation count when
       @{term \<open>\<delta> = 0\<close>}.\<close>

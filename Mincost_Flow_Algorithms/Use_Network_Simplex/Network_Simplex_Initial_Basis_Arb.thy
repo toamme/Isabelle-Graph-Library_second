@@ -10,7 +10,7 @@ section \<open>Assembling the abstract arborescence from the finished tree\<clos
 text \<open>The DFS produces five vertex-indexed arrays (@{const ds_prnt}, @{const ds_thrd}, @{const ds_rvth},
       @{const ds_lsuc}, @{const ds_snum}); here we read them off @{const build_tree} into the abstract
       @{typ \<open>nat ndtree\<close>} @{term Sarb}, with root @{term \<open>vcount\<close>} and vertex set @{term \<open>Varb\<close>}. The vertex
-      set is based on the \<^emph>\<open>seen\<close> set @{term Vseen} (which coincides with the real vertices \<open>set vs_list\<close> —
+      set is based on the \<^emph>\<open>seen\<close> set @{term Vseen} (which coincides with the real vertices \<open>set vs_list\<close> ---
       a bridge deferred to the network-simplex layer); this makes @{const follow} over the parent map and
       @{const children} coincide \<^emph>\<open>directly\<close> with the array-level @{const pstep}/@{const desc} machinery of
       the correctness theory. We then discharge the @{const arb_invar} obligations (via @{thm arb_invarI})
@@ -50,9 +50,9 @@ lemma pstep_eq_Sprnt: "pstep (build_tree acyc_flow) = {(x, y) |x y. Some y = Spr
 subsection \<open>Parent map: @{const parent_spec} via acyclicity of the parent step\<close>
 
 text \<open>@{const parent_spec} of @{term \<open>prnt Sarb\<close>} is wellfoundedness of the parent relation, i.e.\
-      acyclicity of @{term \<open>pstep (build_tree acyc_flow)\<close>} (child \<rightarrow> parent). @{const pstep} is single-valued and every
+      acyclicity of @{term \<open>pstep (build_tree acyc_flow)\<close>} (child {\isasymrightarrow} parent). @{const pstep} is single-valued and every
       emitted vertex reaches the root through it (\<open>build_tree_reaches_root\<close>, I6), and the root has no
-      outgoing parent step — a single-valued relation in which every point reaches a sink has no cycle.\<close>
+      outgoing parent step --- a single-valued relation in which every point reaches a sink has no cycle.\<close>
 
 lemma orbit_returns:
   assumes sv: "single_valued R" and reach: "(a, b) \<in> R\<^sup>*" and cyc: "(a, a) \<in> R\<^sup>+"
@@ -126,7 +126,7 @@ qed
 subsection \<open>Bridge: @{const follow} of the parent map is the @{const pstep} ancestor set\<close>
 
 text \<open>A generic fact: under @{const parent_spec}, the root-path @{term \<open>follow T u\<close>} enumerates exactly the
-      ancestors of @{term u} — the reflexive-transitive closure of the one-step parent relation.\<close>
+      ancestors of @{term u} --- the reflexive-transitive closure of the one-step parent relation.\<close>
 
 lemma follow_set_rtrancl:
   assumes ps: "parent_spec T"
@@ -220,7 +220,7 @@ qed
 subsection \<open>@{const arb_invar} obligations discharged so far\<close>
 
 text \<open>Root membership, the parent-map domain, the subtree-size obligation, and last-successor membership
-      — all on the interior (seen) vertices.\<close>
+      --- all on the interior (seen) vertices.\<close>
 
 lemma dom_Sprnt: "dom Sprnt = Varb - {vcount}"
   by (auto simp: Sprnt_def Varb_def Vseen_def dom_def)
@@ -250,7 +250,7 @@ text \<open>The DFS builds the thread by \<^emph>\<open>append at the end\<close
       root @{term vcount} grows by exactly that new vertex. We carry this reachability invariant
       @{term tspan} through the whole build (alongside @{const dfs_inv}), giving \<^emph>\<open>thread spanning\<close> at
       @{const build_tree}. This is what makes the thread's @{const follow} enumerate all of @{term Varb}
-      (obligation 4) and — with injectivity — makes the thread relation acyclic (obligations 2, 3).\<close>
+      (obligation 4) and --- with injectivity --- makes the thread relation acyclic (obligations 2, 3).\<close>
 
 definition thrdstep :: "'n dfs_state \<Rightarrow> (nat \<times> nat) set" where
   "thrdstep s = {(x, ds_thrd s ! x) |x. x < Suc vcount \<and> (x = vcount \<or> ds_seen s ! x) \<and> ds_thrd s ! x \<noteq> 0}"
@@ -878,7 +878,7 @@ text \<open>The remaining ingredient of @{const rooted_arborescense_invar} is th
       vertex set. The @{term fst} projection of the edge set is exactly @{term Vseen} (the domain of
       @{term Sprnt}); the @{term snd} projection is the set of stored parents, each of which is either
       @{term vcount} or a seen vertex. The graph has at least one edge (@{thm num_edges_gtr_0}), hence at
-      least one real vertex, so @{term Vseen} is non-empty and — following any parent chain to the root —
+      least one real vertex, so @{term Vseen} is non-empty and --- following any parent chain to the root ---
       some component root has @{term vcount} as its parent, putting @{term vcount} into the edge set.\<close>
 
 lemma Vseen_nonempty: "Vseen \<noteq> {}"
@@ -1129,7 +1129,7 @@ text \<open>The subtree-size obligation for interior vertices is @{thm snum_eq_c
       @{term \<open>ds_snum (build_tree acyc_flow) ! vcount = card Varb\<close>}, which @{const snum_inv} does not track (it ranges
       over \<open>v < vcount\<close>). We carry a dedicated invariant @{term rootacc} through the whole build (mirroring
       the @{const tspan} carry): at every state, @{term \<open>Suc (card (seen vertices))\<close>} equals the root's
-      running count plus the subtree size of the \<^emph>\<open>bottom\<close> (component-root) stack frame — the vertices of
+      running count plus the subtree size of the \<^emph>\<open>bottom\<close> (component-root) stack frame --- the vertices of
       the currently-open component, not yet added to the root. A discovery grows both sides by one (the
       fresh vertex joins the bottom frame's subtree via @{thm stk_top_reaches} / @{thm desc_discover});
       finishing a component root adds its size to the root; opening a component reseeds the bottom frame.
@@ -1610,7 +1610,7 @@ text \<open>Each @{const open_tree_component} / @{const emit_U_edge} increments 
       @{const ds_nxt} by exactly one and leaves its subject vertex seen; @{const build_dfs} preserves it.
       Since every vertex of @{term vs_list} is the subject of at most one emission (opened XOR emitted-as-U
       in phase 1, or opened-if-unseen in phase 2), the total number of artificial edges
-      @{term \<open>ds_nxt (build_tree acyc_flow)\<close>} is at most @{term \<open>length vs_list\<close>} — so the pre-sized artificial tails
+      @{term \<open>ds_nxt (build_tree acyc_flow)\<close>} is at most @{term \<open>length vs_list\<close>} --- so the pre-sized artificial tails
       (length @{term \<open>length vs_list\<close>}) hold every emitted edge without dropping any.\<close>
 
 lemma emit_U_edge_nxt: "ds_nxt (emit_U_edge s v) = Suc (ds_nxt s)"
@@ -1724,7 +1724,7 @@ qed
 
 text \<open>Fold-level emission bound (seen freshness, for phase 2): here the scan only emits for \<^emph>\<open>unseen\<close>
       vertices (it opens them), so the new subject is fresh because the accumulated set is a set of seen
-      vertices — no distinctness needed, and the initial set may already meet @{term vs_list}.\<close>
+      vertices --- no distinctness needed, and the initial set may already meet @{term vs_list}.\<close>
 
 lemma fold_emit_bnd2:
   assumes step_inv: "\<And>v t. v \<in> set vs_list \<Longrightarrow> dfs_inv acyc_flow t \<Longrightarrow> ds_stk t = [] \<Longrightarrow> dfs_inv acyc_flow (g v t) \<and> ds_stk (g v t) = []"
@@ -1811,7 +1811,7 @@ subsection \<open>Assembly substrate: the artificial-edge tails keep length @{te
 text \<open>The tails are pre-sized to @{term \<open>length vs_list\<close>} at @{const dfs_init} and only ever updated
       in place (@{const List.list_update}) or left untouched by @{const build_dfs}, so their length is
       invariant. With @{thm build_tree_nxt_le} this shows every artificial edge the build emits lands
-      inside the tails — the well-formedness the augmented edge arrays need.\<close>
+      inside the tails --- the well-formedness the augmented edge arrays need.\<close>
 
 definition art_len :: "'n dfs_state \<Rightarrow> bool" where
   "art_len s \<longleftrightarrow> length (ds_afst s) = length vs_list \<and> length (ds_asnd s) = length vs_list
@@ -1998,7 +1998,7 @@ lemma emit_U_edge_aest_at:
 subsection \<open>Assembly substrate: the full artificial-edge tail content\<close>
 
 text \<open>Lifting the per-emission content facts to the whole build: every artificial edge index
-      @{term \<open>k < ds_nxt (build_tree acyc_flow)\<close>} stores a well-formed edge — one endpoint the artificial root
+      @{term \<open>k < ds_nxt (build_tree acyc_flow)\<close>} stores a well-formed edge --- one endpoint the artificial root
       @{const vcount}, the other a genuine vertex @{term \<open>subj < vcount\<close>}, oriented by @{const art_dir},
       carrying @{const art_flow} and (on tree edges) @{const art_tree_cap}. The bound
       @{thm build_tree_nxt_le} supplies the in-bounds premise at each emission via the same carried
@@ -2338,7 +2338,7 @@ qed
 
 subsection \<open>The acyclified flow the tree is built from\<close>
 
-text \<open>The builder runs on @{const acyc_flow} — the acyclifier's output — never on the raw input
+text \<open>The builder runs on @{const acyc_flow} --- the acyclifier's output --- never on the raw input
       @{term flow_list}.  Its length is @{term m} on \<^emph>\<open>both\<close> branches: on @{term None} it is the
       input list itself, and on @{term Some} the acyclifier's own flow-array invariant (which pins the
       length) is carried through the loop by @{thm make_acyclic_flow_invar}.  So the augmented-array
@@ -2381,7 +2381,7 @@ text \<open>The acyclified flow is capacity-complying on \<^emph>\<open>both\<cl
       both: on @{term None} it is the input list, which is capacity-complying by hypothesis; on
       @{term Some} the acyclifier returns a capacity-complying flow (@{thm make_acyclic_feasible}).
       Cancelling cycles never pushes an arc outside its bounds, so no case split on the acyclifier's
-      verdict is needed here — acyclicity is the only property that is genuinely \<^emph>\<open>Some\<close>-only.\<close>
+      verdict is needed here --- acyclicity is the only property that is genuinely \<^emph>\<open>Some\<close>-only.\<close>
 
 lemma af_cap_feasible_acyc_flow: "af_cap_feasible acyc_flow"
 proof (cases acyc_flow_opt)
@@ -2406,8 +2406,8 @@ lemma acyc_flow_nonneg: "e < m \<Longrightarrow> 0 \<le> acyc_flow ! e"
 lemma acyc_flow_le_cap: "e < m \<Longrightarrow> capacity_list ! e \<noteq> - 1 \<Longrightarrow> acyc_flow ! e \<le> capacity_list ! e"
   using af_cap_feasible_acyc_flow by (force simp: af_cap_feasible_def)subsection \<open>Thin glue: the unified augmented edge arrays (real part @ artificial tail)\<close>
 
-text \<open>The design (\<section>5, Network_Simplex_Initial_Basis.thy) calls for the augmented network's endpoints,
-      capacity, flow, cost and edge-state to be single length-@{term \<open>m + Kart\<close>} arrays — the input
+text \<open>The design ({\isasymsection}5, Network\_Simplex\_Initial\_Basis.thy) calls for the augmented network's endpoints,
+      capacity, flow, cost and edge-state to be single length-@{term \<open>m + Kart\<close>} arrays --- the input
       lists followed by the @{const build_tree} artificial tail truncated to its live prefix
       @{term \<open>Kart = ds_nxt (build_tree acyc_flow)\<close>}. Real indices @{term \<open>e < m\<close>} read the input lists; artificial
       indices @{term \<open>m + e\<close>} (@{term \<open>e < Kart\<close>}) read the built tail, characterised by
@@ -2486,7 +2486,7 @@ lemma cost_all_art: "e < Kart \<Longrightarrow> cost_all ! (m + e) = bigM"
 lemma tail_edge_ok_build_tree: "e < Kart \<Longrightarrow> tail_edge_ok (build_tree acyc_flow) e"
   using build_tree_tail_content by (simp add: tail_content_def Kart_def)
 
-text \<open>\<^bold>\<open>Status of the @{const arb_invar} obligations — all discharged (@{thm arb_invar_Sarb}).\<close>
+text \<open>\<^bold>\<open>Status of the @{const arb_invar} obligations --- all discharged (@{thm arb_invar_Sarb}).\<close>
       Obligation 1 = \<open>rooted_arb_invar_Sprnt\<close> (\<open>parent_spec_Sprnt\<close>, \<open>r_in_V\<close>, \<open>dom_Sprnt\<close>, edge-set spanning
       \<open>dVs_Sprnt\<close>); 2 = \<open>parent_spec_Sthrd\<close>; 3 = \<open>parent_spec_Srvth\<close>; 4 = \<open>follow_Sthrd_spans\<close>; domains 5/6 =
       \<open>dom_Sthrd\<close> (with \<open>lsuc_root_eq_prev\<close>) / \<open>dom_Srvth\<close>; thread/rev-thread inverse 7 = \<open>thrd_rvth_inverse\<close>;
@@ -3775,7 +3775,7 @@ next
 qed
 
 
-section \<open>Big-M potential arithmetic: the pot_value_plus/minus specifications\<close>
+section \<open>Big-M potential arithmetic: the pot\_value\_plus/minus specifications\<close>
 
 text \<open>The abstract potential/reduced-cost descriptor is the tagged pair \<open>pval\<close>, read as
       \<open>pval_abstract bigM p = of_mtag (fst p) * bigM + snd p\<close>.  With \<open>bigM\<close> chosen larger than
@@ -4112,7 +4112,7 @@ proof -
 qed
 
 
-text \<open>Design-notes obligation 11 (init_pot_fits), interior case: every interior tree vertex's stored
+text \<open>Design-notes obligation 11 (init\_pot\_fits), interior case: every interior tree vertex's stored
       parent edge is a real free edge whose reduced cost @{term \<open>\<c> e + \<pi>(fst e) - \<pi>(snd e)\<close>} is
       \<^emph>\<open>zero\<close> in the abstract.  This follows directly from the potential recursion @{thm build_tree_pot}
       (the parent's potential plus the @{term M_0}-tagged signed edge cost), so the increment is
@@ -4171,7 +4171,7 @@ proof -
 qed
 
 
-text \<open>Obligation 11 (init_pot_fits), component-root case: the parent edge of a component root @{term c}
+text \<open>Obligation 11 (init\_pot\_fits), component-root case: the parent edge of a component root @{term c}
       (\<open>prnt = vcount\<close>) is the \<^emph>\<open>artificial\<close> edge @{term \<open>ds_par (build_tree acyc_flow) ! c = m + k\<close>} joining @{term c}
       to the root, with cost @{term bigM}, and @{term c}'s potential is the seed \<open>\<plusminus> bigM\<close>
       (\<open>pval_negM\<close>/\<open>pval_M\<close>) so that the big-\<open>M\<close> terms cancel and the reduced cost is zero.  The three
@@ -4208,7 +4208,7 @@ proof -
   qed
 qed
 
-subsection \<open>Obligation 11 (init_pot_fits): reduced cost 0 on every tree edge\<close>
+subsection \<open>Obligation 11 (init\_pot\_fits): reduced cost 0 on every tree edge\<close>
 
 text \<open>The interior case (@{thm build_tree_interior_rc_zero}) and the component-root case
       (@{thm build_tree_comproot_rc_zero}) above are now combined into \<open>build_tree_rc_zero\<close>,
@@ -4216,7 +4216,7 @@ text \<open>The interior case (@{thm build_tree_interior_rc_zero}) and the compo
       reduced cost. The five hypotheses of @{thm build_tree_comproot_rc_zero} are discharged by a
       carried DFS invariant \<open>comproot_inv\<close>: at each @{const open_tree_component} the new
       component root @{term c} gets @{term \<open>ds_par (build_tree acyc_flow) ! c = m + k\<close>} pointing at its freshly
-      emitted artificial edge @{term k} (subject @{term c}) and the seed potential \<open>\<mp> bigM\<close>;
+      emitted artificial edge @{term k} (subject @{term c}) and the seed potential \<open>\<minusplus> bigM\<close>;
       every later step frames those fields (@{const build_dfs} freezes seen vertices' @{const ds_par}
       / @{const ds_pot} / @{const ds_prnt} and never creates a new component root -- \<open>build_dfs_cr\<close>).\<close>
 
@@ -4795,7 +4795,7 @@ text \<open>Every vertex the builder ever marks \<^emph>\<open>seen\<close> (bel
 
 text \<open>Under the dense model a name of @{term vs_list} that carries no edge (@{const is_lonely}) is a
       genuine non-vertex: it has zero @{const excess} (no incident edge contributes) and zero balance
-      (@{thm isolated_zero}), hence zero @{const imbalance}, so the builder never opens it — the seen
+      (@{thm isolated_zero}), hence zero @{const imbalance}, so the builder never opens it --- the seen
       set is exactly the edged vertices.  The lemmas below package this for the seen-set invariant.\<close>
 
 lemma excess_lonely:
@@ -5186,7 +5186,7 @@ lemma seen_set_build_tree: "seen_set (build_tree acyc_flow) = Vseen"
 text \<open>Strengthened to the \<^emph>\<open>seen\<close> set: every stored artificial edge runs between the root and a
       vertex that is already visited (a component root just opened, or a still-visited imbalanced
       vertex).  Because visitedness only grows this survives to @{const build_tree}, where the seen
-      set is exactly @{const Vseen} — the fact that identifies the augmented vertex set with @{const Varb}.\<close>
+      set is exactly @{const Vseen} --- the fact that identifies the augmented vertex set with @{const Varb}.\<close>
 
 definition tail_sub :: "'n dfs_state \<Rightarrow> bool" where
   "tail_sub s \<longleftrightarrow> (\<forall>k<ds_nxt s. ds_afst s ! k \<in> insert vcount (seen_set s)
@@ -5540,8 +5540,8 @@ next
   qed
 qed
 
-text \<open>The augmented graph's vertex set @{term \<open>NSg.\<V>\<close>} — the endpoint set of all @{term \<open>m + Kart\<close>}
-      edges — is exactly the arborescence vertex set @{term Varb} (@{term \<open>insert vcount (set vs_list)\<close>}):
+text \<open>The augmented graph's vertex set @{term \<open>NSg.\<V>\<close>} --- the endpoint set of all @{term \<open>m + Kart\<close>}
+      edges --- is exactly the arborescence vertex set @{term Varb} (@{term \<open>insert vcount (set vs_list)\<close>}):
       real edges contribute @{term \<open>set vs_list\<close>} (@{thm fst_snd_vs}), artificial edges contribute
       @{const vcount} together with their subjects, and @{thm Kart_pos} guarantees at least one
       artificial edge so that @{const vcount} itself is present. This is the identity that lets the

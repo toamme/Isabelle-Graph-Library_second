@@ -20,9 +20,9 @@ text \<open>This theory is the place where the minimum cost flow problem as pose
 
       \paragraph{The problem.} Writing \<open>f\<close> for the flow, the specification asks to minimise
       \<open>\<Sum>\<^bsub>a \<in> A\<^esub> c(a) f(a)\<close> subject to
-      \begin{align}        l(a) \<le> f(a) &\<le> u(a) & \<forall> a &\<in> A \\
-        \textstyle\<Sum>_{x : (w,x) \<in> A} f(w,x) - \textstyle\<Sum>_{v : (v,w) \<in> A} f(v,w) &= b(w)
-           & \forall w &\<in> V
+      \begin{align}        l(a) {\isasymle} f(a) &{\isasymle} u(a) & {\isasymforall} a &{\isasymin} A \\
+        \textstyle{\isasymSum}_{x : (w,x) {\isasymin} A} f(w,x) - \textstyle{\isasymSum}_{v : (v,w) {\isasymin} A} f(v,w) &= b(w)
+           & \forall w &{\isasymin} V
       \end{align}
 
       \paragraph{Output.} A solution consists of a solution line \<open>s <F>\<close> carrying the cost of the

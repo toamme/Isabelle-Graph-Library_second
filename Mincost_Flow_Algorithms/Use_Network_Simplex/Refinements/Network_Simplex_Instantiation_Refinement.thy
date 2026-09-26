@@ -17,8 +17,8 @@ text \<open>This theory assembles the imperative counterpart of the top-level fu
         (\<open>NSc.ns_loop_impl\<close> from \<open>NSc.init_state\<close>) and, on a bounded optimum of the augmented
         network, reads the verdict off the artificial edges @{term \<open>[m..<m + Kart]\<close>}.
 
-      The imperative version reuses the two big already-verified refinements — \<open>make_acyclic_imp\<close>
-      (see \<open>make_acyclic_imp_rule\<close>) and \<open>ns_loop_imp\<close> (see \<open>ns_loop_imp_rule\<close>) — and glues them with a
+      The imperative version reuses the two big already-verified refinements --- \<open>make_acyclic_imp\<close>
+      (see \<open>make_acyclic_imp_rule\<close>) and \<open>ns_loop_imp\<close> (see \<open>ns_loop_imp_rule\<close>) --- and glues them with a
       materialisation step and a final artificial-edge scan.  All stores are @{class heap} arrays;
       arrays are reused across phases (the acyclifier's DFS stacks and CSR blocks are handed on as
       the network-simplex path buffers and spanning-tree scaffold once the acyclifier no longer
@@ -26,10 +26,10 @@ text \<open>This theory assembles the imperative counterpart of the top-level fu
 
 subsection \<open>The three-valued solution flag\<close>
 
-text \<open>The imperative orchestrator returns only a status flag; the optimum flow — when one exists —
+text \<open>The imperative orchestrator returns only a status flag; the optimum flow --- when one exists ---
       is left in the first @{term m} cells of the flow array.  The flag mirrors the three shapes of
-      the functional @{typ \<open>'n ns_outcome\<close>}: @{const Optimum} \<mapsto> @{term OptimalF},
-      @{const Infeasible} \<mapsto> @{term InfeasibleF}, @{const Neg_inf_cycle} \<mapsto> @{term NegInfCycleF}.\<close>
+      the functional @{typ \<open>'n ns_outcome\<close>}: @{const Optimum} {\isasymmapsto} @{term OptimalF},
+      @{const Infeasible} {\isasymmapsto} @{term InfeasibleF}, @{const Neg_inf_cycle} {\isasymmapsto} @{term NegInfCycleF}.\<close>
 
 datatype solve_status = OptimalF | InfeasibleF | NegInfCycleF
 
@@ -91,7 +91,7 @@ text \<open>The functional program models every store as a \<^emph>\<open>list r
       at them.  Nothing here lives in a locale; the refinement obligations are discharged later in
       the proof locale of @{const initial_basis_code_spec.solve}.\<close>
 
-subsection \<open>Flow / vertex-state stores — plain arrays\<close>
+subsection \<open>Flow / vertex-state stores --- plain arrays\<close>
 
 text \<open>The abstract-array model uses @{const nth} for lookup and @{const list_update} for update; the
       mutable counterparts are @{const Array.nth} and @{term \<open>\<lambda>a i x. Array.upd i x a\<close>}, with the
@@ -100,7 +100,7 @@ text \<open>The abstract-array model uses @{const nth} for lookup and @{const li
 
 subsection \<open>The CSR edge iterator\<close>
 
-text \<open>A @{typ \<open>'e edge_csr\<close>} is four lists — @{const csr_edges}, @{const csr_lo}, @{const csr_hi}
+text \<open>A @{typ \<open>'e edge_csr\<close>} is four lists --- @{const csr_edges}, @{const csr_lo}, @{const csr_hi}
       and the \<^emph>\<open>mutable\<close> cursor @{const csr_cur}; only the cursor is written (by @{const csr_move} /
       @{const csr_reset}).  Its mutable form is four arrays; the cursor array is the only one ever
       updated.  The vertex count @{const csr_n} is the cursor array's length.\<close>
@@ -131,7 +131,7 @@ definition csr_current_imp :: "'e::heap csr_imp \<Rightarrow> nat \<Rightarrow> 
 
 text \<open>@{const csr_move}: advance the cursor of @{term v} by one.  Called only when the remaining
       region is non-empty (@{term \<open>v < csr_n C\<close>} and @{term \<open>csr_cur C ! v < csr_hi C ! v\<close>}), so the
-      cursor read/write is in range and the advance is unconditional — no bound or exhaustion test.\<close>
+      cursor read/write is in range and the advance is unconditional --- no bound or exhaustion test.\<close>
 definition csr_move_imp :: "'e::heap csr_imp \<Rightarrow> nat \<Rightarrow> unit Heap" where
   "csr_move_imp h v =
      (case h of (ea, la, ha, ca) \<Rightarrow>
@@ -217,7 +217,7 @@ lemma vtx_move_imp_rule:
 subsection \<open>Plain array update returning unit\<close>
 
 text \<open>The abstract-array update @{const list_update} refines to an in-place @{const Array.upd} whose
-      returned handle is dropped, so the result type is @{typ \<open>unit Heap\<close>} — matching the
+      returned handle is dropped, so the result type is @{typ \<open>unit Heap\<close>} --- matching the
       @{text \<open>_upd_imp\<close>} shape both refinement locales fix.\<close>
 definition arr_upd :: "'a::heap array \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> unit Heap" where
   "arr_upd a i x = do { _ \<leftarrow> Array.upd i x a; return () }"
@@ -238,14 +238,14 @@ instance mtag :: heap ..
 section \<open>Instantiating the imperative acyclifier\<close>
 
 text \<open>The imperative acyclifier is defined in the assumption-free specification locale
-      @{locale acyclic_flow_impl_refine}, which fixes only the manipulating \<^emph>\<open>functions\<close> — no
+      @{locale acyclic_flow_impl_refine}, which fixes only the manipulating \<^emph>\<open>functions\<close> --- no
       assumptions and no fixed arrays.  We turn it into \<^emph>\<open>actual code\<close> by a @{command
       global_interpretation}: the store / iterator functions are the concrete array-manipulating
       programs built above, and the four per-edge reads are array look-ups closing over the \<^emph>\<open>four
       graph arrays\<close>, which the \<open>for\<close> clause makes \<^emph>\<open>parameters\<close> of the generated constant.
       The interpretation is provable outright (no assumptions), and @{term make_acyclic_prog} is the
       resulting executable, taking @{term cap_arr}, @{term cost_arr}, @{term fst_arr}, @{term snd_arr}
-      (via \<open>for\<close>) and the eight store handles as arguments — every array handed in.\<close>
+      (via \<open>for\<close>) and the eight store handles as arguments --- every array handed in.\<close>
 
 global_interpretation acyc: acyclic_flow_impl_refine
   where out_current_imp = csr_current_imp and out_has_imp = csr_has_imp
@@ -263,7 +263,7 @@ global_interpretation acyc: acyclic_flow_impl_refine
   by unfold_locales
 
 text \<open>Register the recursive Heap sub-programs' fixpoint equations as code equations (the
-      @{command partial_function} @{text simps}), so the acyclifier is code-generatable — the same
+      @{command partial_function} @{text simps}), so the acyclifier is code-generatable --- the same
       discipline as \<open>DFS_imperative.simps\<close> in the imperative-DFS template.\<close>
 lemmas [code] =
   acyclic_flow_impl_refine.af_rooms_imp_def
@@ -298,14 +298,14 @@ text \<open>The imperative loop \<open>ns_loop_imp\<close> is defined in the ass
       \<^emph>\<open>actual code\<close> by a @{command global_interpretation}, as for the acyclifier.  The spanning-tree
       primitives are the already-verified imperative ports @{const update_tree_imp},
       @{const get_path_pair_imp}, @{const iterate_root_opposed_imp} of \<open>Rooted_Arborescense_Refinement\<close>;
-      the network-simplex operations are thin compositions of them.  No arrays are allocated — every
+      the network-simplex operations are thin compositions of them.  No arrays are allocated --- every
       store is a fixed function and the graph arrays / tuning constants remain
       @{command global_interpretation} parameters, allocated only in the final orchestrator.\<close>
 
 subsection \<open>The three spanning-tree operations, on @{typ ndtree_impl}\<close>
 
 text \<open>The join (apex / LCA) of @{term u} and @{term v}: the two pointers converge upward, the one with
-      the smaller subtree size (@{const snum_impl}) climbing to its parent, until they meet — the
+      the smaller subtree size (@{const snum_impl}) climbing to its parent, until they meet --- the
       imperative counterpart of @{const join_of}.  This mirrors the convergence of
       @{const join_paths_loop_imp} but keeps only the meeting vertex.\<close>
 partial_function (heap) join_of_imp :: "ndtree_impl \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat Heap" where
@@ -453,7 +453,7 @@ definition ns_get_path_pair_imp ::
 text \<open>The functional \<open>shift_pot_impl\<close>, imperatively: fold the read/shift/write of the potential cell
       over the subtree of @{term v} opposed to the root, via the verified
       @{const iterate_root_opposed_imp}.  The sign of the shift is chosen by @{term up} (add on the
-      up-side, subtract on the down-side).  The accumulator is the unused unit — the potential array is
+      up-side, subtract on the down-side).  The accumulator is the unused unit --- the potential array is
       mutated in place.\<close>
 definition ns_shift_pot_imp ::
   "ndtree_impl \<Rightarrow> nat \<Rightarrow> (mtag \<times> 'n::{heap,linordered_idom}) array \<Rightarrow> (mtag \<times> 'n) \<Rightarrow> bool \<Rightarrow> unit Heap" where
@@ -469,7 +469,7 @@ text \<open>The M-free block-search selector, ported to the Heap monad.  The can
       @{typ \<open>nat array\<close>}, and the bookmark / live-length become @{typ \<open>nat ref\<close>}s; the running best is
       carried as the pure flat @{typ \<open>'n best_cand\<close>}.  Everything else (the reduced-cost descriptor
       arithmetic, the eligibility and violation tests) is the same M-free pure code as the functional
-      selector — the pure @{const initial_basis_code_spec.better} is reused directly — so the
+      selector --- the pure @{const initial_basis_code_spec.better} is reused directly --- so the
       executable counterparts of \<open>cost_pval\<close> / \<open>evaluate\<close> / \<open>scan_cache\<close> / \<open>scan\<close> differ only in
       reading their inputs from arrays.  The tuning constants (@{term m}, the arc count, the block
       size, the min / max candidate counts) and the three graph arrays (endpoints, cost) stay
@@ -543,7 +543,7 @@ partial_function (heap) scan_imp ::
 text \<open>The functional \<open>sel_select_impl\<close>, imperatively: minor iteration first; if it finds an entering
       edge, commit the shrunk length and return it; otherwise a major iteration, committing bookmark and
       length on success, @{term None} (optimal) otherwise.  The state triple is mutated in place, so the
-      returned tuple drops the selector — exactly the \<^emph>\<open>_imp\<close> discipline.\<close>
+      returned tuple drops the selector --- exactly the \<^emph>\<open>\_imp\<close> discipline.\<close>
 definition ns_sel_select_imp ::
   "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow> 'n::{heap,linordered_idom} array
    \<Rightarrow> ns_sel_imp \<Rightarrow> (mtag \<times> 'n) array \<Rightarrow> edge_tag array
@@ -594,7 +594,7 @@ section \<open>Materialising the strongly-feasible initial basis\<close>
 text \<open>The imperative port of the functional builder \<open>build_tree\<close> / \<open>art_tree\<close> of
       \<open>Network_Simplex_Initial_Basis_Code\<close>: a genuine array program that, from the acyclified flow left
       in the flow array, fills the augmented edge arrays (the artificial tail @{term \<open>[m..<m+Kart]\<close>})
-      and the strongly-feasible spanning tree — the very @{typ ndtree_impl}, parent / direction /
+      and the strongly-feasible spanning tree --- the very @{typ ndtree_impl}, parent / direction /
       potential arrays and edge-state array the network-simplex loop then mutates.  Following the
       functional code, \<^emph>\<open>arrays are reused, not reallocated\<close>: the acyclifier's two counting-sort CSRs
       become the free-edge CSRs in place (Pass A keeps their block starts @{const csr_lo} and
@@ -606,7 +606,7 @@ subsection \<open>Pass A: the fused free-edge CSR sweep, in place\<close>
 
 text \<open>The functional \<open>passA_step\<close> as a Heap loop over the edge range @{term \<open>[e..<hi]\<close>}.  For each edge
       it writes the edge tag into the (augmented) edge-state array, accumulates the excess (head then
-      tail, so a self-loop cancels), and — for a \<^emph>\<open>free\<close> edge (tag @{const InTree}) — appends the edge
+      tail, so a self-loop cancels), and --- for a \<^emph>\<open>free\<close> edge (tag @{const InTree}) --- appends the edge
       to the front of its endpoints' outgoing / ingoing free blocks, bumping the two cursor arrays.  The
       edge arrays @{term oe} / @{term ie} and cursors @{term oc} / @{term ic} are the acyclifier's CSR
       edge / cursor arrays, overwritten in place; the block starts stay untouched, so afterwards the
@@ -649,7 +649,7 @@ text \<open>The mutable counterpart of the functional @{typ \<open>'n dfs_state\
       @{term di_tree} (whose arrays \<^emph>\<open>are\<close> the network-simplex loop's tree, filled here); the parent /
       direction / potential / edge-state arrays are likewise the loop's own stores.  The artificial
       edges are written \<^emph>\<open>directly into the augmented endpoint / capacity / flow / edge-state arrays\<close>
-      at index @{term \<open>m + k\<close>} (no separate artificial arrays), so @{term di_fst} \<dots> @{term di_es} are
+      at index @{term \<open>m + k\<close>} (no separate artificial arrays), so @{term di_fst} {\isasymdots} @{term di_es} are
       the length-\<open>m + K\<close> augmented arrays.  The free-edge CSRs @{term di_oe} / @{term di_olo} /
       @{term di_ohi} (and the ingoing triple) are the acyclifier's repurposed CSR arrays; the DFS stack
       of @{term \<open>(v, oc, ic)\<close>} frames is the three arrays @{term di_sv} / @{term di_soc} / @{term di_sic}
@@ -664,7 +664,7 @@ record 'n dfs_imp =
   di_fst  :: "nat array"           \<comment> \<open>augmented edge tails (fst); artificial writes at \<open>m + k\<close>\<close>
   di_snd  :: "nat array"           \<comment> \<open>augmented edge heads (snd)\<close>
   di_cap  :: "'n array"            \<comment> \<open>augmented capacities\<close>
-  di_cost :: "'n array"            \<comment> \<open>edge costs (original block; the \<plusminus> cost seed)\<close>
+  di_cost :: "'n array"            \<comment> \<open>edge costs (original block; the {\isasymplusminus} cost seed)\<close>
   di_flow :: "'n array"            \<comment> \<open>augmented flow\<close>
   di_es   :: "edge_tag array"      \<comment> \<open>augmented edge-state tags\<close>
   di_oe   :: "nat array"           \<comment> \<open>free outgoing CSR edges\<close>
@@ -683,7 +683,7 @@ record 'n dfs_imp =
 subsection \<open>Discovering and finishing a vertex\<close>
 
 text \<open>The functional @{term dfs_discover}: finalise the fresh child @{term w} reached from @{term v}
-      across free real edge @{term e} — seed its tree fields, thread-link it after the last emitted
+      across free real edge @{term e} --- seed its tree fields, thread-link it after the last emitted
       vertex, give @{term e} zero reduced cost (\<open>\<plusminus> cost\<close> by whether @{term v} is @{term e}'s tail), and
       push its frame @{term \<open>(w, out_lo ! w, in_lo ! w)\<close>}.\<close>
 definition dfs_discover_imp :: "'n::{heap,linordered_idom} dfs_imp \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> unit Heap" where
@@ -770,9 +770,9 @@ partial_function (heap) build_dfs_a_imp ::
 subsection \<open>Opening tree components and emitting artificial edges\<close>
 
 text \<open>The functional @{term open_tree_component}: open an unseen imbalanced (Phase 1) or balanced
-      (Phase 2) vertex @{term c} as a child of the root.  Emit @{term c}'s \<^emph>\<open>tree\<close> artificial edge —
-      written directly into the augmented arrays at index @{term \<open>m + k\<close>} and tagged @{const InTree} —
-      finalise @{term c}'s tree fields, seed its potential to \<open>\<plusminus> 𝑀\<close>, thread-link it, then drain its
+      (Phase 2) vertex @{term c} as a child of the root.  Emit @{term c}'s \<^emph>\<open>tree\<close> artificial edge ---
+      written directly into the augmented arrays at index @{term \<open>m + k\<close>} and tagged @{const InTree} ---
+      finalise @{term c}'s tree fields, seed its potential to \<open>\<plusminus> M\<close>, thread-link it, then drain its
       subtree with @{const build_dfs_a_imp}.  Orientation / flow / capacity come from the one
       @{term \<open>imb_arr ! c\<close>} read (the imbalance array): up (\<open>c \<rightarrow> root\<close>) iff @{term \<open>0 \<le> imb\<close>}, flow
       @{term \<open>\<bar>imb\<bar>\<close>}, a tree edge getting a \<open>+ 1\<close> slack toward the root when it points up.\<close>
@@ -809,7 +809,7 @@ definition open_tree_component_imp ::
           build_dfs_a_imp st }) }"
 
 text \<open>The functional @{term emit_U_edge}: a \<^emph>\<open>saturated\<close> @{term U} artificial edge for an already-seen
-      imbalanced vertex @{term v} — capacity equal to its flow @{term \<open>\<bar>imb\<bar>\<close>}, tagged @{const InU},
+      imbalanced vertex @{term v} --- capacity equal to its flow @{term \<open>\<bar>imb\<bar>\<close>}, tagged @{const InU},
       touching no tree field.\<close>
 definition emit_U_edge_imp ::
   "'n::{heap,linordered_idom} dfs_imp \<Rightarrow> 'n array \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> unit Heap" where
@@ -848,7 +848,7 @@ partial_function (heap) phase1_imp ::
                 phase1_imp st imb_arr m vcount (Suc v) n })"
 
 text \<open>The functional @{term phase2_step}: open every still-unseen, \<^emph>\<open>non-lonely\<close> (hence balanced)
-      vertex as a flow-0 tree component.  A vertex is lonely when it is an endpoint of no edge — both
+      vertex as a flow-0 tree component.  A vertex is lonely when it is an endpoint of no edge --- both
       its \<^emph>\<open>full\<close> outgoing and ingoing blocks are empty; those full block-ends are the acyclifier's
       original @{const csr_hi} arrays @{term ofh} / @{term ifh}, untouched by Pass A (which only rewrote
       the cursors into the free block-ends).\<close>
@@ -874,7 +874,7 @@ subsection \<open>The finished builder\<close>
 
 text \<open>The functional @{term build_tree}: seed the root (subtree size @{term 1}, last-emitted vertex the
       root @{term vcount}, empty stack, no artificial edges yet), run both phases, then the one root
-      finalisation the traversal cannot do per-frame — the root is never popped, so its \<open>lsuc\<close>
+      finalisation the traversal cannot do per-frame --- the root is never popped, so its \<open>lsuc\<close>
       (rightmost descendant of the whole tree) is the final last-emitted vertex.  The vertex-indexed
       arrays are assumed freshly zeroed by the orchestrator (parents / edges / thread pointers @{term 0},
       directions @{term False}, potentials @{const pval_zero}, sizes @{term 0}); this seeds only the
@@ -894,9 +894,9 @@ definition build_tree_imp ::
 
 text \<open>The flat-array DFS stack: @{term di_sv} / @{term di_soc} / @{term di_sic} hold the frames in
       index order @{term \<open>[0..<sp]\<close>} with the fill pointer @{term \<open>sp = di_sp\<close>}; the functional
-      @{const ds_stk} is that prefix \<^emph>\<open>reversed\<close> — its head is the array top at index @{term \<open>sp - 1\<close>}.
+      @{const ds_stk} is that prefix \<^emph>\<open>reversed\<close> --- its head is the array top at index @{term \<open>sp - 1\<close>}.
       \<open>dfs_discover\<close> pushes (a write at @{term sp}, bump) and \<open>dfs_finish\<close> pops (just a
-      pointer decrement — the popped slot stays but is invisible above @{term sp}).\<close>
+      pointer decrement --- the popped slot stays but is invisible above @{term sp}).\<close>
 definition stk_rel :: "nat list \<Rightarrow> nat list \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> (nat \<times> nat \<times> nat) list \<Rightarrow> bool" where
   "stk_rel svl socl sicl sp stk \<longleftrightarrow>
      sp \<le> length svl \<and> sp \<le> length socl \<and> sp \<le> length sicl \<and>
@@ -964,7 +964,7 @@ proof -
 qed
 
 text \<open>A decomposition rewrite for a non-empty flat stack: exposes the top frame values, the fill
-      pointer, the in-range indices and the tail relation as an explicit conjunction — used to resolve
+      pointer, the in-range indices and the tail relation as an explicit conjunction --- used to resolve
       the DFS-loop reads by simplification.\<close>
 lemma stk_rel_cons_simp:
   "stk_rel svl socl sicl sp ((v,oc,ic)#rest) \<longleftrightarrow>
@@ -989,7 +989,7 @@ qed
 
 text \<open>Updating a stack array at an index at or above the current depth leaves the frame relation of the
       tail untouched (the read positions are all strictly below).  The two variants target the
-      out-cursor array (@{term socl}) and the in-cursor array (@{term sicl}) — the two the DFS loop
+      out-cursor array (@{term socl}) and the in-cursor array (@{term sicl}) --- the two the DFS loop
       bumps in place.\<close>
 lemma stk_rel_upd_ge:
   assumes "stk_rel svl socl sicl sp' rest" "sp' \<le> i"
@@ -1152,7 +1152,7 @@ partial_function (heap) csr_scatter_imp :: "nat array \<Rightarrow> nat array \<
                 csr_scatter_imp key_arr edges cur (Suc e) hi })"
 
 text \<open>Build one CSR keyed by @{term key_arr}: count the degrees (the count array @{term c} must be
-      pre-zeroed by the caller — freshly allocated for the first build, explicitly re-zeroed for later
+      pre-zeroed by the caller --- freshly allocated for the first build, explicitly re-zeroed for later
       ones, so no redundant zeroing pass), prefix-sum into @{term lo} / @{term hi} / @{term cur},
       scatter into @{term edges}, then reset the cursor to the block starts.  @{term m} edges,
       @{term nn} vertex names.\<close>
@@ -1315,8 +1315,8 @@ next
     by (sep_auto heap: step simp: foldeq)
 qed
 
-text \<open>The whole CSR build refines the functional constructor: count (@{const ct}) \<rightarrow> prefix-sum
-      (@{const psums}) \<rightarrow> scatter (@{const scatter_edges}) \<rightarrow> reset the cursor to the block starts.\<close>
+text \<open>The whole CSR build refines the functional constructor: count (@{const ct}) {\isasymrightarrow} prefix-sum
+      (@{const psums}) {\isasymrightarrow} scatter (@{const scatter_edges}) {\isasymrightarrow} reset the cursor to the block starts.\<close>
 lemma fold_scatter_snd_length: "length (snd (fold (scatter_body key) es st)) = length (snd st)"
   by (induction es arbitrary: st) (auto simp: scatter_body_def split: prod.splits)
 
@@ -1366,7 +1366,7 @@ qed
 section \<open>The orchestrator\<close>
 
 text \<open>The imperative counterpart of the functional @{const initial_basis_code_spec.edged_vs_list}: the
-      dense vertex range @{term \<open>[1..n]\<close>} with the \<^emph>\<open>lonely\<close> names (endpoints of no edge — both full
+      dense vertex range @{term \<open>[1..n]\<close>} with the \<^emph>\<open>lonely\<close> names (endpoints of no edge --- both full
       blocks empty) removed.  The acyclifier iterates exactly these.  We count them, then fill an
       exactly-sized array (so the iterator's length matches the abstraction).\<close>
 partial_function (heap) count_edged_imp ::
@@ -1403,7 +1403,7 @@ qed
 lemma edged_lst_empty: "n < v \<Longrightarrow> edged_lst ol oh il ih v n = []"
   by (simp add: edged_lst_def)
 
-text \<open>@{const count_edged_imp} counts the non-lonely vertices — the length of \<open>edged_lst\<close>.\<close>
+text \<open>@{const count_edged_imp} counts the non-lonely vertices --- the length of \<open>edged_lst\<close>.\<close>
 lemma count_edged_imp_rule:
   "v \<le> Suc n \<Longrightarrow> Suc n \<le> length ol \<Longrightarrow> Suc n \<le> length oh \<Longrightarrow> Suc n \<le> length il \<Longrightarrow> Suc n \<le> length ih \<Longrightarrow>
    <olo \<mapsto>\<^sub>a ol * ohi \<mapsto>\<^sub>a oh * ilo \<mapsto>\<^sub>a il * ihi \<mapsto>\<^sub>a ih>
@@ -1435,7 +1435,7 @@ next
     by (sep_auto heap: step simp: feq)
 qed
 
-text \<open>@{const fill_edged_imp} writes the non-lonely vertices — @{term \<open>edged_lst ol oh il ih v n\<close>} —
+text \<open>@{const fill_edged_imp} writes the non-lonely vertices --- @{term \<open>edged_lst ol oh il ih v n\<close>} ---
       into \<open>vl\<close> starting at index @{term j}, leaving the rest of the array untouched.  Proved \<^emph>\<open>without\<close> an Isar
       case-split on lonely/non-lonely: splitting makes @{method sep_auto} explore the unreachable
       branch (whose recursive call has no rule) and loop; giving it the general induction hypothesis as
@@ -1500,7 +1500,7 @@ lemma in_csr_edges: "csr_edges in_csr = scatter_edges vcount ((!) snd_list) [0..
   by (simp add: in_csr_def two_csr_def build_two_csr_def Let_def fold_pair_snd ct_def[symmetric] scatter_edges_def edge_csr.make_def)
 
 text \<open>Hence the two imperative CSR builds establish the abstract @{const csr_assn} of the outgoing /
-      ingoing CSRs — exactly the graph assertion the acyclifier refinement consumes.\<close>
+      ingoing CSRs --- exactly the graph assertion the acyclifier refinement consumes.\<close>
 lemma build_csr_out_rule:
   assumes "m \<le> length fst_list" "\<forall>i<m. fst_list ! i < vcount"
   shows "<ka \<mapsto>\<^sub>a fst_list * c \<mapsto>\<^sub>a replicate vcount 0 * o_lo \<mapsto>\<^sub>a replicate vcount 0 * o_hi \<mapsto>\<^sub>a replicate vcount 0 * o_cur \<mapsto>\<^sub>a replicate vcount 0 * o_edges \<mapsto>\<^sub>a replicate m 0>
@@ -1518,7 +1518,7 @@ lemma build_csr_in_rule:
                simp: csr_assn_def in_csr_edges in_csr_lo in_csr_hi in_csr_cur)
 
 text \<open>The edged-vertex loops compute exactly @{const edged_vs_list}: @{const edged_lst} on the CSR
-      block boundaries (@{term out_lo} \<dots> @{term in_hi}) is the non-lonely filter of @{term vs_list}.\<close>
+      block boundaries (@{term out_lo} {\isasymdots} @{term in_hi}) is the non-lonely filter of @{term vs_list}.\<close>
 lemma edged_lst_eq_vs_list: "edged_lst out_lo out_hi in_lo in_hi (Suc 0) n = edged_vs_list"
   by (simp add: edged_lst_def edged_vs_list_def is_lonely_def vs_list_def)
 
@@ -1536,7 +1536,7 @@ text \<open>The imperative refinement of the functional orchestrator @{const ini
       infinite-capacity cycle, @{term NegInfCycleF}); reset the cursors and run Pass A + the imbalance
       transform; build the strongly-feasible spanning tree; run the network-simplex loop (an
       @{term unbounded} verdict is again @{term NegInfCycleF}); on a bounded optimum inspect the
-      artificial edges @{term \<open>[m..<m + Kart]\<close>} — all-zero means the minimum-cost @{term b}-flow is left
+      artificial edges @{term \<open>[m..<m + Kart]\<close>} --- all-zero means the minimum-cost @{term b}-flow is left
       in the first @{term m} flow cells (@{term OptimalF}), otherwise the instance is infeasible
       (@{term InfeasibleF}).\<close>
 definition solve_imp ::
@@ -1579,7 +1579,7 @@ definition solve_imp ::
            _ \<leftarrow> imbalance_imp exc_arr in_b 0 vcount;
            \<comment> \<open>Reuse the acyclifier's (now dead) DFS stack @{term dst} as the tree-builder's ``seen''
               array; it must be all-@{term False} for the build.  Likewise @{term cnt} (dead since the
-              CSR build) becomes the DFS in-cursor stack @{term di_sic} — no reset needed there, as every
+              CSR build) becomes the DFS in-cursor stack @{term di_sic} --- no reset needed there, as every
               stack slot is written before it is read.\<close>
            _ \<leftarrow> arr_fill_imp dst False 0 V;
            sp_ref \<leftarrow> ref 0; prev_ref \<leftarrow> ref 0; nxt_ref \<leftarrow> ref 0;
@@ -1669,7 +1669,7 @@ definition af_sample :: "(bool \<times> int list) Heap" where
 
 text \<open>Running the exported code: @{term af_sample} is generated as an SML function \<open>unit \<Rightarrow> \<dots>\<close> (the
       native Imperative-HOL Heap model), so applying it to \<open>()\<close> actually executes it on a real
-      mutable heap and returns the pair \<open>(unbounded-flag, resulting flow)\<close> — expected \<open>(false, [3])\<close>.\<close>
+      mutable heap and returns the pair \<open>(unbounded-flag, resulting flow)\<close> --- expected \<open>(false, [3])\<close>.\<close>
 
 ML_val \<open>
   val (ubd, f) = @{code af_sample} ();
@@ -1678,9 +1678,9 @@ ML_val \<open>
 \<close>
 
 text \<open>A CSR sample: vertex \<open>0\<close> owns the edge ids \<open>[10, 20]\<close>, vertex \<open>1\<close> owns \<open>[30]\<close>.  We read the
-      current edge of vertex \<open>0\<close> (its \<^emph>\<open>next\<close>, i.e. first unconsumed, edge — expected \<open>10\<close>), advance
+      current edge of vertex \<open>0\<close> (its \<^emph>\<open>next\<close>, i.e. first unconsumed, edge --- expected \<open>10\<close>), advance
       its cursor with @{const csr_move_imp}, read the new current edge (\<open>20\<close>), and finally ask
-      @{const csr_has_imp} whether vertex \<open>0\<close> still has an unconsumed edge (cursor \<open>1 < 2\<close> \<Rightarrow>
+      @{const csr_has_imp} whether vertex \<open>0\<close> still has an unconsumed edge (cursor \<open>1 < 2\<close> {\isasymRightarrow}
       @{term True}).\<close>
 
 definition csr_sample :: "(nat \<times> nat \<times> bool) Heap" where
@@ -1705,7 +1705,7 @@ ML_val \<open>
 text \<open>A \<^emph>\<open>cyclic\<close> flow, acyclified.  Three vertices \<open>0,1,2\<close> and a directed triangle
       \<open>0 \<rightarrow>\<^sup>0 1 \<rightarrow>\<^sup>1 2 \<rightarrow>\<^sup>2 0\<close> carrying flow \<open>[3, 5, 4]\<close>, all within capacity \<open>10\<close> at unit cost.  The
       flow's support is the whole cycle, so it is \<^emph>\<open>not\<close> acyclic.  @{const make_acyclic_prog} cancels
-      the cycle — pushing the bottleneck \<open>3\<close> around it (reducing cost) — leaving an acyclic flow with
+      the cycle --- pushing the bottleneck \<open>3\<close> around it (reducing cost) --- leaving an acyclic flow with
       the same vertex excesses (expected \<open>[0, 2, 1]\<close>), and reports @{term False} (bounded).\<close>
 
 definition af_cycle_sample :: "(bool \<times> int list) Heap" where
@@ -1742,15 +1742,15 @@ text \<open>The functional selector locale @{locale initial_basis_selector} fixe
       @{class linordered_idom}, but the imperative @{const solve_imp} stores those values in
       @{typ \<open>'n array\<close>}s, which additionally requires @{class heap}.  A locale's fixed type parameter
       cannot be re-sorted after the fact, so we introduce the thin extension
-      \<open>initial_basis_selector_heap\<close>: it \<^emph>\<open>is\<close> @{locale initial_basis_selector} — inheriting
-      \<open>solve\<close>, @{thm [source] initial_basis_selector.solve_correct} and all the input lists —
-      but re-declares @{typ 'n} at the stronger sort @{class heap} \<inter> @{class linordered_idom}.  All of
+      \<open>initial_basis_selector_heap\<close>: it \<^emph>\<open>is\<close> @{locale initial_basis_selector} --- inheriting
+      \<open>solve\<close>, @{thm [source] initial_basis_selector.solve_correct} and all the input lists ---
+      but re-declares @{typ 'n} at the stronger sort @{class heap} {\isasyminter} @{class linordered_idom}.  All of
       this lives in the present theory; the functional development is untouched.
 
       Inside it the final refinement statement is a single Hoare triple: run on six input arrays
       holding the locale-fixed input lists, @{const solve_imp} returns the same verdict as the
       functional \<open>solve\<close> (under @{const status_of}), leaves the five read-only input arrays
-      untouched, and — on @{const OptimalF} — leaves the minimum-cost @{term b}-flow in the first
+      untouched, and --- on @{const OptimalF} --- leaves the minimum-cost @{term b}-flow in the first
       @{term m} cells of the flow array.  Composed with @{thm [source] initial_basis_selector.solve_correct}
       it certifies the executable solver end-to-end.\<close>
 
@@ -2238,7 +2238,7 @@ subsection \<open>Layer (d.5): the depth-first spanning-tree builder refines @{c
 text \<open>The DFS state relation: the imperative @{typ \<open>'n dfs_imp\<close>} record of array / reference handles
       against the functional @{typ \<open>'n dfs_state\<close>}.  The augmented edge arrays @{term di_fst} /
       @{term di_snd} (and @{term di_cap} / @{term di_flow} / @{term di_es}) are wider than
-      the real block, so they are existential with their real prefix pinned — @{term di_fst} /
+      the real block, so they are existential with their real prefix pinned --- @{term di_fst} /
       @{term di_snd} to @{term fst_list} / @{term snd_list}, @{term di_cap} to @{term capacity_list},
       and @{term di_flow} to the parameter @{term fl0} (the real-edge flow the tree builder must carry
       through to the network-simplex loop); the four scanned arrays @{term di_oe} / @{term di_ohi} /
@@ -2282,7 +2282,7 @@ definition dfs_rel :: "'n list \<Rightarrow> edge_tag list \<Rightarrow> nat lis
 
 text \<open>Finishing (popping) a fully-scanned stack-top @{term v}: a straight run of array writes
       (@{term ds_lsuc}, the parent's @{term ds_snum}) and a fill-pointer decrement.  The stack arrays are
-      not touched — the popped slot merely falls above @{term \<open>sp - 1\<close>}, exactly @{thm stk_rel_pop'}.\<close>
+      not touched --- the popped slot merely falls above @{term \<open>sp - 1\<close>}, exactly @{thm stk_rel_pop'}.\<close>
 lemma dfs_finish_imp_rule:
   assumes stk: "ds_stk s = (v, oc, ic) # rest"
     and vlt: "v < length (ds_prnt s)" "v < length (ds_lsuc s)" "v < length (ds_snum s)"
@@ -2300,7 +2300,7 @@ lemma dfs_finish_imp_rule:
 text \<open>Discovering a fresh vertex @{term w} from stack-top @{term v} across the free real edge @{term e}:
       finalise @{term w}'s tree fields, thread-link it after @{term \<open>ds_prev s\<close>}, seed its potential
       (\<open>\<plusminus> cost_list ! e\<close> by whether @{term v} is @{term e}'s tail), then push its frame
-      @{term \<open>(w, out_lo ! w, in_lo ! w)\<close>} — a write at the fill pointer plus a bump, exactly
+      @{term \<open>(w, out_lo ! w, in_lo ! w)\<close>} --- a write at the fill pointer plus a bump, exactly
       @{thm stk_rel_push}.  The single case split is on @{term \<open>v = fst_list ! e\<close>} (the potential seed's
       sign); every array bound is a caller obligation, and the stack-space bound is
       @{term \<open>length (ds_stk s) < Suc vcount\<close>}.\<close>
@@ -2334,7 +2334,7 @@ lemma dfs_discover_imp_rule:
 
 text \<open>The DFS-loop refinement invariant.  Beyond @{const dfs_wf} (stack vertices are real, seen array
       sized) and @{const dfs_sized} (all vertex arrays sized), the loop needs: the stack frames carry
-      \<^emph>\<open>distinct\<close> vertices (so the flat stack never overflows its @{term \<open>Suc vcount\<close>} capacity — the
+      \<^emph>\<open>distinct\<close> vertices (so the flat stack never overflows its @{term \<open>Suc vcount\<close>} capacity --- the
       depth is at most @{term vcount}), every stacked vertex is already seen (so a freshly discovered
       neighbour is genuinely new, preserving distinctness), and the \<open>prev\<close> pointer / all parent entries
       are valid vertex names.  Each conjunct is preserved by the three call-updates @{const bd_upd1} /
@@ -2345,7 +2345,7 @@ definition dref_inv :: "'n dfs_state \<Rightarrow> bool" where
      \<and> ds_prev s < Suc vcount
      \<and> (\<forall>v<Suc vcount. ds_prnt s ! v < Suc vcount)"
 
-text \<open>Distinct stack frames whose vertices are all below @{term vcount} number at most @{term vcount} — the
+text \<open>Distinct stack frames whose vertices are all below @{term vcount} number at most @{term vcount} --- the
       depth bound that keeps the flat DFS stack within its @{term \<open>Suc vcount\<close>} allocation.\<close>
 lemma stk_depth_le:
   assumes "distinct (map (\<lambda>(v,oc,ic). v) xs)" and "\<forall>(v,oc,ic)\<in>set xs. v < vcount"
@@ -2827,7 +2827,7 @@ lemma dfs_rel_emit_art:
   done
 
 text \<open>Finalising the opened vertex @{term c}'s tree fields (parent @{term \<open>m + nxt\<close>}, potential seed
-      @{term pot_c}, thread link after the previous vertex @{term pv}) — nine straight vertex-array
+      @{term pot_c}, thread link after the previous vertex @{term pv}) --- nine straight vertex-array
       writes that leave the artificial region and the stack untouched.\<close>
 lemma dfs_rel_open_fields:
   assumes "c < length (ds_seen s)" "c < length (ds_prnt s)" "c < length (ds_par s)" "c < length (ds_dir s)"
@@ -3291,8 +3291,8 @@ next
     done
 qed
 
-text \<open>Phase 2 mirrors phase 1 but only ever opens components (for still-unseen, non-lonely — hence
-      balanced — vertices), so its per-step preservation and effect lemmas follow directly from those of
+text \<open>Phase 2 mirrors phase 1 but only ever opens components (for still-unseen, non-lonely --- hence
+      balanced --- vertices), so its per-step preservation and effect lemmas follow directly from those of
       @{const open_tree_component}.\<close>
 lemma phase2_step_wsd:
   assumes "dfs_wf s" "dfs_sized s" "dref_inv s" "v < vcount"
@@ -3353,7 +3353,7 @@ text \<open>Composable counting helpers for phase 2.  Unlike phase 1 (which alwa
       \<open>ds_nxt (fold (phase2_step fl) [v..<Suc n] s) \<le> length \<dots>\<close>: it is preserved trivially along the
       fold and it is discharged for @{const build_tree} by the functional @{thm build_tree_nxt_le}.  A step
       only writes an artificial edge when it actually opens a component (\<open>\<not> ds_seen s ! v \<and> \<not> is_lonely v\<close>),
-      so its in-bounds premise is needed only under that guard — supplied here by monotonicity of \<open>ds_nxt\<close>.\<close>
+      so its in-bounds premise is needed only under that guard --- supplied here by monotonicity of \<open>ds_nxt\<close>.\<close>
 
 lemma phase2_step_nxt_ge:
   assumes "dfs_wf s" "dfs_sized s" "v < vcount"
@@ -3611,8 +3611,8 @@ next
 qed
 
 text \<open>The tree builder @{const build_tree_imp} refines the functional @{const build_tree}: it seeds the
-      four root fields (@{term ds_snum} at @{term vcount}, @{term ds_prev}, @{term ds_nxt}, the stack) —
-      each write is idempotent on @{const dfs_init} — then runs the two scans and the final @{term ds_lsuc}
+      four root fields (@{term ds_snum} at @{term vcount}, @{term ds_prev}, @{term ds_nxt}, the stack) ---
+      each write is idempotent on @{const dfs_init} --- then runs the two scans and the final @{term ds_lsuc}
       write.  Since @{const build_tree} starts phase 1 from @{const dfs_init} (where @{term ds_nxt} is
       @{term 0}), the phase-1 in-bounds bound is the trivial \<open>0 + n \<le> n\<close>; the composable phase-2 bound is
       @{thm build_tree_nxt_le}.  The two scans are sequenced with @{thm wlp_apply_ht} (a plain
@@ -3675,8 +3675,8 @@ qed
 
 subsection \<open>Layer (e): the concrete spanning-tree operations refine the arborescence ADT\<close>
 
-text \<open>The three tree operations the network-simplex loop calls — @{const ns_swap_edge_imp},
-      @{const ns_get_path_pair_imp}, @{const ns_shift_pot_imp} — are ported from the verified
+text \<open>The three tree operations the network-simplex loop calls --- @{const ns_swap_edge_imp},
+      @{const ns_get_path_pair_imp}, @{const ns_shift_pot_imp} --- are ported from the verified
       @{typ ndtree_impl} primitives of \<open>Rooted_Arborescense_Refinement\<close>.  Their imperative Hoare rules
       here match, one-for-one, the abstract @{locale arborescense_adt} axioms that
       @{locale network_simplex_impl_refine} assumes (with @{const ndtree_assn} for the tree assertion and
@@ -3693,7 +3693,7 @@ text \<open>Tree-edge swap: compute the join of the entering edge's endpoints (@
       hand it to @{const update_tree_imp}.  The abstract swap-edge preconditions (a fundamental-circuit
       walk through the entering edge) are exactly those of @{thm swap_edge_axiom1}; we reuse its
       derivation to place @{term x} on @{term u}'s root-path below the join (@{text xfu}), off the root
-      (@{text xnr}), with the join itself in the tree (@{text jnV}) — the premises of
+      (@{text xnr}), with the join itself in the tree (@{text jnV}) --- the premises of
       @{thm update_tree_imp_rule}.\<close>
 lemma ns_swap_edge_imp_rule:
   assumes inv: "arb_invar rt Vt S" and gp: "get_path_pair_impl S u v = (p1, p2)"
@@ -3797,7 +3797,7 @@ proof -
 qed
 
 text \<open>Functional bridge: the branch-free potential walk @{const shift_pot_impl} is a subtree fold over
-      the thread block opposed to the root — i.e. @{const iterate_root_opposed_impl} with the per-node
+      the thread block opposed to the root --- i.e. @{const iterate_root_opposed_impl} with the per-node
       read/shift/write step.  The block decomposition (@{thm block_props}) supplies the
       \<open>follow (thrd S) v = bl @ lsuc S v # rest\<close> split with \<open>lsuc S v \<notin> set bl\<close> that
       @{thm shift_pot_up_loop_subtree_fold} / @{thm shift_pot_down_loop_subtree_fold} need.\<close>
@@ -3904,7 +3904,7 @@ lemma cost_pval_imp_rule:
   using ce by (cases "e < m") sep_auto+
 
 text \<open>One-arc pricing: @{const evaluate_imp} reads the two endpoints (@{term \<open>fst_all ! e\<close>} /
-      @{term \<open>snd_all ! e\<close>}), the edge tag and — off a self-loop — the reduced cost, exactly the
+      @{term \<open>snd_all ! e\<close>}), the edge tag and --- off a self-loop --- the reduced cost, exactly the
       functional @{const evaluate}.  A self-loop is ineligible without pricing; otherwise the M-free sign
       test on the assembled descriptor gives eligibility, alongside the @{term \<open>InU\<close>} flag and the
       descriptor itself.\<close>
@@ -4097,7 +4097,7 @@ definition sel_assn_ns :: "ns_sel \<Rightarrow> ns_sel_imp \<Rightarrow> assn" w
 text \<open>@{const ns_sel_select_imp} refines @{const sel_select_impl}: minor iteration over the cache
       (@{const scan_cache_imp}), and on failure a major block sweep (@{const scan_imp}), committing the
       pointers on a hit.  On @{term None} the cache has been rearranged (stale candidates pruned), so the
-      store now represents \<^emph>\<open>some\<close> selector — exactly the existential the weakened ADT axiom demands.\<close>
+      store now represents \<^emph>\<open>some\<close> selector --- exactly the existential the weakened ADT axiom demands.\<close>
 lemma ns_sel_select_imp_rule:
   assumes inv: "sel_invar_impl sel" and mcpos: "0 < marc"
     and arc_ok: "\<And>e. e < marc \<Longrightarrow> e < length fstl \<and> e < length sndl \<and> e < length esl \<and>
@@ -4145,7 +4145,7 @@ proof -
     unfolding ns_sel_select_imp_def sel_assn_ns_def sel_select_impl_def
     apply (sep_auto simp: sc split: prod.splits if_splits heap: scr scim)
     \<comment> \<open>The @{term None} / @{term None} case: the store now holds the pruned cache @{term aa}, which is
-        the selector \<open>sel\<lparr>sel_arr := aa\<rparr>\<close> — the existential witness.\<close>
+        the selector \<open>sel\<lparr>sel_arr := aa\<rparr>\<close> --- the existential witness.\<close>
     subgoal premises prems for x1 aa ab ac ad ae af ba x1a ag ah ai bb found1 a b found2
       apply (rule entailsD[OF _ prems(7)])
       apply (rule ent_ex_postI[where x = "sel\<lparr>sel_arr := aa\<rparr>"])
@@ -4157,8 +4157,8 @@ qed
 
 subsection \<open>Layer (e): the network-simplex loop refines the functional loop\<close>
 
-text \<open>The five array-backed stores of the loop state — flow, potentials, parent edge, parent direction,
-      edge tags — are plain \<open>\<mapsto>\<^sub>a\<close> points-to assertions (the functional value \<^emph>\<open>is\<close> the array
+text \<open>The five array-backed stores of the loop state --- flow, potentials, parent edge, parent direction,
+      edge tags --- are plain \<open>\<mapsto>\<^sub>a\<close> points-to assertions (the functional value \<^emph>\<open>is\<close> the array
       contents; unlike the acyclifier there is no over-allocated remainder here, since the loop operates
       on the full augmented edge / vertex ranges).  The spanning tree uses @{const ndtree_assn}, the
       selector @{const sel_assn_ns}.\<close>
@@ -4703,7 +4703,7 @@ qed
 text \<open>Layer 1 of the network-simplex loop's padding-coupling lemma: the concrete entering-edge
       selector reads @{term edge_state} only at arc indices in @{term \<open>{0..<marc}\<close>}.  Hence
       @{const evaluate}, @{const scan_cache}, @{const scan} and @{const sel_select_impl} give the same
-      result on two edge-state lists that agree on @{term \<open>{0..<marc}\<close>} — the invariant a padded
+      result on two edge-state lists that agree on @{term \<open>{0..<marc}\<close>} --- the invariant a padded
       @{term \<open>state_all @ replicate (n - Kart) InL\<close>} needs so the loop is insensitive to the inert tail.\<close>
 
 lemma evaluate_es_cong:
@@ -4973,7 +4973,7 @@ proof (rule fold_cong[OF refl refl])
       = (\<lambda>(m, best). let rr = NS.res_down s' x in if rr = - 1 then (m, best) else if m = - 1 then (rr, x) else if rr < m then (rr, x) else (m, best))"
     by simp
 qed
-text \<open>Layer 3 (part b, cont.): the bottleneck agrees under the coupling — it is a function of the two
+text \<open>Layer 3 (part b, cont.): the bottleneck agrees under the coupling --- it is a function of the two
       scans, the entering-edge residual, and the (equal) direction flags.\<close>
 
 lemma bottleneck_cong:
@@ -5025,7 +5025,7 @@ proof -
     apply (auto simp: peq pueq)
     done
 qed
-text \<open>Layer 4: under the coupling and a @{term Some} selection, the bottleneck agrees — the entering
+text \<open>Layer 4: under the coupling and a @{term Some} selection, the bottleneck agrees --- the entering
       edge is a real arc and both tree paths consist of non-root tree vertices, so @{thm bottleneck_cong}
       applies.\<close>
 
@@ -5121,8 +5121,8 @@ next
 qed
 
 text \<open>Re-parenting depends on the source state @{term s} only through @{term \<open>NS.par_edge s\<close>} and
-      @{term \<open>NS.par_up s\<close>} (read along the spine); hence coupled states — which share
-      @{term parent_edge} and @{term edge_dir}, and therefore @{term par_edge}/@{term par_up} — produce
+      @{term \<open>NS.par_up s\<close>} (read along the spine); hence coupled states --- which share
+      @{term parent_edge} and @{term edge_dir}, and therefore @{term par_edge}/@{term par_up} --- produce
       the identical re-parented arrays.\<close>
 lemma reparent_walk_cong:
   assumes "\<And>w. NS.par_edge s w = NS.par_edge s' w" and "\<And>w. NS.par_up s w = NS.par_up s' w"
@@ -5394,8 +5394,8 @@ qed
 
 text \<open>Padding invariance: the loop invariant @{const NS.ns_invar} depends on the flow and edge-state
       stores only through their values at the real edge universe @{term \<open>{0..<m+Kart}\<close>} (and the length
-      bound).  Hence extending / overwriting either store outside that range — as the imperative solver
-      does, allocating length @{term \<open>m+n\<close>} arrays and using only the first @{term \<open>m+Kart\<close>} cells —
+      bound).  Hence extending / overwriting either store outside that range --- as the imperative solver
+      does, allocating length @{term \<open>m+n\<close>} arrays and using only the first @{term \<open>m+Kart\<close>} cells ---
       preserves the invariant.  Each of the eight conjuncts is transported: the b-flow via
       @{thm NS.isbflow_cong}, the two partition sets via their set-builder shape over the edge range, the
       flow-fit on the L / U sets (both subsets of the edge range), strong feasibility on the tree parent edges
@@ -5502,7 +5502,7 @@ lemma ns_couple_sym: "ns_couple s s' \<Longrightarrow> ns_couple s' s"
   unfolding ns_couple_def by (auto simp del: NS.fst_exec_eq NS.snd_exec_eq)
 
 text \<open>The whole-loop padding transfer, packaged for the capstone: running @{const NS.ns_loop} from a
-      padded state agrees with running it from the base state — same termination, same terminal
+      padded state agrees with running it from the base state --- same termination, same terminal
       @{term return} verdict, and the two flows agree on the real edge range @{term \<open>{0..<marc}\<close>}.
       Instantiated later at @{term s0} = the functional initial basis.\<close>
 lemma ns_loop_pad_transfer:
@@ -5703,8 +5703,8 @@ lemma csr_n_in_csr: "csr_n in_csr = vcount"
 
 text \<open>Pass A reads the flow only at the real edges @{term \<open>[0..<m]\<close>}, so it is insensitive to the
       padding of the working flow array beyond @{term m}: running it on @{term \<open>acyc_flow @ (padding)\<close>}
-      gives the same result — hence the same @{const free_out_edges} / @{const free_out_hi} /
-      @{const free_in_edges} / @{const free_in_hi} / @{const edge_state} — as on @{const acyc_flow}.\<close>
+      gives the same result --- hence the same @{const free_out_edges} / @{const free_out_hi} /
+      @{const free_in_edges} / @{const free_in_hi} / @{const edge_state} --- as on @{const acyc_flow}.\<close>
 lemma passA_flow_cong:
   assumes "\<forall>e<m. fl ! e = fl' ! e" shows "passA fl = passA fl'"
   unfolding passA_def
@@ -5715,7 +5715,7 @@ proof (rule fold_cong[OF refl refl])
 qed
 
 text \<open>The count / prefix-sum passes read the count array only on @{term \<open>[0..<nn]\<close>}, so they tolerate an
-      \<^emph>\<open>over-long\<close> count array — as arises when @{const solve_imp} reuses the length-@{term \<open>Suc vcount\<close>}
+      \<^emph>\<open>over-long\<close> count array --- as arises when @{const solve_imp} reuses the length-@{term \<open>Suc vcount\<close>}
       array @{term cnt} (later the DFS stack @{term di_sic}) as the CSR builder's count store.\<close>
 lemma fold_upd_take:
   "take nn (fold (\<lambda>i cc. cc[key i := Suc (cc ! key i)]) es xs)
@@ -5823,7 +5823,7 @@ qed
 
 text \<open>Combined padded builders: an over-long key array (agreeing with @{term fst_list}/@{term snd_list}
       on @{term \<open>[0..<m]\<close>}) and an over-long count array still establish @{const csr_assn} of
-      @{const out_csr}/@{const in_csr} — exactly the shape @{const solve_imp} produces.\<close>
+      @{const out_csr}/@{const in_csr} --- exactly the shape @{const solve_imp} produces.\<close>
 lemma build_csr_out_pad_over_c:
   assumes mk: "m \<le> length keys" and bd: "\<forall>i<m. keys ! i < vcount" and ag: "\<forall>i<m. keys ! i = fst_list ! i" and lc: "vcount \<le> lenc"
   shows "<ka \<mapsto>\<^sub>a keys * c \<mapsto>\<^sub>a replicate lenc 0 * o_lo \<mapsto>\<^sub>a replicate vcount 0 * o_hi \<mapsto>\<^sub>a replicate vcount 0 * o_cur \<mapsto>\<^sub>a replicate vcount 0 * o_edges \<mapsto>\<^sub>a replicate m 0>
@@ -5894,7 +5894,7 @@ proof -
 qed
 
 text \<open>@{const solve_imp} hands the tree builder freshly-allocated arrays, so the DFS state's
-      @{term ds_snum} is all-zero and @{term ds_prev} is @{term 0} — one short of @{const dfs_init}
+      @{term ds_snum} is all-zero and @{term ds_prev} is @{term 0} --- one short of @{const dfs_init}
       (which seeds the snum entry at the root to @{term \<open>1::nat\<close>} and @{term ds_prev} to @{term vcount}).  The tree builder itself
       performs exactly those seed writes as its first action, so it also refines @{const build_tree} from
       this \<^emph>\<open>raw\<close> pre-seed state \<open>dfs_raw\<close>.\<close>
@@ -5984,7 +5984,7 @@ qed
 text \<open>CSR count-array reset: after building the out-CSR the count array holds the fst-degrees; the
       subsequent @{const arr_fill_imp} zeroes indices @{term \<open>[0..<vcount]\<close>} and the reserved root
       cell @{term vcount} is already @{term 0} (no real edge points at the root), so the array is
-      back to @{term \<open>replicate (Suc (Suc n)) 0\<close>} — ready to build the in-CSR.\<close>
+      back to @{term \<open>replicate (Suc (Suc n)) 0\<close>} --- ready to build the in-CSR.\<close>
 lemma arr_fill_to_replicate:
   assumes len: "length ys = Suc NN" and lastx: "ys ! NN = x"
   shows "take 0 ys @ replicate (NN - 0) x @ drop NN ys = replicate (Suc NN) x"
@@ -6112,8 +6112,8 @@ proof -
   from card_mono[OF _ this] show ?thesis by simp
 qed
 
-text \<open>Exit bridge: the raw arrays the tree builder leaves behind — which are literally the components
-      of the imperative DFS state — satisfy the precondition @{thm [source] ns_loop_prog_rule} demands.
+text \<open>Exit bridge: the raw arrays the tree builder leaves behind --- which are literally the components
+      of the imperative DFS state --- satisfy the precondition @{thm [source] ns_loop_prog_rule} demands.
       The six tree arrays become @{const ndtree_assn} via @{thm ndtree_assn_Sarb}; the flow / potential /
       parent / direction / edge-tag stores are already the loop's own assertions (they are plain
       points-to); the freshly allocated selector triple is @{const init_sel}; and the two DFS stack
@@ -6331,7 +6331,7 @@ lemma ns_phase_triple:
   done
 
 text \<open>The tail of @{const solve_imp}: read the loop's verdict, and on a bounded optimum scan the
-      artificial range @{term \<open>[m..<marc]\<close>} — all-zero means the @{term b}-flow is the first @{term m}
+      artificial range @{term \<open>[m..<marc]\<close>} --- all-zero means the @{term b}-flow is the first @{term m}
       cells, which are copied back into the caller's flow array.  The three branches deliver exactly
       @{term \<open>status_of solve\<close>}, and on @{const Optimum} the copied prefix is the optimal flow.\<close>
 lemma ns_tail_triple:
@@ -6357,7 +6357,7 @@ proof -
 qed
 
 text \<open>The tail again, but with the \<^emph>\<open>garbage\<close> predicate already in the precondition, so that it matches
-      the postcondition of the loop phase verbatim — this is what lets the two compose by a bare
+      the postcondition of the loop phase verbatim --- this is what lets the two compose by a bare
       @{thm [source] ht_bind}, with no frame and no re-association.\<close>
 lemma ns_tail_triple2:
   assumes lfl: "marc \<le> length fl'"
@@ -6384,7 +6384,7 @@ qed
 text \<open>The loop phase, reshaped for composition: the caller's flow array @{term in_flow} is threaded
       through untouched and the pure conjunct is moved \<^emph>\<open>last\<close>, so that stripping the existential and
       extracting the pure part leaves @{thm [source] ns_tail_triple2}'s precondition (plus the cost
-      array, which @{const ns_loop_prog} also returns unchanged — the capstone's postcondition asserts
+      array, which @{const ns_loop_prog} also returns unchanged --- the capstone's postcondition asserts
       that the caller's cost array still holds the cost list on exit, and since @{const solve_imp}
       passes it in \<^emph>\<open>uncopied\<close> it must not be dropped into the garbage predicate anywhere along the
       chain).\<close>
@@ -6423,8 +6423,8 @@ proof -
 qed
 
 text \<open>The edged-vertex phase of @{const solve_imp}: count the non-lonely vertices, allocate an
-      exactly-sized array and fill it.  Together the two loops materialise @{const edged_vs_list} —
-      the vertex iterator the acyclifier consumes — leaving the four CSR block-boundary arrays
+      exactly-sized array and fill it.  Together the two loops materialise @{const edged_vs_list} ---
+      the vertex iterator the acyclifier consumes --- leaving the four CSR block-boundary arrays
       untouched.\<close>
 lemma edged_build_triple:
   "<olo \<mapsto>\<^sub>a out_lo * ohi \<mapsto>\<^sub>a out_hi * ilo \<mapsto>\<^sub>a in_lo * ihi \<mapsto>\<^sub>a in_hi> do { k \<leftarrow> count_edged_imp olo ohi ilo ihi 1 n 0; vl \<leftarrow> Array.new k 0; _ \<leftarrow> fill_edged_imp vl olo ohi ilo ihi 1 n 0; return vl } <\<lambda>vl. vl \<mapsto>\<^sub>a edged_vs_list * olo \<mapsto>\<^sub>a out_lo * ohi \<mapsto>\<^sub>a out_hi * ilo \<mapsto>\<^sub>a in_lo * ihi \<mapsto>\<^sub>a in_hi>"
@@ -6442,7 +6442,7 @@ qed
 text \<open>The CSR-building phase of @{const solve_imp}, as one triple: build the outgoing CSR keyed on the
       padded @{term fst_list} array, re-zero the shared count array, then build the ingoing CSR keyed on
       the padded @{term snd_list} array.  The reset is exactly what @{thm fst_cto_pad_drop} makes
-      possible — after the first build the count array's reserved root cell is still @{term 0}, so
+      possible --- after the first build the count array's reserved root cell is still @{term 0}, so
       filling @{term \<open>[0..<vcount]\<close>} restores it to all-zero for the second build.  The two padded key
       arrays are returned untouched and the count array is left as garbage.\<close>
 lemma csr_build_triple:
@@ -6706,8 +6706,8 @@ proof -
     done
 qed
 
-text \<open>Segment (F)'s exit bridge: the raw stores segment (F) leaves behind — together with the three
-      freshly allocated references — \<^emph>\<open>are\<close> the tree builder's state relation at the pre-seed state
+text \<open>Segment (F)'s exit bridge: the raw stores segment (F) leaves behind --- together with the three
+      freshly allocated references --- \<^emph>\<open>are\<close> the tree builder's state relation at the pre-seed state
       @{const dfs_raw}.  Every tree field is a fresh all-zero / all-@{term False} array of length
       @{term \<open>Suc vcount\<close>}; the augmented endpoint / capacity / flow / edge-state arrays carry their
       real prefix plus @{term n} spare artificial cells; and the empty DFS stack is the fill pointer
@@ -6737,7 +6737,7 @@ lemma dfs_rel_raw_intro:
 text \<open>The acyclifier's flow assertion, weakened to exactly what the tree builder needs: a store of
       at least the augmented length whose real-edge prefix is @{const acyc_flow}.  Extracting \<^emph>\<open>this\<close>
       pure part (rather than @{const flow_assn_m}'s @{term \<open>length r = n\<close>}) is what keeps an equation
-      on the locale parameter @{term n} out of the proof context — with one there, every subsequent
+      on the locale parameter @{term n} out of the proof context --- with one there, every subsequent
       @{text sep_auto} substitutes @{term n} away and unfolds the whole locale.\<close>
 lemma flow_assn_m_pad:
   assumes some: "acyc_flow_opt = Some f'"
@@ -6789,8 +6789,8 @@ text \<open>Two rules restated with the state record's \<^emph>\<open>components
       variables that are \<^emph>\<open>bound by the program itself\<close> (the three @{term \<open>ref 0\<close>} allocations), so a
       rule whose program mentions @{term \<open>di_nxt st\<close>} can never be unified against the program's
       @{term \<open>Ref.lookup nxt_ref\<close>}: higher-order unification would have to invert a record selector.
-      Taking the component as a parameter and discharging @{term \<open>di_nxt st = nx\<close>} \<^emph>\<open>afterwards\<close> — once
-      the enclosing entailment has pinned @{term st} from the heap — sidesteps this.\<close>
+      Taking the component as a parameter and discharging @{term \<open>di_nxt st = nx\<close>} \<^emph>\<open>afterwards\<close> --- once
+      the enclosing entailment has pinned @{term st} from the heap --- sidesteps this.\<close>
 lemma dfs_rel_rd_nxt2:
   assumes "di_nxt st = nx"
   shows "<dfs_rel fl0 es0 oe oh ie ih st s> Ref.lookup nx <\<lambda>r. dfs_rel fl0 es0 oe oh ie ih st s * \<up>(r = ds_nxt s)>"
@@ -6809,8 +6809,8 @@ lemma marc_eq: "marc = m + ds_nxt (build_tree acyc_flow)" by (simp add: marc_def
 lemma marc_pos: "0 < marc" using num_edges_gtr_0 by (simp add: marc_def)
 lemma some_ne: "acyc_flow_opt = Some f' \<Longrightarrow> acyc_flow_opt \<noteq> None" by simp
 
-text \<open>The \<^emph>\<open>else\<close> branch of @{const solve_imp} — Pass A, the imbalance transform, the tree builder, the
-      network-simplex loop and the verdict tail — as one Hoare triple over the raw arrays that the
+text \<open>The \<^emph>\<open>else\<close> branch of @{const solve_imp} --- Pass A, the imbalance transform, the tree builder, the
+      network-simplex loop and the verdict tail --- as one Hoare triple over the raw arrays that the
       allocation and acyclifier phases leave behind.
 
       Two points of technique.  First, the precondition keeps the acyclifier's @{const flow_assn_m}
@@ -6870,15 +6870,15 @@ lemma solve_tail_triple:
   qed
   done
 
-text \<open>\<^emph>\<open>Total correctness of the whole solver.\<close>  @{const solve_imp} — allocation and padding of the six
+text \<open>\<^emph>\<open>Total correctness of the whole solver.\<close>  @{const solve_imp} --- allocation and padding of the six
       input arrays, the two CSR builds, the edged-vertex materialisation, the acyclifier, Pass A, the
-      spanning-tree build, the network-simplex loop and the verdict tail — returns exactly
+      spanning-tree build, the network-simplex loop and the verdict tail --- returns exactly
       @{term \<open>status_of solve\<close>}, and on @{const Optimum} the caller's flow array holds the optimal
       @{term b}-flow in its first @{term m} cells.
 
       The script walks the program phase by phase.  Each @{method sep_auto} consumes one phase; the
       rules are pre-instantiated (@{thm [source] make_acyclic_solve_triple'} and friends) so that frame
-      inference — which is purely \<^emph>\<open>syntactic\<close> — finds the frame without any hand-supplied
+      inference --- which is purely \<^emph>\<open>syntactic\<close> --- finds the frame without any hand-supplied
       @{text \<open>where F = \<dots>\<close>}.  The acyclifier splits the proof in two: its @{const None} verdict is the
       infinite-cycle branch, closed outright, and its @{term \<open>Some f'\<close>} verdict is the whole rest of the
       solver, which is @{thm [source] solve_tail_triple}.\<close>
@@ -6919,14 +6919,14 @@ theorem solve_imp_correct:
 subsection \<open>The specification of @{const solve_imp}, free of the functional implementation\<close>
 
 text \<open>@{thm [source] solve_imp_correct} still mentions the functional @{const solve}.  Composing it with
-      @{thm [source] solve_correct} — the three verdicts of the functional solver, stated against the
-      input network @{term original_network} — removes that reference: what remains is a statement
+      @{thm [source] solve_correct} --- the three verdicts of the functional solver, stated against the
+      input network @{term original_network} --- removes that reference: what remains is a statement
       relating the imperative program's \<^emph>\<open>returned flag and flow array\<close> directly to the
       minimum-cost-flow problem the input lists describe.
 
       The composition also has to eliminate the two \<^emph>\<open>derived\<close> balance constants, so that the balances
       in the specification are read off the caller's own @{term b_list}.  @{const b_arr} is the scatter
-      of @{term b_list} into a @{term \<open>Suc vcount\<close>}-slot array at the vertex names @{term vs_list} —
+      of @{term b_list} into a @{term \<open>Suc vcount\<close>}-slot array at the vertex names @{term vs_list} ---
       which, the names being the dense range @{term \<open>[Suc 0..<Suc n]\<close>}, is just @{term b_list} framed by
       the null-sentinel slot and the artificial-root slot.\<close>
 lemma b_arr_eq: "b_arr = 0 # b_list @ [0]"
@@ -6980,15 +6980,15 @@ proof -
   qed
 qed
 
-text \<open>Hence, at every vertex of the input network — the vertices are edge endpoints, so they lie in
-      @{term \<open>{Suc 0..n}\<close>} — the balance @{const b_lookup} reads is the entry of @{term \<open>0 # b_list\<close>}
+text \<open>Hence, at every vertex of the input network --- the vertices are edge endpoints, so they lie in
+      @{term \<open>{Suc 0..n}\<close>} --- the balance @{const b_lookup} reads is the entry of @{term \<open>0 # b_list\<close>}
       at that vertex \<^emph>\<open>name\<close>.  This is the functional mirror of what the code does: the caller passes
       the array @{term \<open>0 # b_list @ [0]\<close>} and the program indexes it by the vertex name, slot
       @{term \<open>0::nat\<close>} being the null sentinel and slot @{term \<open>Suc n\<close>} the artificial root.  (The
       input list @{term b_list} is itself indexed from @{term \<open>0::nat\<close>}, its entry @{term i} being the
-      balance of vertex @{term \<open>Suc i\<close>} — the convention @{thm [source] isolated_zero} already uses;
+      balance of vertex @{term \<open>Suc i\<close>} --- the convention @{thm [source] isolated_zero} already uses;
       prefixing the sentinel slot absorbs that shift.)  The balance function only ever occurs applied
-      to vertices — \<open>isbflow\<close> constrains it on @{term \<open>original_network.\<V>\<close>} alone — so the two agree
+      to vertices --- \<open>isbflow\<close> constrains it on @{term \<open>original_network.\<V>\<close>} alone --- so the two agree
       wherever it matters and may be exchanged inside \<open>isbflow\<close> and \<open>is_Opt\<close>.\<close>
 lemma b_lookup_V:
   assumes "v \<in> original_network.\<V>" shows "b_lookup v = (0 # b_list) ! v"
@@ -7040,14 +7040,14 @@ qed
 text \<open>Monotonicity of the pure assertion.  The final entailment must \<^emph>\<open>not\<close> be left to
       @{method sep_auto}: its @{method clarsimp} would orient the conjunct @{term \<open>length fs' = m\<close>} the
       wrong way and substitute the locale parameter @{term m} away, unfolding every locale
-      abbreviation — @{const solve} would become \<open>initial_basis_code_spec.solve capacity_list \<dots>
-      (length fs') \<dots>\<close> — and leaving an unprovable goal.  Splitting the entailment with
+      abbreviation --- @{const solve} would become \<open>initial_basis_code_spec.solve capacity_list \<dots>
+      (length fs') \<dots>\<close> --- and leaving an unprovable goal.  Splitting the entailment with
       @{thm [source] ent_star_mono} keeps the equation out of the simplifier's hands.\<close>
 lemma ent_pure_mono: "(P \<Longrightarrow> Q) \<Longrightarrow> \<up>P \<Longrightarrow>\<^sub>A \<up>Q"
   by (cases P) (auto simp: entails_def)
 
-text \<open>\<^emph>\<open>The specification of the imperative solver.\<close>  The caller supplies the six input arrays — the
-      balance array being @{term b_list} framed by the sentinel and root slots — and gets back a flow
+text \<open>\<^emph>\<open>The specification of the imperative solver.\<close>  The caller supplies the six input arrays --- the
+      balance array being @{term b_list} framed by the sentinel and root slots --- and gets back a flow
       array of exactly @{term m} entries: on @{const OptimalF} a minimum-cost @{term b}-flow of the
       input network, on @{const InfeasibleF} the information that no @{term b}-flow exists at all, and
       on @{const NegInfCycleF} that the network has a negative cycle of infinite capacity, so no
@@ -7081,10 +7081,10 @@ end
 section \<open>A worked example: 10 vertices, 40 edges\<close>
 
 text \<open>A random well-formed min-cost-flow instance meeting the locale conditions: vertices @{term \<open>1::nat\<close>}
-      \<dots> @{term \<open>10::nat\<close>} (name @{term \<open>0::nat\<close>} is the reserved null sentinel), 40 directed edges whose
+      {\isasymdots} @{term \<open>10::nat\<close>} (name @{term \<open>0::nat\<close>} is the reserved null sentinel), 40 directed edges whose
       first ten form a Hamiltonian cycle so \<^emph>\<open>every vertex is incident to an edge\<close> (no lonely vertex)
       and the graph is connected; capacities / costs in \<open>[1, 50]\<close>; the initial flow is random but
-      \<^emph>\<open>capacity-complying\<close> (\<open>0 \<le> f \<le> cap\<close>); and the balances (index @{term \<open>1::nat\<close>}\<dots>@{term \<open>10::nat\<close>},
+      \<^emph>\<open>capacity-complying\<close> (\<open>0 \<le> f \<le> cap\<close>); and the balances (index @{term \<open>1::nat\<close>}{\isasymdots}@{term \<open>10::nat\<close>},
       with the sentinel and root slots @{term 0}) lie in \<open>[-50, 50]\<close> and \<^emph>\<open>sum to zero\<close> (flow
       conservation).  The selector is tuned with block size @{term \<open>10::nat\<close>}, min / max candidates
       @{term \<open>4::nat\<close>} / @{term \<open>16::nat\<close>}.  The optimum @{term b}-flow, if one exists, is written back

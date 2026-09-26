@@ -5,7 +5,7 @@ begin
 text \<open>Proof layer of the list instantiation: it imports the single code theory
       \<open>Network_Simplex_Initial_Basis_Code\<close> (all executable definitions) and adds the
       cost-flow-network and acyclic-flow-instance interpretations, the eleven well-formedness
-      assumptions, the proof-only constants (bigM, sized, dfs_sized, is_free) and every lemma.\<close>
+      assumptions, the proof-only constants (bigM, sized, dfs\_sized, is\_free) and every lemma.\<close>
 
 locale initial_basis_lists =
   initial_basis_code_spec where capacity_list = capacity_list +
@@ -101,7 +101,7 @@ lemma vs_less_vcount: "v \<in> set vs_list \<Longrightarrow> v < vcount"
   using le_foldr_max[of _ vs_list] by (simp add: vcount_foldr less_Suc_eq_le)
 
 text \<open>The balance of the artificial root.  Every name scattered into \<open>b_arr\<close> comes from
-      vs_list and is therefore smaller than vcount, so the last slot keeps the 0 it was initialised
+      vs\_list and is therefore smaller than vcount, so the last slot keeps the 0 it was initialised
       with.  The augmented network of the initial basis needs exactly this: the root neither supplies
       nor demands, and the artificial edges carry as much flow into it as out of it.\<close>
 
@@ -361,8 +361,8 @@ lemma is_lonely_iff:
   shows "is_lonely v \<longleftrightarrow> v \<notin> set fst_list \<union> set snd_list"
   using edged_not_lonely not_lonely_edged[OF vs_less_vcount[OF v]] by blast
 
-text \<open>The graph vertex set is exactly the set of edge endpoints, and — since every endpoint lies in
-      the dense range and is non-lonely — exactly @{term \<open>set edged_vs_list\<close>}, the list fed to the
+text \<open>The graph vertex set is exactly the set of edge endpoints, and --- since every endpoint lies in
+      the dense range and is non-lonely --- exactly @{term \<open>set edged_vs_list\<close>}, the list fed to the
       acyclifier.  This is what keeps the acyclifier's @{term \<open>vit_abstract all_vertices = \<V>\<close>}
       hypothesis intact under the dense model.\<close>
 
@@ -444,7 +444,7 @@ lemma length_imbalance[simp]: "length imbalance = Suc vcount"
 subsection \<open>Big-M, artificial-edge orientation and the augmented endpoints\<close>
 
 text \<open>A single large cost @{term bigM} makes the tagged-pair potential representation faithful
-      (\<open>bigM > 6 * sum of the absolute edge costs\<close>) and is the artificial-edge cost (\<section>2).\<close>
+      (\<open>bigM > 6 * sum of the absolute edge costs\<close>) and is the artificial-edge cost ({\isasymsection}2).\<close>
 
 definition bigM :: real where
   "bigM = 6 * h (sum_list (map abs cost_list)) + 1"

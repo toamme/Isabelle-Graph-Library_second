@@ -40,7 +40,7 @@ session "Directed_Set_Graphs" = "HOL-Eisbach" +
     "Adaptors/Pair_Graph_Library_Component_Adaptor"
     
     Multigraph_Weighted_Paths
-    Multigraphs
+    Multigraph
     Multigraph_Potentials
 
 

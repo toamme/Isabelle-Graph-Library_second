@@ -15,10 +15,10 @@ text \<open>This theory mirrors the functional specification locale @{locale net
 
       The refinement discipline is the standard Imperative-HOL one:
       \<^item> a functional operation that \<^emph>\<open>changes and returns\<close> a data structure (an array update, a tree
-        swap) becomes an in-place mutation whose result type is @{typ \<open>unit Heap\<close>} — the structure is
+        swap) becomes an in-place mutation whose result type is @{typ \<open>unit Heap\<close>} --- the structure is
         changed but \<^emph>\<open>not returned\<close>;
       \<^item> a functional operation that returns \<^emph>\<open>both a proper value and a changed container\<close> (the
-        selector) drops the container from the returned tuple — it is mutated in place — and returns
+        selector) drops the container from the returned tuple --- it is mutated in place --- and returns
         only the value(s) in the @{typ \<open>_ Heap\<close>} monad;
       \<^item> a functional operation that \<^emph>\<open>computes a value\<close> (a lookup, an endpoint projection, a
         descriptor combination) returns that value in the @{typ \<open>_ Heap\<close>} monad;
@@ -27,7 +27,7 @@ text \<open>This theory mirrors the functional specification locale @{locale net
       The program state gains \<^emph>\<open>two extra variables\<close> @{term ipath1}, @{term ipath2}: mutable arrays
       into which the fundamental-circuit path search writes its two vertex paths. The path search
       therefore no longer returns two lists but two natural-number \<^emph>\<open>pointers\<close> @{term \<open>(ptr1, ptr2)\<close>};
-      the intended contract (used, never assumed here — the properties belong to the proof locale) is
+      the intended contract (used, never assumed here --- the properties belong to the proof locale) is
       that the first @{term ptr1} / @{term ptr2} entries of @{term ipath1} / @{term ipath2} hold the
       vertices of the functional lists @{term p1} / @{term p2}.
 
@@ -56,16 +56,16 @@ subsection \<open>The specification locale of the imperative operations\<close>
 
 text \<open>@{term sel_select_imp} runs the selector on the current potentials and edge tags: it mutates
       the selector in place (so the functional @{term sel'} is dropped from the returned tuple) and
-      returns @{term None} (optimal) or @{term \<open>Some (e, in_U, \<gamma>)\<close>} — an entering edge, its
+      returns @{term None} (optimal) or @{term \<open>Some (e, in_U, \<gamma>)\<close>} --- an entering edge, its
       @{term U}/@{term L} flag and its reduced cost descriptor.
 
       @{term shift_pot_imp} shifts every potential in the subtree opposed to the root at @{term v} by
-      the reduced-cost descriptor @{term \<gamma>} — added when the flag holds, else subtracted — in place on
+      the reduced-cost descriptor @{term \<gamma>} --- added when the flag holds, else subtracted --- in place on
       the potential store. It is a \<^emph>\<open>dedicated first-order traversal\<close>: the subtree walk, the
       descriptor arithmetic and the per-vertex potential read/write are fused into this one primitive,
       so \<^emph>\<open>nothing higher-order (no callback / closure) is applied per vertex\<close>. This is why the
       potential descriptor @{typ 'p} and the separate @{text \<open>pot_*_imp\<close>} / @{text \<open>pot_value_*_imp\<close>}
-      operations no longer appear — they are now internal to the concrete shift.
+      operations no longer appear --- they are now internal to the concrete shift.
 
       @{term get_path_pair_imp} searches the two tree paths of the fundamental circuit of
       @{term \<open>(u, v)\<close>}, writing the vertex paths into the two supplied arrays and returning the two
@@ -73,7 +73,7 @@ text \<open>@{term sel_select_imp} runs the selector on the current potentials a
 
       @{term swap_edge_imp} swaps a tree edge in place. The @{text \<open>_upd_imp\<close>} stores mutate in place;
       the @{text \<open>_lookup_imp\<close>} stores read a value. @{term cap_imp} reads an edge capacity
-      (@{term \<open>- 1\<close>} = \<infinity>). @{term fst_exec_imp} / @{term snd_exec_imp} read the endpoints of an edge.\<close>
+      (@{term \<open>- 1\<close>} = {\isasyminfinity}). @{term fst_exec_imp} / @{term snd_exec_imp} read the endpoints of an edge.\<close>
 
 locale network_simplex_impl_spec =
   fixes r :: "'a::heap"
@@ -100,7 +100,7 @@ text \<open>Run the entering-edge selector on the current potentials and edge ta
 definition "ns_select_imp s = sel_select_imp (isel s) (ipot s) (iestate s)"
 
 text \<open>Forward residual (remaining capacity) and backward residual (current flow) of a graph edge,
-      as reals with @{term \<open>- 1\<close>} standing for \<infinity> (only the forward residual can be infinite).\<close>
+      as reals with @{term \<open>- 1\<close>} standing for {\isasyminfinity} (only the forward residual can be infinite).\<close>
 definition "res_fwd_imp s a =
   do { c \<leftarrow> cap_imp a;
        if c = - 1 then return (- 1)
@@ -122,14 +122,14 @@ definition "res_down_imp s v =
 
 subsection \<open>Bottleneck (in-place, over the two path arrays)\<close>
 
-text \<open>Minimum of two residuals under the @{term \<open>- 1\<close>} = \<infinity> convention — pure, on values already read.\<close>
+text \<open>Minimum of two residuals under the @{term \<open>- 1\<close>} = {\isasyminfinity} convention --- pure, on values already read.\<close>
 definition "mininf_imp (x::'n) y =
   (if x = - 1 then y else if y = - 1 then x else min x y)"
 
 text \<open>Scan a path-array prefix @{term \<open>[0..<ptr]\<close>} bottom-up. @{term scan_up_loop_imp} keeps the
       \<^emph>\<open>last\<close> minimiser (via @{text \<open>\<le>\<close>}), @{term scan_down_loop_imp} the \<^emph>\<open>first\<close> (via @{text \<open><\<close>}).
       The running minimum @{term m} and its child vertex @{term best} are threaded as \<^emph>\<open>two flat
-      arguments\<close> — no option, no per-step pair — with @{term \<open>m = - 1\<close>} as the ``nothing seen yet''
+      arguments\<close> --- no option, no per-step pair --- with @{term \<open>m = - 1\<close>} as the ``nothing seen yet''
       sentinel (so @{term best}, seeded with the dummy @{term r}, is meaningful only once
       @{term \<open>m \<noteq> - 1\<close>}). No intermediate list is built.\<close>
 partial_function (heap) scan_up_loop_imp ::
@@ -168,7 +168,7 @@ text \<open>The bottleneck of the fundamental circuit of the entering edge @{ter
       the @{term \<open>snd e\<close>} side is the up-path; for @{term U} the roles swap. Returns a flat tuple
       @{term \<open>(\<delta>, is_flip, v, e0fwd, up_side)\<close>} (no options): @{term \<open>\<delta> = - 1\<close>} signals an
       all-infinite circuit (unbounded); otherwise @{term is_flip} tells a flip (the entering edge is
-      itself the bottleneck — @{term v}, @{term e0fwd}, @{term up_side} are then dummies) from a full
+      itself the bottleneck --- @{term v}, @{term e0fwd}, @{term up_side} are then dummies) from a full
       pivot with leaving-edge child @{term v}. The peak tie-break prefers the up-path, then the
       entering edge, then the down-path.\<close>
 definition "bottleneck_imp s e in_U ptr1 ptr2 =
@@ -231,8 +231,8 @@ definition "ns_flip_imp s e in_U \<delta> ptr1 ptr2 =
 
 text \<open>Re-parenting after a swap, walking a path-array prefix from @{term \<open>hd P\<close>} up to @{term v} and
       no further, reversing parent pointers in place. To avoid a read-after-write the walk carries the
-      \<^emph>\<open>old\<close> parent edge @{term pe} and orientation @{term pup} of the previous spine vertex — captured
-      into @{term \<open>(olde, oldup)\<close>} before the current vertex is overwritten — rather than re-reading
+      \<^emph>\<open>old\<close> parent edge @{term pe} and orientation @{term pup} of the previous spine vertex --- captured
+      into @{term \<open>(olde, oldup)\<close>} before the current vertex is overwritten --- rather than re-reading
       them; the @{term first} flag marks the initial step (where @{term pe}, @{term pup} are unused
       dummies), replacing what was an option.\<close>
 partial_function (heap) reparent_walk_imp ::
@@ -277,10 +277,10 @@ definition "ns_pivot_imp s e eu ev in_U \<gamma> \<delta> v e0fwd up_side ptr1 p
 
 subsection \<open>The loop\<close>
 
-text \<open>One iteration: select an entering edge (@{const None} \<Longrightarrow> optimal, return @{const success});
-      otherwise search the paths, compute the bottleneck (@{const None} \<Longrightarrow> unbounded, return
+text \<open>One iteration: select an entering edge (@{const None} {\isasymLongrightarrow} optimal, return @{const success});
+      otherwise search the paths, compute the bottleneck (@{const None} {\isasymLongrightarrow} unbounded, return
       @{const unbounded}); otherwise flip or pivot in place and recurse. The state handles are threaded
-      unchanged — all changes are in-place mutations — so the loop is genuinely tail-recursive and
+      unchanged --- all changes are in-place mutations --- so the loop is genuinely tail-recursive and
       MLton compiles it to an in-place loop.\<close>
 partial_function (heap) ns_loop_imp ::
   "('farr, 'parr, 'arbor, 'pearr, 'darr, 'earr, 'sel, 'a) ns_impl_state \<Rightarrow> return Heap" where
@@ -307,10 +307,10 @@ end
 
 section \<open>The refinement proof locale\<close>
 
-text \<open>The proof locale combines the functional proof locale @{locale network_simplex} — which
+text \<open>The proof locale combines the functional proof locale @{locale network_simplex} --- which
       supplies the cost-flow network (hence the vertex set @{term \<V>}, the edge set @{term \<E>} and the
       root @{term r}), the spanning-tree ADT, the five array stores, the selector and \<^emph>\<open>all their
-      assumed laws\<close> — with the imperative code locale @{locale network_simplex_impl_spec}. The two
+      assumed laws\<close> --- with the imperative code locale @{locale network_simplex_impl_spec}. The two
       locales share only the root @{term r}; every imperative operation carries an @{text \<open>_imp\<close>}
       suffix, so no other parameter is accidentally identified.
 
@@ -375,42 +375,42 @@ locale network_simplex_impl_refine =
     and sel_assn    :: "'selector \<Rightarrow> 'seli \<Rightarrow> assn"
     and rd          :: assn  \<comment> \<open>footprint of the read-only per-edge cap / endpoint stores\<close>
   assumes
-    \<comment> \<open>flow store — an @{locale fixed_univ_map} with key set @{term \<E>}\<close>
+    \<comment> \<open>flow store --- an @{locale fixed_univ_map} with key set @{term \<E>}\<close>
     flow_lookup_rule:
       "\<lbrakk>flow_invar Fl; e \<in> \<E>\<rbrakk> \<Longrightarrow> <flow_assn Fl fh> flow_lookup_imp fh e
                  <\<lambda>x. flow_assn Fl fh * \<up>(x = flow_lookup Fl e)>"
     and flow_upd_rule:
       "\<lbrakk>flow_invar Fl; e \<in> \<E>\<rbrakk> \<Longrightarrow> <flow_assn Fl fh> flow_upd_imp fh e w
                  <\<lambda>_. flow_assn (flow_upd Fl e w) fh>"
-    \<comment> \<open>edge-state store — an @{locale fixed_univ_map} with key set @{term \<E>}\<close>
+    \<comment> \<open>edge-state store --- an @{locale fixed_univ_map} with key set @{term \<E>}\<close>
     and es_lookup_rule:
       "\<lbrakk>es_invar Es; e \<in> \<E>\<rbrakk> \<Longrightarrow> <es_assn Es esh> es_lookup_imp esh e
                  <\<lambda>x. es_assn Es esh * \<up>(x = es_lookup Es e)>"
     and es_upd_rule:
       "\<lbrakk>es_invar Es; e \<in> \<E>\<rbrakk> \<Longrightarrow> <es_assn Es esh> es_upd_imp esh e t
                  <\<lambda>_. es_assn (es_upd Es e t) esh>"
-    \<comment> \<open>parent-edge store — an @{locale fixed_univ_map} with key set @{term \<open>\<V> - {r}\<close>}\<close>
+    \<comment> \<open>parent-edge store --- an @{locale fixed_univ_map} with key set @{term \<open>\<V> - {r}\<close>}\<close>
     and parent_lookup_rule:
       "\<lbrakk>parent_invar Pe; v \<in> \<V> - {r}\<rbrakk> \<Longrightarrow> <parent_assn Pe ph> parent_lookup_imp ph v
                  <\<lambda>x. parent_assn Pe ph * \<up>(x = parent_lookup Pe v)>"
     and parent_upd_rule:
       "\<lbrakk>parent_invar Pe; v \<in> \<V> - {r}\<rbrakk> \<Longrightarrow> <parent_assn Pe ph> parent_upd_imp ph v e
                  <\<lambda>_. parent_assn (parent_upd Pe v e) ph>"
-    \<comment> \<open>parent-direction store — an @{locale fixed_univ_map} with key set @{term \<open>\<V> - {r}\<close>}\<close>
+    \<comment> \<open>parent-direction store --- an @{locale fixed_univ_map} with key set @{term \<open>\<V> - {r}\<close>}\<close>
     and dir_lookup_rule:
       "\<lbrakk>dir_invar D; v \<in> \<V> - {r}\<rbrakk> \<Longrightarrow> <dir_assn D dh> dir_lookup_imp dh v
                  <\<lambda>x. dir_assn D dh * \<up>(x = dir_lookup D v)>"
     and dir_upd_rule:
       "\<lbrakk>dir_invar D; v \<in> \<V> - {r}\<rbrakk> \<Longrightarrow> <dir_assn D dh> dir_upd_imp dh v q
                  <\<lambda>_. dir_assn (dir_upd D v q) dh>"
-    \<comment> \<open>potential shift — the first-order subtree traversal refining the functional \<open>shift_pot\<close>; it
+    \<comment> \<open>potential shift --- the first-order subtree traversal refining the functional \<open>shift_pot\<close>; it
         reads the tree and mutates the potential store, whose functional value becomes
         \<open>shift_pot T v pa g up\<close>. Its precondition is exactly that of the functional law \<open>shift_pot_spec\<close>.\<close>
     and shift_pot_rule:
       "\<lbrakk>arborescense_invar T; v \<in> \<V>; pot_invar pa; \<And>u. u \<in> \<V> \<Longrightarrow> pot_value_invar (pot_lookup pa u)\<rbrakk> \<Longrightarrow>
        <tree_assn T th * pot_assn pa poth> shift_pot_imp th v poth g up
                  <\<lambda>_. tree_assn T th * pot_assn (shift_pot T v pa g up) poth>"
-    \<comment> \<open>entering-edge selection — reads potentials and edge tags, mutates the selector in place and
+    \<comment> \<open>entering-edge selection --- reads potentials and edge tags, mutates the selector in place and
         returns the value part of the functional result (the functional @{term sel'} is dropped).\<close>
     and sel_select_rule:
       "\<lbrakk>sel_invar Sel; pot_invar \<pi>; es_invar Es\<rbrakk> \<Longrightarrow>
@@ -419,7 +419,7 @@ locale network_simplex_impl_refine =
                     (case sel_select Sel \<pi> Es of
                        None \<Rightarrow> (\<exists>\<^sub>A ss. sel_assn ss selh) * \<up>(res = None)
                      | Some (e, in_U, \<gamma>, sel') \<Rightarrow> sel_assn sel' selh * \<up>(res = Some (e, in_U, \<gamma>)))>"
-    \<comment> \<open>fundamental-circuit path search — writes the two functional vertex paths into the two buffers
+    \<comment> \<open>fundamental-circuit path search --- writes the two functional vertex paths into the two buffers
         and returns their fill pointers; the buffer prefixes then hold @{term p1} / @{term p2}. The
         buffers must be at least as long as a longest tree path (@{term \<open>card \<V>\<close>} bounds it). Its
         precondition is exactly that of the @{locale arborescense_adt} axiom @{text get_path_pair}.\<close>
@@ -430,7 +430,7 @@ locale network_simplex_impl_refine =
                     \<up>(length l1' = length l1 \<and> length l2' = length l2 \<and>
                       ptr1 \<le> length l1' \<and> ptr2 \<le> length l2' \<and>
                       (take ptr1 l1', take ptr2 l2') = get_path_pair T u v)>"
-    \<comment> \<open>tree-edge swap — mutates the tree structure, whose functional value becomes
+    \<comment> \<open>tree-edge swap --- mutates the tree structure, whose functional value becomes
         @{term \<open>swap_edge T x u v\<close>}. Its precondition is exactly that of the @{locale arborescense_adt}
         axiom @{text swap_edge}.\<close>
     and swap_edge_rule:
@@ -438,7 +438,7 @@ locale network_simplex_impl_refine =
         walk_betw (abstract_arborescense T) u (p1 @ a # p3) r; distinct (p1 @ a # p3);
         (x, y) \<in> set (edges_of_vwalk (p1 @ [a])); u \<in> \<V>; v \<in> \<V>\<rbrakk> \<Longrightarrow>
        <tree_assn T th> swap_edge_imp th x u v <\<lambda>_. tree_assn (swap_edge T x u v) th>"
-    \<comment> \<open>pure per-edge reads — empty heap footprint, the same @{term \<open>e \<in> \<E>\<close>} the functional encoding
+    \<comment> \<open>pure per-edge reads --- empty heap footprint, the same @{term \<open>e \<in> \<E>\<close>} the functional encoding
         axioms (\<open>cap_infinite\<close> / \<open>cap_finite\<close>, \<open>fst_exec_coincide\<close>, \<open>snd_exec_coincide\<close>) assume.\<close>
     and cap_rule:      "e \<in> \<E> \<Longrightarrow> <rd> cap_imp e      <\<lambda>x. rd * \<up>(x = cap e)>"
     and fst_exec_rule: "e \<in> \<E> \<Longrightarrow> <rd> fst_exec_imp e <\<lambda>x. rd * \<up>(x = fst_exec e)>"
@@ -455,18 +455,18 @@ lemmas [sep_heap_rules] =
 
 subsection \<open>Refinement of the derived leaf operations\<close>
 
-text \<open>The @{term \<open>- 1\<close>}-as-\<infinity> minimum is purely functional and identical to @{const mininf}.\<close>
+text \<open>The @{term \<open>- 1\<close>}-as-{\isasyminfinity} minimum is purely functional and identical to @{const mininf}.\<close>
 lemma mininf_imp_eq: "mininf_imp x y = mininf x y"
   by (simp add: mininf_imp_def mininf_def)
 
-text \<open>Forward residual of a graph edge — one read of capacity and, if finite, of flow.\<close>
+text \<open>Forward residual of a graph edge --- one read of capacity and, if finite, of flow.\<close>
 lemma res_fwd_imp_rule [sep_heap_rules]:
   "\<lbrakk>flow_invar (current_flow s); a \<in> \<E>\<rbrakk> \<Longrightarrow>
    <flow_assn (current_flow s) (iflow si) * rd> res_fwd_imp si a
    <\<lambda>x. flow_assn (current_flow s) (iflow si) * rd * \<up>(x = res_fwd s a)>"
   unfolding res_fwd_imp_def res_fwd_def by (sep_auto simp: Let_def)
 
-text \<open>Backward residual — the current flow on the edge.\<close>
+text \<open>Backward residual --- the current flow on the edge.\<close>
 lemma res_bwd_imp_rule [sep_heap_rules]:
   "\<lbrakk>flow_invar (current_flow s); a \<in> \<E>\<rbrakk> \<Longrightarrow>
    <flow_assn (current_flow s) (iflow si)> res_bwd_imp si a
@@ -487,7 +487,7 @@ lemma par_up_imp_rule [sep_heap_rules]:
    <\<lambda>x. dir_assn (edge_dir s) (idir si) * \<up>(x = par_up s v)>"
   unfolding par_up_imp_def par_up_def by sep_auto
 
-text \<open>Residual of a vertex's parent edge traversed upward — reads direction, parent edge and flow.\<close>
+text \<open>Residual of a vertex's parent edge traversed upward --- reads direction, parent edge and flow.\<close>
 lemma res_up_imp_rule [sep_heap_rules]:
   "\<lbrakk>flow_invar (current_flow s); parent_invar (parent_edge s); dir_invar (edge_dir s);
     v \<in> \<V> - {r}; par_edge s v \<in> \<E>\<rbrakk> \<Longrightarrow>
@@ -509,7 +509,7 @@ lemma res_down_imp_rule [sep_heap_rules]:
       * dir_assn (edge_dir s) (idir si) * rd * \<up>(x = res_down s v)>"
   unfolding res_down_imp_def res_down_def by sep_auto
 
-text \<open>Run the entering-edge selector — reads potentials and edge tags, mutates the selector in place
+text \<open>Run the entering-edge selector --- reads potentials and edge tags, mutates the selector in place
       and returns the value part of @{const ns_select} (the functional @{term sel'} is dropped).\<close>
 lemma ns_select_imp_rule:
   "\<lbrakk>sel_invar (edge_sel s); pot_invar (potentials s); es_invar (edge_state s)\<rbrakk> \<Longrightarrow>
@@ -527,8 +527,8 @@ text \<open>@{term ns_rel} ties a functional \<open>network_simplex_state\<close
       \<open>ns_impl_state\<close>: the seven functional stores relate to their imperative handles through
       the seven representation assertions, and the two path buffers @{term ipath1}, @{term ipath2}
       are \<^emph>\<open>existentially quantified\<close> arrays with room for a longest tree path (@{term \<open>card \<V> - 1\<close>}
-      entries). The buffers carry \<^emph>\<open>no semantic content between iterations\<close> — they are scratch space,
-      meaningful only \<^emph>\<open>during\<close> an iteration — so all @{term ns_rel} asserts is that each refines
+      entries). The buffers carry \<^emph>\<open>no semantic content between iterations\<close> --- they are scratch space,
+      meaningful only \<^emph>\<open>during\<close> an iteration --- so all @{term ns_rel} asserts is that each refines
       \<^emph>\<open>some\<close> list of length at least @{term \<open>card \<V> - 1\<close>}; at the loop granularity they are hidden
       behind the
       existential; the operations that inspect them (\<open>get_path_pair_imp\<close>, \<open>bottleneck_imp\<close>,
@@ -661,7 +661,7 @@ qed
 
 text \<open>Snoc recurrences of the two scans (left @{const fold}), and the consequence used below: when a
       scan reports a finite minimum (first component not the \<open>- 1\<close> sentinel) its minimiser is a genuine
-      element of the scanned path — hence, under the path precondition, a non-root vertex on which
+      element of the scanned path --- hence, under the path precondition, a non-root vertex on which
       @{const par_up_imp} is specified.\<close>
 lemma scan_up_snoc:
   "scan_up s (xs @ [x]) =
@@ -741,7 +741,7 @@ qed
 
 
 text \<open>If the circuit bottleneck is finite but is attained neither at the entering edge nor on the
-      up-path, then the down-path minimum is itself finite — so its minimiser is a real vertex.\<close>
+      up-path, then the down-path minimum is itself finite --- so its minimiser is a real vertex.\<close>
 lemma bottleneck_down_finite:
   "mininf r_e (mininf mu md) \<noteq> - 1 \<Longrightarrow> r_e \<noteq> mininf r_e (mininf mu md)
      \<Longrightarrow> \<not> (mu \<noteq> - 1 \<and> mu = mininf r_e (mininf mu md)) \<Longrightarrow> md \<noteq> - 1"
@@ -749,7 +749,7 @@ lemma bottleneck_down_finite:
 
 text \<open>The whole bottleneck computation refines @{const bottleneck}. It reads the entering edge's
       residual, runs the two scans over the two buffer prefixes (the functional paths
-      @{term \<open>take ptr1 l1\<close>} / @{term \<open>take ptr2 l2\<close>}), and — when a tree edge leaves — reads the
+      @{term \<open>take ptr1 l1\<close>} / @{term \<open>take ptr2 l2\<close>}), and --- when a tree edge leaves --- reads the
       leaving vertex's orientation. The scans' minimisers are genuine path vertices (by
       @{thm scan_up_snd_mem} / @{thm scan_down_snd_mem}), hence non-root, so @{const par_up_imp} is
       specified there.\<close>
@@ -989,7 +989,7 @@ subsection \<open>Refinement of the re-parenting walk\<close>
 text \<open>@{const reparent_walk_imp} reverses the parent pointers along the spine in place. It both
       \<^emph>\<open>reads and mutates\<close> the parent-edge / direction stores, so its refinement carries a \<^emph>\<open>store
       agreement invariant\<close>: on the still-unvisited suffix of the spine the mutable stores @{term Pe},
-      @{term D} still agree with the frozen functional state @{term s} — maintained because the spine
+      @{term D} still agree with the frozen functional state @{term s} --- maintained because the spine
       is @{term distinct}, so each visited vertex leaves the suffix untouched. The reads therefore see
       the original @{term \<open>par_edge s\<close>} / @{term \<open>par_up s\<close>} that @{const reparent_walk} threads.\<close>
 lemma reparent_walk_imp_rule:
@@ -1153,7 +1153,7 @@ qed
 subsection \<open>Refinement of the whole loop\<close>
 
 text \<open>The fundamental-circuit spine on the \<^emph>\<open>up\<close> side carries the leaving edge @{term \<open>par_edge s v\<close>}
-      as one of its @{const edges_of_vwalk} arcs — the well-formedness the \<open>swap_edge\<close> refinement axiom
+      as one of its @{const edges_of_vwalk} arcs --- the well-formedness the \<open>swap_edge\<close> refinement axiom
       needs. This reconstructs the witness that the preservation proof @{text swap_edge_pivot} builds
       internally.\<close>
 
@@ -1215,7 +1215,7 @@ qed
 
 text \<open>The store invariants, the fundamental-circuit well-formedness, and the step-preservation facts
       that the loop refinement needs are all consequences of the concrete network-simplex invariant
-      @{const ns_invar} — its data-structure part and the \<open>Network_Simplex_Preservation\<close> development.
+      @{const ns_invar} --- its data-structure part and the \<open>Network_Simplex_Preservation\<close> development.
       We package them as six interface lemmas so the loop refinement reads cleanly.\<close>
 
 lemma inv_sel:
@@ -1405,7 +1405,7 @@ next
                * \<up>(card \<V> - 1 \<le> length l1 \<and> card \<V> - 1 \<le> length l2))
           * \<up>(res = Some (e, in_U, \<gamma>))>"
         by (sep_auto heap: selSome)
-      \<comment> \<open>The Some-branch body with a \<^emph>\<open>concrete\<close> entering edge — no option-case-split, so the endpoint
+      \<comment> \<open>The Some-branch body with a \<^emph>\<open>concrete\<close> entering edge --- no option-case-split, so the endpoint
           reads and the path/bottleneck refinements thread cleanly.\<close>
       have contBody: "<rd * flow_assn (current_flow s) (iflow si) * pot_assn (potentials s) (ipot si)
           * tree_assn (spanning_tree s) (itree si) * parent_assn (parent_edge s) (iparent si)
@@ -1425,7 +1425,7 @@ next
         \<comment> \<open>Peel the two endpoint reads and the path search with @{thm ht_bind}; each peeled step turns
             its guarantee into a \<^emph>\<open>top-level\<close> precondition pure, so the fill pointers arrive with the
             clean facts @{term \<open>take ptr1 l1' = p1\<close>} / @{term \<open>take ptr2 l2' = p2\<close>} that the bottleneck /
-            augmentation refinements need — a single \<open>sep_auto\<close> never re-normalises them mid-monad.\<close>
+            augmentation refinements need --- a single \<open>sep_auto\<close> never re-normalises them mid-monad.\<close>
         have fstF: "<rd * flow_assn (current_flow s) (iflow si) * pot_assn (potentials s) (ipot si)
             * tree_assn (spanning_tree s) (itree si) * parent_assn (parent_edge s) (iparent si)
             * dir_assn (edge_dir s) (idir si) * es_assn (edge_state s) (iestate si)
@@ -1475,7 +1475,7 @@ next
           by (sep_auto simp: gpp gppb gp gpb st(4) heap: get_path_pair_rule)
         \<comment> \<open>The bottleneck / augmentation tail, with the fill pointers' guarantees as clean hypotheses.
             The branch well-formedness and the bottleneck value are derived here by \<^emph>\<open>controlled\<close>
-            rewriting with the path facts — never a blind \<open>sep_auto\<close> search.\<close>
+            rewriting with the path facts --- never a blind \<open>sep_auto\<close> search.\<close>
         have tailP: "\<lbrakk>u = fst_exec e; v = snd_exec e;
             card \<V> - 1 \<le> length l1' \<and> card \<V> - 1 \<le> length l2'
               \<and> ptr1 \<le> length l1' \<and> ptr2 \<le> length l2'
@@ -1509,7 +1509,7 @@ next
             using bn by (simp add: TA1 TA2)
           note bottR = bottleneck_imp_rule[OF st(1) st(2) st(3) gp(1) A5 A6 af1 af2]
           note bottR2 = bottR[unfolded bv]
-          \<comment> \<open>Peel the bottleneck read on its own — a straight-line \<open>sep_auto\<close> with no \<open>case\<close> / \<open>if\<close>
+          \<comment> \<open>Peel the bottleneck read on its own --- a straight-line \<open>sep_auto\<close> with no \<open>case\<close> / \<open>if\<close>
               tail, so the self-referential @{thm fst_exec_eq} never fires on the (un-taken) pivot
               branch.  Its result is the \<^emph>\<open>concrete\<close> bottleneck tuple.\<close>
           have bottF2: "<rd * flow_assn (current_flow s) (iflow si) * pot_assn (potentials s) (ipot si)
@@ -1714,7 +1714,7 @@ begin
 
 text \<open>Specialised to the initial basis built by @{locale network_simplex_init}: since
       @{text init_state_invar} gives @{term \<open>ns_invar init_state\<close>}, the imperative loop started from
-      any heap refining \<open>init_state\<close> refines the functional run @{term \<open>ns_loop init_state\<close>} — the
+      any heap refining \<open>init_state\<close> refines the functional run @{term \<open>ns_loop init_state\<close>} --- the
       state on which @{text network_simplex_correct} states optimality / unboundedness.\<close>
 
 corollary ns_loop_imp_init:

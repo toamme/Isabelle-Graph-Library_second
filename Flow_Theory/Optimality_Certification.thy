@@ -132,7 +132,7 @@ interpretation residual_flow: cost_flow_network where
 
 text \<open>An \<^emph>\<open>M-scaled\<close> relaxation of \<open>optimality_from_potentials\<close>, in the following sense: instead of
       requiring the reduced cost of \<^emph>\<open>every\<close> residual arc to sit in the exact three-way trichotomy
-      (empty \<longrightarrow> \<ge>0, saturated \<longrightarrow> \<le>0, interior \<longrightarrow> =0), it only requires \<open>M \<sqdot> (reduced cost) \<ge> -1\<close> on every
+      (empty {\isasymlongrightarrow} {\isasymge}0, saturated {\isasymlongrightarrow} {\isasymle}0, interior {\isasymlongrightarrow} =0), it only requires \<open>M \<sqdot> (reduced cost) \<ge> -1\<close> on every
       residual arc that is still present, for a single global integer \<open>M\<close> exceeding the vertex count.
       This is deliberately weaker and cheaper to produce --- a cost-scaling oracle's own potentials
       already satisfy it at its last phase, with no correction pass --- and it is still enough to
@@ -526,7 +526,7 @@ definition eps_complementary_slack :: "real \<Rightarrow> ('edge \<Rightarrow> r
   "eps_complementary_slack \<epsilon> f \<pi> \<longleftrightarrow>
      (\<forall> e \<in> \<EE>. \<uu>\<^bsub>f\<^esub>e > 0 \<longrightarrow> \<cc> e + \<pi> (fstv e) - \<pi> (sndv e) \<ge> - \<epsilon>)"
 
-text \<open>\<^emph>\<open>\<epsilon>-optimality certifies optimality once \<epsilon> is small enough, given integer costs.\<close> The proof is
+text \<open>\<^emph>\<open>{\isasymepsilon}-optimality certifies optimality once {\isasymepsilon} is small enough, given integer costs.\<close> The proof is
       exactly \<open>optimality_from_potentials\<close>'s: assume not, obtain a short augmenting cycle from
       \<open>short_augcycle_from_not_opt\<close>, and telescope the criterion over it. What used to be a
       multiplication by an integer \<open>M\<close> is now a plain real bound \<open>n\<epsilon> < 1\<close>, and every step after the

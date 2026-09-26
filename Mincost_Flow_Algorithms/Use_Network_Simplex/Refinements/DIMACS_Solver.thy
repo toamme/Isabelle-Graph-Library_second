@@ -1234,12 +1234,12 @@ export_code dimacs_solve_prog reduce_imp orig_flow_imp ns_cleanup_imp isqrt
   integer_of_nat integer_of_int OptimumI InfeasibleI UnboundedI
   in SML module_name DIMACS_Solver_Code
 
-text \<open>The same code, written into the generated_sml directory -- the one the MLton build
+text \<open>The same code, written into the generated\_sml directory -- the one the MLton build
       compiles from -- so that an external driver can compile it: the solver, the reduction and
       the back-transformation, plus the integer constructors a driver needs in order to build the
       six input arrays.
 
-      It used to be written next to this theory and copied into generated_sml by hand. The copy is
+      It used to be written next to this theory and copied into generated\_sml by hand. The copy is
       what the driver builds, so a forgotten copy step meant building against code that was no
       longer what had been proved -- and nothing about that failure is visible from the outside:
       every test passes, against the wrong program. Writing it where the build reads it does not

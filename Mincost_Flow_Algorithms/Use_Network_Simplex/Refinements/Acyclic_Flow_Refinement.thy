@@ -6,18 +6,18 @@ begin
 section \<open>Imperative refinement of the acyclic-flow procedure\<close>
 
 text \<open>This theory mirrors the functional specification locale @{locale acyclic_flow_impl_spec}, but
-      every store the algorithm mutates — the flow, the three-valued vertex-state map, the two
+      every store the algorithm mutates --- the flow, the three-valued vertex-state map, the two
       per-vertex edge iterators, the vertex iterator of the outer loop and the three parallel DFS
-      stacks — is now a \<^emph>\<open>mutable heap object\<close>, and every operation is lifted into the @{typ \<open>_ Heap\<close>}
+      stacks --- is now a \<^emph>\<open>mutable heap object\<close>, and every operation is lifted into the @{typ \<open>_ Heap\<close>}
       monad. Every fixed operation and every derived constant carries an @{text \<open>_imp\<close>} suffix so that
       this locale can later be combined with the functional locales without name clashes.
 
       The refinement discipline is the standard Imperative-HOL one:
       \<^item> a functional operation that \<^emph>\<open>changes\<close> a data structure (a flow update, a vertex-state write,
         advancing / resetting an iterator) becomes an in-place mutation with result type
-        @{typ \<open>unit Heap\<close>} — the structure is changed but \<^emph>\<open>not returned\<close>;
+        @{typ \<open>unit Heap\<close>} --- the structure is changed but \<^emph>\<open>not returned\<close>;
       \<^item> a functional operation that \<^emph>\<open>changes a container and also returns a proper value\<close> drops the
-        container from the returned tuple — it is mutated in place — and returns only the value(s) in
+        container from the returned tuple --- it is mutated in place --- and returns only the value(s) in
         the @{typ \<open>_ Heap\<close>} monad (e.g.\ the cancellation returns just its drop count and unbounded
         flag, the flow having been augmented in place);
       \<^item> a functional operation that \<^emph>\<open>computes a value\<close> (a lookup, an endpoint projection, a room /
@@ -27,7 +27,7 @@ text \<open>This theory mirrors the functional specification locale @{locale acy
       The three functional DFS stacks @{term af_vstack} / @{term af_estack} / @{term af_dstack} become
       three \<^emph>\<open>mutable arrays\<close> @{term ivstack} / @{term iestack} / @{term idstack} together with a
       \<^emph>\<open>stack pointer\<close> @{term sp} that is threaded as an ordinary @{typ nat} argument (a value on the
-      heap), rather than a boxed length. The intended (never here assumed — this belongs to the proof
+      heap), rather than a boxed length. The intended (never here assumed --- this belongs to the proof
       locale) layout is: @{term ivstack} holds the trail vertices in indices \<open>[0..<sp]\<close> with the
       top at \<open>sp - 1\<close>; for \<open>1 \<le> i < sp\<close> the entries \<open>iestack ! i\<close> /
       \<open>idstack ! i\<close> hold the arc / direction by which \<open>ivstack ! i\<close> was entered from its
@@ -35,8 +35,8 @@ text \<open>This theory mirrors the functional specification locale @{locale acy
       is unused.
 
       The @{term af_unbounded} flag is not stored: exactly as the network-simplex loop returns a
-      status value, the loops here \<^emph>\<open>return a boolean\<close> — @{term True} meaning an unbounded
-      instance (a negative infinite-capacity free cycle) was detected — and leave the mutated flow store
+      status value, the loops here \<^emph>\<open>return a boolean\<close> --- @{term True} meaning an unbounded
+      instance (a negative infinite-capacity free cycle) was detected --- and leave the mutated flow store
       in place for the caller to read.
 
       This locale fixes only the imperative operations; it states \<^emph>\<open>no assumptions\<close>. Every text below
@@ -68,7 +68,7 @@ text \<open>The two edge iterators are per-vertex: @{term out_current_imp} / @{t
       @{term flow_lookup_imp} / @{term st_lookup_imp} read, the flow and vertex-state stores. The
       vertex iterator @{term current_vertex_imp} / @{term has_vertex_imp} / @{term move_on_vertex_imp}
       hands out the vertices of the outer loop, advancing in place. @{term cap_imp} reads an edge
-      capacity (@{term \<open>- 1\<close>} = \<infinity>), @{term cost_imp} its unit cost, and @{term fst_exec_imp} /
+      capacity (@{term \<open>- 1\<close>} = {\isasyminfinity}), @{term cost_imp} its unit cost, and @{term fst_exec_imp} /
       @{term snd_exec_imp} its two endpoints.\<close>
 
 locale acyclic_flow_impl_refine =
@@ -105,7 +105,7 @@ definition "af_rooms_imp s a =
 text \<open>Marginal cost of pushing one unit along an arc in a direction.\<close>
 definition "af_delta_cost_imp a dir = do { c \<leftarrow> cost_imp a; (let dc = (if dir then c else - c) in return dc) }"
 
-text \<open>Minimum treating @{term \<open>- 1\<close>} as ``no bound'' — pure, on values already read.\<close>
+text \<open>Minimum treating @{term \<open>- 1\<close>} as ``no bound'' --- pure, on values already read.\<close>
 definition "af_min_imp x y = (if x = - 1 then y else if y = - 1 then x else min x y)"
 
 text \<open>Push @{term \<gamma>} on one arc in place and \<^emph>\<open>return the new flow value\<close>, so a caller can test
@@ -115,13 +115,13 @@ definition "af_push_arc_imp \<gamma> a dir s =
        (let \<delta> = (if dir then \<gamma> else - \<gamma>); f = f0 + \<delta> in
         do { _ \<leftarrow> flow_upd_imp (iflow s) a f; return f }) }"
 
-text \<open>Saturation test on an arc's \<^emph>\<open>already-computed\<close> new flow value @{term f} — reads only
+text \<open>Saturation test on an arc's \<^emph>\<open>already-computed\<close> new flow value @{term f} --- reads only
       @{term cap_imp}, not the flow again.\<close>
 definition "af_saturated_imp f a = do { c \<leftarrow> cap_imp a; return (\<not> (0 < f \<and> (c = - 1 \<or> f < c))) }"
 
 subsection \<open>The two cancellation passes over the stack segment\<close>
 
-text \<open>First pass — \<^emph>\<open>scan-until-@{term x}\<close>. Walk the DFS stack from the top \<open>sp - 1\<close> downward,
+text \<open>First pass --- \<^emph>\<open>scan-until-@{term x}\<close>. Walk the DFS stack from the top \<open>sp - 1\<close> downward,
       at each index @{term i} reading the entering arc \<open>iestack ! i\<close> (tagged \<open>idstack ! i\<close>)
       and stopping once the \<^emph>\<open>parent\<close> vertex \<open>ivstack ! (i - 1)\<close> is the reached ancestor
       @{term x}. It accumulates the total marginal cost @{term k}, the as-is bottleneck room @{term ra}
@@ -147,13 +147,13 @@ partial_function (heap) af_scan_imp ::
                rf' = af_min_imp rd rf
            in if p = x then return (k', ra', rf') else af_scan_imp s x (i - 1) k' ra' rf') }"
 
-text \<open>Second pass — push @{term \<gamma>} around the same cycle \<^emph>\<open>and\<close> locate the bottleneck. Each cycle arc
+text \<open>Second pass --- push @{term \<gamma>} around the same cycle \<^emph>\<open>and\<close> locate the bottleneck. Each cycle arc
       is pushed once (negating its tag via @{term \<open>d \<noteq> flip\<close>}); right after the push the arc is tested
       for saturation. The pass returns the \<^emph>\<open>drop count\<close> \<open>m'\<close> = one more than the index of the
       \<^emph>\<open>deepest\<close> arc that saturated, or @{term 0} if none but the closing arc did.
 
       To keep the pass in \<^emph>\<open>constant stack space\<close> it is written \<^emph>\<open>tail-recursively\<close>: rather than
-      combine a result read back from the recursive call, it threads two flat @{typ nat} arguments —
+      combine a result read back from the recursive call, it threads two flat @{typ nat} arguments ---
       the running depth @{term dep} (@{term 1} at the top) and the deepest saturated depth @{term best}
       seen so far (@{term 0} = none). Because the walk descends towards @{term x}, a later (deeper) hit
       simply overwrites @{term best}, so at the leaf @{term best} already \<^emph>\<open>is\<close> @{term \<open>m'\<close>}. The flow
@@ -170,7 +170,7 @@ partial_function (heap) af_push_imp ::
           (let best' = (if sat then dep else best)
            in if p = x then return best' else af_push_imp s \<gamma> x (i - 1) flip (dep + 1) best') }"
 
-text \<open>Cancel the tagged closed cycle — the stack segment from the top down to the reached ancestor
+text \<open>Cancel the tagged closed cycle --- the stack segment from the top down to the reached ancestor
       @{term x} (walked by @{const af_scan_imp} / @{const af_push_imp}, never materialised) closed by the
       arc @{term a} in direction @{term dir}, whose two rooms @{term up} / @{term dn} the caller already
       read. Returns only the \<^emph>\<open>drop count\<close> \<open>m'\<close> and the \<^emph>\<open>unbounded\<close> flag; the flow is augmented
@@ -198,8 +198,8 @@ subsection \<open>Truncation clean-up and self-loops\<close>
 text \<open>Reset one vertex's two edge iterators to their pristine unconsumed state, in place.\<close>
 definition "af_reset_imp s v = do { _ \<leftarrow> out_reset_imp (iout s) v; in_reset_imp (iin s) v }"
 
-text \<open>Fused truncation clean-up: over the top @{term n} (= \<open>m'\<close>) stack vertices — indices
-      @{term i}, @{term \<open>i - 1\<close>}, \<dots> — in \<^emph>\<open>one\<close> walk set each back to @{term Unseen} and reset its
+text \<open>Fused truncation clean-up: over the top @{term n} (= \<open>m'\<close>) stack vertices --- indices
+      @{term i}, @{term \<open>i - 1\<close>}, {\isasymdots} --- in \<^emph>\<open>one\<close> walk set each back to @{term Unseen} and reset its
       iterators. The surviving endpoint just below is not touched.\<close>
 partial_function (heap) af_reset_unsee_seg_imp ::
   "('farr, 'sarr, 'g, 'vvit, 'v, 'e) af_impl_state \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> unit Heap"
@@ -232,8 +232,8 @@ text \<open>Process one incident arc @{term a} of the current top vertex, traver
       given the current stack pointer @{term sp}. All mutation is in place; the returned pair is the
       \<^emph>\<open>new stack pointer\<close> and the \<^emph>\<open>unbounded\<close> flag. A self-loop is normalised on sight; a
       non-free arc, the parent arc, and an arc to a @{term Finished} vertex are no-ops (@{term sp}
-      unchanged); an arc to an @{term OnStack} vertex closes a cycle — cancelled, the stack truncated by
-      the drop count and the dropped vertices reset — and an arc to an @{term Unseen} vertex pushes it.\<close>
+      unchanged); an arc to an @{term OnStack} vertex closes a cycle --- cancelled, the stack truncated by
+      the drop count and the dropped vertices reset --- and an arc to an @{term Unseen} vertex pushes it.\<close>
 text \<open>Cycle-closing case (an @{term OnStack} target): cancel the cycle in place, then either report
       unboundedness or truncate the stack by the drop count @{term \<open>m'\<close>} and reset the dropped vertices.\<close>
 definition "af_close_cycle_imp s up dn x a dir sp =
@@ -282,7 +282,7 @@ subsection \<open>The inner DFS-like procedure\<close>
 text \<open>The inner loop, threading the stack pointer @{term sp}. An empty stack (@{term \<open>sp = 0\<close>}) returns
       ``bounded''. Otherwise the top vertex is scanned: an outgoing free arc first (the current arc is
       read, the iterator advanced in place, then @{const af_handle_imp} run), then an ingoing one, then
-      backtrack — mark the top @{term Finished} and pop (@{term \<open>sp - 1\<close>}). As soon as
+      backtrack --- mark the top @{term Finished} and pop (@{term \<open>sp - 1\<close>}). As soon as
       @{const af_handle_imp} reports unboundedness the loop returns @{term True}.\<close>
 partial_function (heap) AF_DFS_imp ::
   "('farr, 'sarr, 'g, 'vvit, 'v, 'e) af_impl_state \<Rightarrow> nat \<Rightarrow> bool Heap"
@@ -336,7 +336,7 @@ partial_function (heap) AF_outer_imp ::
 
 text \<open>The initial imperative state is \<^emph>\<open>assembled from externally supplied handles and arrays\<close>: the
       flow store @{term fl}, the vertex-state store @{term stt}, the two edge-iterator stores
-      @{term oa} / @{term ia}, the vertex iterator @{term vit}, and — crucially — the three DFS-stack
+      @{term oa} / @{term ia}, the vertex iterator @{term vit}, and --- crucially --- the three DFS-stack
       arrays @{term vst} / @{term est} / @{term dst}. \<^emph>\<open>Every non-constant amount of memory therefore
       originates outside this locale\<close>: the caller allocates the stores and the three size-@{text \<open>\<ge> |V|\<close>}
       stack arrays and hands them in; the assembly below is a constant-size record of handles and the
@@ -368,10 +368,10 @@ end
 
 section \<open>The refinement proof locale\<close>
 
-text \<open>The proof locale combines the functional proof locale @{locale acyclic_flow_impl} — which
+text \<open>The proof locale combines the functional proof locale @{locale acyclic_flow_impl} --- which
       supplies the cost-flow network (hence the vertex set @{term \<V>} and edge set @{term \<E>}), the
       functional ADT operations and \<^emph>\<open>all their assumed laws\<close>, and the correctness of the functional
-      \<open>make_acyclic\<close> — with the imperative code locale @{locale acyclic_flow_impl_refine}.
+      \<open>make_acyclic\<close> --- with the imperative code locale @{locale acyclic_flow_impl_refine}.
 
       For each mutable store it fixes a \<^emph>\<open>representation assertion\<close> relating a functional store value to
       its imperative heap handle (@{typ assn} is the separation-logic heap predicate): @{term flow_assn}
@@ -387,13 +387,13 @@ text \<open>The proof locale combines the functional proof locale @{locale acycl
       \<^item> the pure endpoint / capacity / cost reads have an empty footprint.
 
       Crucially, the \<^emph>\<open>pure logical preconditions of each triple are exactly the hypotheses of the
-      corresponding functional ADT law(s)\<close> — the refinement assertion alone does not guarantee that the
+      corresponding functional ADT law(s)\<close> --- the refinement assertion alone does not guarantee that the
       \<^emph>\<open>inputs have the right structure\<close> (the ADT invariant, the key-set membership, a non-empty
       remainder), so those hypotheses must \<^emph>\<open>still be assumed\<close>. For the flow store that is
       @{term \<open>flow_invar Fl\<close>} together with the key-set membership @{term \<open>e \<in> \<E>\<close>} (mirroring the law
       \<open>fixed_univ_map.fixed_univ_map_upd\<close>); for the vertex-state store @{term \<open>st_invar St\<close>} and
       @{term \<open>v \<in> \<V>\<close>}; for the two indexed edge iterators @{term \<open>out_invar G\<close>} resp.\ @{term \<open>in_invar G\<close>},
-      @{term \<open>v \<in> \<V>\<close>}, and — for the \<open>current\<close>/\<open>move\<close> steps — the extra @{term \<open>out_remaining G v \<noteq> {}\<close>}
+      @{term \<open>v \<in> \<V>\<close>}, and --- for the \<open>current\<close>/\<open>move\<close> steps --- the extra @{term \<open>out_remaining G v \<noteq> {}\<close>}
       / @{term \<open>in_remaining G v \<noteq> {}\<close>} (mirroring \<open>indexed_iterable_set.idx_current\<close> and
       \<open>indexed_iterable_set.idx_move_invar\<close>); and for the vertex iterator @{term \<open>vit_invar Vit\<close>} plus,
       for \<open>current\<close>/\<open>move_on\<close>, @{term \<open>vit_remaining Vit \<noteq> {}\<close>} (mirroring \<open>iterable_set.has_current\<close>
@@ -423,21 +423,21 @@ locale acyclic_flow_impl_refine_proof =
          caller (which reuses these arrays afterwards) needs it back.  The acyclifier's own
          requirement stays the lower bound in terms of the vertex count, kept alongside.\<close>
   assumes
-    \<comment> \<open>flow store — an @{locale fixed_univ_map} with key set @{term \<E>}\<close>
+    \<comment> \<open>flow store --- an @{locale fixed_univ_map} with key set @{term \<E>}\<close>
     flow_lookup_rule:
       "\<lbrakk>flow_invar Fl; e \<in> \<E>\<rbrakk> \<Longrightarrow> <flow_assn Fl fh> flow_lookup_imp fh e
                  <\<lambda>r. flow_assn Fl fh * \<up>(r = flow_lookup Fl e)>"
     and flow_upd_rule:
       "\<lbrakk>flow_invar Fl; e \<in> \<E>\<rbrakk> \<Longrightarrow> <flow_assn Fl fh> flow_upd_imp fh e w
                  <\<lambda>_. flow_assn (flow_upd Fl e w) fh>"
-    \<comment> \<open>vertex-state store — an @{locale fixed_univ_map} with key set @{term \<V>}\<close>
+    \<comment> \<open>vertex-state store --- an @{locale fixed_univ_map} with key set @{term \<V>}\<close>
     and st_lookup_rule:
       "\<lbrakk>st_invar St; v \<in> \<V>\<rbrakk> \<Longrightarrow> <state_assn St sh> st_lookup_imp sh v
                  <\<lambda>r. state_assn St sh * \<up>(r = st_lookup St v)>"
     and st_upd_rule:
       "\<lbrakk>st_invar St; v \<in> \<V>\<rbrakk> \<Longrightarrow> <state_assn St sh> st_upd_imp sh v q
                  <\<lambda>_. state_assn (st_upd St v q) sh>"
-    \<comment> \<open>outgoing edge iterator — an @{locale indexed_iterable_set} with key set @{term \<V>}\<close>
+    \<comment> \<open>outgoing edge iterator --- an @{locale indexed_iterable_set} with key set @{term \<V>}\<close>
     and out_has_rule:
       "\<lbrakk>out_invar G; v \<in> \<V>\<rbrakk> \<Longrightarrow> <graph_assn G gh> out_has_imp gh v
                  <\<lambda>r. graph_assn G gh * \<up>(r = out_has G v)>"
@@ -450,7 +450,7 @@ locale acyclic_flow_impl_refine_proof =
     and out_reset_rule:
       "\<lbrakk>out_invar G; v \<in> \<V>\<rbrakk> \<Longrightarrow> <graph_assn G gh> out_reset_imp gh v
                  <\<lambda>_. graph_assn (out_reset G v) gh>"
-    \<comment> \<open>ingoing edge iterator — an @{locale indexed_iterable_set} with key set @{term \<V>}\<close>
+    \<comment> \<open>ingoing edge iterator --- an @{locale indexed_iterable_set} with key set @{term \<V>}\<close>
     and in_has_rule:
       "\<lbrakk>in_invar G; v \<in> \<V>\<rbrakk> \<Longrightarrow> <graph_assn G gh> in_has_imp gh v
                  <\<lambda>r. graph_assn G gh * \<up>(r = in_has G v)>"
@@ -463,7 +463,7 @@ locale acyclic_flow_impl_refine_proof =
     and in_reset_rule:
       "\<lbrakk>in_invar G; v \<in> \<V>\<rbrakk> \<Longrightarrow> <graph_assn G gh> in_reset_imp gh v
                  <\<lambda>_. graph_assn (in_reset G v) gh>"
-    \<comment> \<open>vertex iterator — an @{locale iterable_set}\<close>
+    \<comment> \<open>vertex iterator --- an @{locale iterable_set}\<close>
     and has_vertex_rule:
       "vit_invar Vit \<Longrightarrow> <vit_assn Vit vh> has_vertex_imp vh
                  <\<lambda>r. vit_assn Vit vh * \<up>(r = has_vertex Vit)>"
@@ -473,7 +473,7 @@ locale acyclic_flow_impl_refine_proof =
     and move_on_vertex_rule:
       "\<lbrakk>vit_invar Vit; vit_remaining Vit \<noteq> {}\<rbrakk> \<Longrightarrow> <vit_assn Vit vh> move_on_vertex_imp vh
                  <\<lambda>_. vit_assn (move_on_vertex Vit) vh>"
-    \<comment> \<open>pure per-edge reads — empty heap footprint; the same @{term \<open>e \<in> \<E>\<close>} the functional encoding
+    \<comment> \<open>pure per-edge reads --- empty heap footprint; the same @{term \<open>e \<in> \<E>\<close>} the functional encoding
         axioms (\<open>cap_encoding\<close>, \<open>cost_encoding\<close>, \<open>fst_exec_eq\<close>, \<open>snd_exec_eq\<close>) assume, so a bounded
         (e.g.\ @{term \<E>}-indexed) implementation is provable and all that knowledge is available\<close>
     and cap_rule:      "e \<in> \<E> \<Longrightarrow> <rd> cap_imp e      <\<lambda>r. rd * \<up>(r = cap e)>"
@@ -493,7 +493,7 @@ lemmas [sep_heap_rules] =
   has_vertex_rule current_vertex_rule move_on_vertex_rule
   cap_rule cost_rule fst_exec_rule snd_exec_rule
 
-text \<open>The @{term \<open>- 1\<close>}-as-\<infinity> minimum is purely functional and identical to @{const af_min}.\<close>
+text \<open>The @{term \<open>- 1\<close>}-as-{\isasyminfinity} minimum is purely functional and identical to @{const af_min}.\<close>
 lemma af_min_imp_eq: "af_min_imp x y = af_min x y"
   by (simp add: af_min_imp_def af_min_def)
 
@@ -514,7 +514,7 @@ lemma af_saturated_imp_rule [sep_heap_rules]:
   "a \<in> \<E> \<Longrightarrow> <rd> af_saturated_imp f a <\<lambda>r. rd * \<up>(r = af_saturated f a)>"
   unfolding af_saturated_imp_def af_saturated_def by (sep_auto simp: Let_def)
 
-text \<open>Push @{term \<gamma>} on one arc in place, returning the new flow value — the imperative counterpart of
+text \<open>Push @{term \<gamma>} on one arc in place, returning the new flow value --- the imperative counterpart of
       @{const af_push_arc} with the flow store mutated in place.\<close>
 lemma af_push_arc_imp_rule [sep_heap_rules]:
   "\<lbrakk>flow_invar Fl; a \<in> \<E>\<rbrakk> \<Longrightarrow>
@@ -552,7 +552,7 @@ definition outer_rel :: "('v,'farr,'sarr,'vvit,'g) AF_state \<Rightarrow> ('farr
         \<up>( card \<V> \<le> length vl \<and> card \<V> \<le> length el \<and> card \<V> \<le> length dl \<and>
            length vl = Lvst \<and> length el = Lest \<and> length dl = Ldst))"
 
-subsection \<open>Sorried refinement lemmas, one per remaining operation — filled top to bottom\<close>
+subsection \<open>Sorried refinement lemmas, one per remaining operation --- filled top to bottom\<close>
 
 text \<open>\<^emph>\<open>Scaffold.\<close> One Hoare-triple refinement obligation per imperative function of the program,
       each stating that the operation refines its functional counterpart. They are stated first and
@@ -1022,8 +1022,8 @@ lemma tr_v: "sp \<le> length vl \<Longrightarrow> drop cm (rev (take sp vl)) = r
 lemma tr_e: "cm \<le> sp - Suc 0 \<Longrightarrow> sp \<le> length el \<Longrightarrow> drop cm (rev (drop (Suc 0) (take sp el))) = rev (drop (Suc 0) (take (sp - cm) el))"
   by (simp add: drop_take tr_v)
 
-text \<open>From the @{const OnStack} guard: an OnStack, in-\<V>, non-top vertex sits strictly below the stack
-      top, i.e.\ in the pre-top prefix — exactly @{const af_cancel_seg}'s @{term \<open>x \<in> set (take (sp-1) vl)\<close>}.\<close>
+text \<open>From the @{const OnStack} guard: an OnStack, in-{\isasymV}, non-top vertex sits strictly below the stack
+      top, i.e.\ in the pre-top prefix --- exactly @{const af_cancel_seg}'s @{term \<open>x \<in> set (take (sp-1) vl)\<close>}.\<close>
 lemma xmem_below_top:
   assumes "AF_invar_2 st" "st_lookup (af_state st) x = OnStack" "x \<in> \<V>" "x \<noteq> hd (af_vstack st)"
           "Suc 0 \<le> sp" "af_vstack st = rev (take sp vl)" "sp \<le> length vl"
@@ -1165,7 +1165,7 @@ lemma penc_e: "Suc 0 \<le> sp \<Longrightarrow> sp < length el \<Longrightarrow>
   by (simp add: take_Suc_conv_app_nth list_update_append drop_append)
 
 text \<open>Fresh-vertex case of @{const af_handle}: push the new vertex. Needs @{term \<open>Suc 0 \<le> sp\<close>} (the DFS
-      stack is non-empty — the root is always on it) so the estack / dstack encoding shifts correctly;
+      stack is non-empty --- the root is always on it) so the estack / dstack encoding shifts correctly;
       that premise is discharged at the call site from the @{const AF_DFS} loop condition.\<close>
 lemma af_push_vertex_imp_rule:
   assumes A: "st_invar (af_state st)" "x \<in> \<V>" "sp < card \<V>" "Suc 0 \<le> sp"
@@ -1205,7 +1205,7 @@ qed
 text \<open>Processing one incident arc: refines @{const af_handle}, threading the new stack pointer and the
       unbounded flag. Premises (agreed design): the bundled DFS invariant @{term \<open>AF_inv st\<close>}, a valid
       free arc @{term \<open>a \<in> \<E>\<close>}, boundedness so far, a non-empty stack, and the \<^emph>\<open>orientation\<close> fact that
-      the arc's near endpoint (tail if @{term dir}, head otherwise) is the current stack top — all
+      the arc's near endpoint (tail if @{term dir}, head otherwise) is the current stack top --- all
       discharged at the @{const AF_DFS} call site (@{thm af_current_out_endpoint} / the @{text \<open>v # vs\<close>}
       pattern), so none weakens the final \<open>make_acyclic_imp_rule\<close>.\<close>
 lemma af_handle_imp_rule:
@@ -1652,7 +1652,7 @@ qed
 text \<open>Launching the inner DFS from a fresh vertex. Beyond the store invariants, the caller supplies the
       standing @{term \<open>multigraph_inv out_arr in_arr\<close>} (reset target of @{const AF_DFS_imp}), the launch
       graph's @{term \<open>multigraph_inv OG IG\<close>}, capacity-feasibility of the seed flow, and that no vertex is
-      @{const OnStack} in the seed state — exactly the      \<open>AF_inv_initial\<close> hypotheses, all maintained
+      @{const OnStack} in the seed state --- exactly the      \<open>AF_inv_initial\<close> hypotheses, all maintained
       by the outer loop's @{const AFF_inv}.\<close>
 lemma af_dfs_start_imp_rule:
   assumes fi: "flow_invar Fl" and si: "st_invar St" and ao: "out_invar OG" and ai: "in_invar IG" and vV: "v \<in> \<V>"
@@ -1687,7 +1687,7 @@ proof -
     done
 qed
 
-text \<open>\<^emph>\<open>partial_function = domintro bridges.\<close> The executable @{const AF_DFS_impl} / @{const AF_outer_impl}
+text \<open>\<^emph>\<open>partial\_function = domintro bridges.\<close> The executable @{const AF_DFS_impl} / @{const AF_outer_impl}
       (the @{command partial_function} fixpoints, registered as code equations) coincide with the
       totally-defined domintro functions @{const AF_DFS} / @{const AF_outer} on their domains. These are
       what connect the imperative refinement (which mirrors the \<open>_impl\<close> recursion) to the functional
@@ -1949,7 +1949,7 @@ qed
 
 text \<open>\<^emph>\<open>Target theorem.\<close> If the eight input handles / arrays refine the functional input stores, then
       @{const make_acyclic_imp} leaves the flow store representing the functional @{const make_acyclic}
-      result and returns @{term True} exactly for the unbounded (@{term None}) verdict — i.e.\ the final
+      result and returns @{term True} exactly for the unbounded (@{term None}) verdict --- i.e.\ the final
       imperative structures refine the final functional ones.\<close>
 theorem make_acyclic_imp_rule:
   assumes mi0: "multigraph_inv out_arr in_arr" and ff: "flow_invar f0" and feas: "af_cap_feasible f0"
