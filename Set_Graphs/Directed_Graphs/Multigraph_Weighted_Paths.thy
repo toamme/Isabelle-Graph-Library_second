@@ -11,16 +11,64 @@ text \<open>This theory develops, for a directed multigraph presented \<^emph>\<
       \<^emph>\<open>distinct\<close> (simple) edge paths and are valued in @{typ ereal} (finitely many simple paths in a
       finite graph, so an unreachable target has distance \<open>+\<infinity>\<close>).\<close>
 
-context multigraph
+text \<open>The concepts need no assumption on the graph and are defined in @{locale multigraph_spec}; the
+      lemmas about them are proved in @{locale multigraph}.\<close>
+
+context multigraph_spec
 begin
 
-subsection \<open>The Weight of a Path\<close>
+subsection \<open>Concepts\<close>
 
 text \<open>The length of an edge path under a real weight function @{term w} is the sum of the weights of
       its edges.\<close>
 
 definition weight :: "('edge \<Rightarrow> real) \<Rightarrow> 'edge list \<Rightarrow> real" where
   "weight w es = (\<Sum>e\<leftarrow>es. w e)"
+
+text \<open>A path between @{term u} and @{term v} is a list of graph edges forming a @{const
+      multigraph_path} whose first tail is @{term u} and whose last head is @{term v}; the empty
+      path connects a vertex to itself. This is the edge-list analogue of @{term vwalk_bet}.  The
+      lemmas below give a self-contained calculus of such paths (introduction, elimination,
+      composition, splitting) so that the underlying @{const awalk}/@{const make_pair} encoding need
+      never be unfolded again.\<close>
+
+definition path_bet :: "'edge list \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+  "path_bet es u v \<longleftrightarrow> set es \<subseteq> \<E> \<and> multigraph_path es \<and>
+     (if es = [] then u = v else fst (hd es) = u \<and> snd (last es) = v)"
+
+text \<open>Because edge weights may be negative, a shortest walk need not exist over \<^emph>\<open>all\<close> paths (a
+      negative cycle could be repeated). We therefore measure distance over \<^emph>\<open>distinct\<close>
+      (simple) paths only. In a finite graph there are finitely many of these, so the infimum below
+      is attained whenever the target is reachable, and equals @{term \<open>\<infinity>\<close>} otherwise. Distances
+      live in @{typ ereal}.\<close>
+
+definition spaths_bet :: "'a \<Rightarrow> 'a \<Rightarrow> 'edge list set" where
+  "spaths_bet u v = {es. path_bet es u v \<and> distinct es}"
+
+definition distance :: "('edge \<Rightarrow> real) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> ereal" where
+  "distance w u v = (INF es \<in> spaths_bet u v. ereal (weight w es))"
+
+definition reachable :: "'a \<Rightarrow> 'a \<Rightarrow> bool" where
+  "reachable u v \<longleftrightarrow> spaths_bet u v \<noteq> {}"
+
+definition is_shortest_path :: "('edge \<Rightarrow> real) \<Rightarrow> 'edge list \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+  "is_shortest_path w es u v \<longleftrightarrow>
+      path_bet es u v \<and> distinct es \<and> distance w u v = ereal (weight w es)"
+
+text \<open>The distance from a set of sources @{term U} to a target @{term v} is the least distance from
+      any source. Attainment lemmas require @{term U} to be finite (as it is for the source set of a
+      concrete algorithm); the ordering lemmas hold unconditionally.\<close>
+
+definition distance_set :: "('edge \<Rightarrow> real) \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> ereal" where
+  "distance_set w U v = (INF u \<in> U. distance w u v)"
+
+end
+
+
+context multigraph
+begin
+
+subsection \<open>The Weight of a Path\<close>
 
 lemma weight_Nil[simp]: "weight w [] = 0"
   and weight_Cons[simp]: "weight w (e#es) = w e + weight w es"
@@ -36,17 +84,6 @@ lemma weight_snoc: "weight w (es @ [e]) = weight w es + w e"
 
 
 subsection \<open>Paths between two Vertices\<close>
-
-text \<open>A path between @{term u} and @{term v} is a list of graph edges forming a @{const
-      multigraph_path} whose first tail is @{term u} and whose last head is @{term v}; the empty
-      path connects a vertex to itself. This is the edge-list analogue of @{term vwalk_bet}.  The
-      lemmas below give a self-contained calculus of such paths (introduction, elimination,
-      composition, splitting) so that the underlying @{const awalk}/@{const make_pair} encoding need
-      never be unfolded again.\<close>
-
-definition path_bet :: "'edge list \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
-  "path_bet es u v \<longleftrightarrow> set es \<subseteq> \<E> \<and> multigraph_path es \<and>
-     (if es = [] then u = v else fst (hd es) = u \<and> snd (last es) = v)"
 
 lemma path_bet_Nil[simp]: "path_bet [] u v \<longleftrightarrow> u = v"
   by(auto simp: path_bet_def multigraph_path_intros)
@@ -261,15 +298,6 @@ qed
 
 subsection \<open>Simple Paths, Distance and Reachability\<close>
 
-text \<open>Because edge weights may be negative, a shortest walk need not exist over \<^emph>\<open>all\<close> paths (a
-      negative cycle could be repeated). We therefore measure distance over \<^emph>\<open>distinct\<close>
-      (simple) paths only. In a finite graph there are finitely many of these, so the infimum below
-      is attained whenever the target is reachable, and equals @{term \<open>\<infinity>\<close>} otherwise. Distances
-      live in @{typ ereal}.\<close>
-
-definition spaths_bet :: "'a \<Rightarrow> 'a \<Rightarrow> 'edge list set" where
-  "spaths_bet u v = {es. path_bet es u v \<and> distinct es}"
-
 lemma finite_spaths_bet: "finite (spaths_bet u v)"
 proof -
   have "spaths_bet u v \<subseteq> {es. set es \<subseteq> \<E> \<and> distinct es}"
@@ -284,11 +312,6 @@ lemma spaths_betI: "path_bet es u v \<Longrightarrow> distinct es \<Longrightarr
 lemma spaths_betD: "es \<in> spaths_bet u v \<Longrightarrow> path_bet es u v \<and> distinct es"
   by(auto simp: spaths_bet_def)
 
-definition distance :: "('edge \<Rightarrow> real) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> ereal" where
-  "distance w u v = (INF es \<in> spaths_bet u v. ereal (weight w es))"
-
-definition reachable :: "'a \<Rightarrow> 'a \<Rightarrow> bool" where
-  "reachable u v \<longleftrightarrow> spaths_bet u v \<noteq> {}"
 
 lemma spath_dist: "es \<in> spaths_bet u v \<Longrightarrow> distance w u v \<le> ereal (weight w es)"
   by(auto simp: distance_def intro: INF_lower)
@@ -384,10 +407,6 @@ lemma distance_self_le0: "distance w u u \<le> 0"
 
 subsection \<open>Shortest Paths\<close>
 
-definition is_shortest_path :: "('edge \<Rightarrow> real) \<Rightarrow> 'edge list \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
-  "is_shortest_path w es u v \<longleftrightarrow>
-      path_bet es u v \<and> distinct es \<and> distance w u v = ereal (weight w es)"
-
 lemma is_shortest_pathI:
   "path_bet es u v \<Longrightarrow> distinct es \<Longrightarrow> distance w u v = ereal (weight w es) \<Longrightarrow>
      is_shortest_path w es u v"
@@ -432,13 +451,6 @@ lemma triangle_ineq_distinct:
 
 
 subsection \<open>Distance from a Set of Vertices\<close>
-
-text \<open>The distance from a set of sources @{term U} to a target @{term v} is the least distance from
-      any source. Attainment lemmas require @{term U} to be finite (as it is for the source set of a
-      concrete algorithm); the ordering lemmas hold unconditionally.\<close>
-
-definition distance_set :: "('edge \<Rightarrow> real) \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> ereal" where
-  "distance_set w U v = (INF u \<in> U. distance w u v)"
 
 lemma dist_set_mem: "u \<in> U \<Longrightarrow> distance_set w U v \<le> distance w u v"
   by(auto simp: distance_set_def intro: INF_lower)
@@ -509,6 +521,92 @@ proof -
   then obtain es where "is_shortest_path w es u v" by (auto elim: is_shortest_path_exists)
   then show ?thesis using u that by auto
 qed
+
+subsection \<open>Subgraphs\<close>
+
+context
+  fixes E' assumes sub: "E' \<subseteq> \<E>"
+begin
+
+interpretation sub: multigraph_spec E' fst snd create_edge .
+
+lemma sub_path_bet: "sub.path_bet es u v \<longleftrightarrow> path_bet es u v \<and> set es \<subseteq> E'"
+  using sub by (auto simp: sub.path_bet_def path_bet_def)
+
+lemma sub_path_bet_ConsE:
+  assumes "sub.path_bet (e # es) u w"
+  obtains "e \<in> E'" "fst e = u" "sub.path_bet es (snd e) w"
+  using assms by (auto simp: sub_path_bet elim: path_bet_ConsE)
+
+lemma sub_path_bet_snocI: "\<lbrakk>sub.path_bet es u (fst e); e \<in> E'\<rbrakk> \<Longrightarrow> sub.path_bet (es @ [e]) u (snd e)"
+  using sub by (auto simp: sub_path_bet intro: path_bet_snocI)
+
+lemma sub_path_bet_edge_split:
+  assumes "sub.path_bet es u w" "e \<in> set es"
+  obtains es1 es2 where "es = es1 @ e # es2" "sub.path_bet es1 u (fst e)" "sub.path_bet es2 (snd e) w"
+proof -
+  have p: "path_bet es u w" and s: "set es \<subseteq> E'" using assms(1) by (simp_all add: sub_path_bet)
+  obtain es1 es2 where "es = es1 @ e # es2" "path_bet es1 u (fst e)" "path_bet es2 (snd e) w"
+    by (rule path_bet_edge_split[OF p assms(2)])
+  with s show ?thesis by (intro that[of es1 es2]) (auto simp: sub_path_bet)
+qed
+
+lemma sub_reachable_iff_path: "sub.reachable u v \<longleftrightarrow> (\<exists>es. sub.path_bet es u v)"
+proof
+  assume "\<exists>es. sub.path_bet es u v"
+  then obtain es where "path_bet es u v" "set es \<subseteq> E'" by (auto simp: sub_path_bet)
+  then obtain es' where "path_bet es' u v" "distinct es'" "set es' \<subseteq> E'"
+    using path_bet_imp_spath[of es u v] by blast
+  then show "sub.reachable u v" by (auto simp: sub.reachable_def sub.spaths_bet_def sub_path_bet)
+qed (auto simp: sub.reachable_def sub.spaths_bet_def)
+
+lemma sub_distance_set_le_path:
+  "\<lbrakk>u \<in> U; sub.path_bet es u v; distinct es\<rbrakk> \<Longrightarrow> sub.distance_set w U v \<le> ereal (weight w es)"
+  unfolding sub.distance_set_def sub.distance_def sub.spaths_bet_def
+  by (rule INF_lower2[of u]) (auto intro: INF_lower)
+
+lemma sub_distance_set_infty_iff: "sub.distance_set w U v = \<infinity> \<longleftrightarrow> (\<forall>u\<in>U. \<not> sub.reachable u v)"
+  unfolding sub.distance_set_def sub.distance_def sub.reachable_def top_ereal_def[symmetric] INF_top_conv
+  by (auto simp: top_ereal_def)
+
+lemma sub_dist_set_less_infty_get_path:
+  assumes "finite U" "sub.distance_set w U v < \<infinity>"
+  obtains es u where "u \<in> U" "sub.is_shortest_path w es u v" "sub.distance w u v = sub.distance_set w U v"
+proof -
+  have "U \<noteq> {}" using assms(2) by (auto simp: sub.distance_set_def top_ereal_def)
+  then have "sub.distance_set w U v \<in> (\<lambda>u. sub.distance w u v) ` U"
+    unfolding sub.distance_set_def by (rule finite_INF_in[OF assms(1)])
+  then obtain u where u: "u \<in> U" "sub.distance w u v = sub.distance_set w U v" by auto
+  have "finite (sub.spaths_bet u v)"
+    by (rule finite_subset[OF _ finite_spaths_bet[of u v]]) (auto simp: sub.spaths_bet_def spaths_bet_def sub_path_bet)
+  moreover have "sub.spaths_bet u v \<noteq> {}" using u(2) assms(2) by (auto simp: sub.distance_def top_ereal_def)
+  ultimately have "sub.distance w u v \<in> (\<lambda>es. ereal (weight w es)) ` sub.spaths_bet u v"
+    unfolding sub.distance_def by (rule finite_INF_in)
+  then obtain es where "es \<in> sub.spaths_bet u v" "sub.distance w u v = ereal (weight w es)" by auto
+  then show ?thesis using u that by (auto simp: sub.is_shortest_path_def sub.spaths_bet_def)
+qed
+
+text \<open>A simple path from a source \<open>s \<in> U\<close> whose weight is the distance from \<open>U\<close> is a shortest
+      path from \<open>s\<close>. A path no heavier than the distance from \<open>U\<close> to every vertex of \<open>T\<close> is no
+      heavier than any simple path from \<open>U\<close> to \<open>T\<close>.\<close>
+
+lemma sub_distance_set_path_shortest:
+  assumes "s \<in> U" "sub.path_bet p s v" "distinct p" "ereal (weight w p) = sub.distance_set w U v"
+  shows "ereal (weight w p) = sub.distance w s v"
+proof (rule order_antisym)
+  show "ereal (weight w p) \<le> sub.distance w s v"
+    unfolding assms(4) sub.distance_set_def by (rule INF_lower[OF assms(1)])
+  show "sub.distance w s v \<le> ereal (weight w p)"
+    using assms(2,3) unfolding sub.distance_def sub.spaths_bet_def by (auto intro: INF_lower)
+qed
+
+lemma sub_distance_set_path_le_targets:
+  assumes "\<forall>x \<in> T. ereal (weight w p) \<le> sub.distance_set w U x"
+    "s \<in> U" "x \<in> T" "sub.path_bet q s x" "distinct q"
+  shows "weight w p \<le> weight w q"
+  using order_trans[OF bspec[OF assms(1,3)] sub_distance_set_le_path[OF assms(2,4,5)]] by simp
+
+end
 
 end
 

@@ -13,6 +13,7 @@ session "Directed_Set_Graphs" = "HOL-Eisbach" +
 
   directories
     Adaptors
+    Refinements
     
   theories [document = false]
    More_Logic
@@ -42,6 +43,9 @@ session "Directed_Set_Graphs" = "HOL-Eisbach" +
     Multigraph_Weighted_Paths
     Multigraph
     Multigraph_Potentials
+    
+    CSR_Buildup
+    "Refinements/CSR_Buildup"
 
 
   document_files

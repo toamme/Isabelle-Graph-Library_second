@@ -3,6 +3,7 @@ session "Hungarian_Method" = "HOL-Library" +
 
 sessions
   Graph_Algorithms_Dev
+  Data_Structures
   Alternating_Lists
   Basic_Matching
   Priority_Search_Trees
@@ -13,7 +14,6 @@ sessions
 
 
 theories
-	Key_Value_Queue_Spec
 	Ordered_Map_Heap
 	Egervary
 	Naive_Primal_Dual

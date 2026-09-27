@@ -59,4 +59,68 @@ lemma h_sum: "h (sum f A) = (\<Sum>a\<in>A. h (f a))"
   by (induction A rule: infinite_finite_induct) (simp_all add: h_add)
 
 end
+
+locale additive_real_embedding =
+  fixes h :: "'n :: linordered_ab_group_add \<Rightarrow> real"
+  assumes h_add: "\<And>a b. h (a + b) = h a + h b"
+      and h_strict_mono: "\<And>a b. a < b \<Longrightarrow> h a < h b"
+begin
+
+lemma h_zero [simp]: "h 0 = 0"
+  using h_add[of 0 0] by simp
+
+lemma h_uminus [simp]: "h (- a) = - h a"
+  using h_add[of a "- a"] by simp
+
+lemma h_diff [simp]: "h (a - b) = h a - h b"
+  using h_add[of a "- b"] by simp
+
+lemma h_less_iff [simp]: "h a < h b \<longleftrightarrow> a < b"
+  by (metis h_strict_mono linorder_less_linear order_less_asym order_less_irrefl)
+
+lemma h_le_iff [simp]: "h a \<le> h b \<longleftrightarrow> a \<le> b"
+  by (metis h_less_iff not_less)
+
+lemma h_eq_iff [simp]: "h a = h b \<longleftrightarrow> a = b"
+  by (metis h_le_iff order_antisym order_refl)
+
+lemma h_inj: "inj h"
+  by (simp add: inj_on_def)
+
+lemma h_mono: "a \<le> b \<Longrightarrow> h a \<le> h b" by simp
+
+lemma h_less_zero [simp]: "h a < 0 \<longleftrightarrow> a < 0" using h_less_iff[of a 0] by simp
+lemma h_zero_less [simp]: "0 < h a \<longleftrightarrow> 0 < a" using h_less_iff[of 0 a] by simp
+lemma h_le_zero  [simp]: "h a \<le> 0 \<longleftrightarrow> a \<le> 0" using h_le_iff[of a 0] by simp
+lemma h_zero_le  [simp]: "0 \<le> h a \<longleftrightarrow> 0 \<le> a" using h_le_iff[of 0 a] by simp
+lemma h_eq_zero  [simp]: "h a = 0 \<longleftrightarrow> a = 0" using h_eq_iff[of a 0] by simp
+
+lemma h_min [simp]: "h (min a b) = min (h a) (h b)"
+  by (cases "a \<le> b") (simp_all add: min_def)
+
+lemma h_max [simp]: "h (max a b) = max (h a) (h b)"
+  by (cases "a \<le> b") (simp_all add: max_def)
+
+lemma h_sum: "h (sum f A) = (\<Sum>a\<in>A. h (f a))"
+  by (induction A rule: infinite_finite_induct) (simp_all add: h_add)
+
+lemma h_sum_list: "h (sum_list xs) = sum_list (map h xs)"
+  by (induction xs) (simp_all add: h_add)
+
+end
+
+locale dist_embedding = additive_real_embedding where h = h
+  for h :: "'n :: linordered_ab_group_add \<Rightarrow> real" +
+  fixes unreached :: 'n
+  assumes h_unreached [simp]: "h unreached = -1"
+begin
+
+lemma h_eq_neg1 [simp]: "h a = -1 \<longleftrightarrow> a = unreached"
+  using h_eq_iff[of a unreached] by simp
+
+lemma h_neg1_eq [simp]: "-1 = h a \<longleftrightarrow> a = unreached"
+  by (metis h_eq_neg1)
+
+end
+
 end

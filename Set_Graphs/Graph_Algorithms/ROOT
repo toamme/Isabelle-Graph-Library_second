@@ -4,6 +4,7 @@ session "Graph_Algorithms_Dev" = "Directed_Set_Graphs" +
   sessions
     Verified_SAT_Based_AI_Planning
     Undirected_Set_Graphs
+  directories Refinements
   theories
     RBT_Map_Extension
     DFS
@@ -17,6 +18,10 @@ session "Graph_Algorithms_Dev" = "Directed_Set_Graphs" +
     Parent_Map
     Bellman_Ford
     Bellman_Ford_Example
+    
+    Dijkstra
+    "Refinements/Dijkstra_Refinement"
+    "Refinements/Dijkstra_Instantiation"
 
   document_files
     "root.tex"

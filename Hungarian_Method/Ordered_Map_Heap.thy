@@ -1,5 +1,5 @@
 theory Ordered_Map_Heap (*TODO rename to Key_Value_Queue_Instantiation*)
-  imports Complex_Main "Priority_Search_Trees.PST_RBT" Key_Value_Queue_Spec
+  imports Complex_Main "Priority_Search_Trees.PST_RBT" Data_Structures.Key_Value_Queue_Spec
 begin
 
 section \<open>Instantiation of Queue\<close>
