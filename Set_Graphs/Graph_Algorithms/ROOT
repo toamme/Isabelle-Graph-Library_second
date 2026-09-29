@@ -12,6 +12,7 @@ session "Graph_Algorithms_Dev" = "Directed_Set_Graphs" +
     BFS_2
     BFS_Subprocedures
     BFS_Example
+    BFS_3
     DFS_Cycles_Aux
     DFS_Cycles
     DFS_Cycles_Example
@@ -22,6 +23,8 @@ session "Graph_Algorithms_Dev" = "Directed_Set_Graphs" +
     Dijkstra
     "Refinements/Dijkstra_Refinement"
     "Refinements/Dijkstra_Instantiation"
+    "Refinements/BFS_Refinement"
+    "Refinements/BFS_Instantiation"
 
   document_files
     "root.tex"

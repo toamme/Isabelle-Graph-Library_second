@@ -3,4 +3,5 @@ session "Imperative" = "Separation_Logic_Imperative_HOL_Partial" +
   theories
     Imperative_Base
     Imperative_DS
+    Array_Range_Iteration
 

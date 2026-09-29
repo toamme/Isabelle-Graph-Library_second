@@ -46,6 +46,9 @@ session "Directed_Set_Graphs" = "HOL-Eisbach" +
     
     CSR_Buildup
     "Refinements/CSR_Buildup"
+    
+    CSR_Buildup_Simple
+    CSR_Graph_Simple
 
 
   document_files

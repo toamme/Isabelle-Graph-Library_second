@@ -5,7 +5,7 @@ begin
 text \<open>Proof layer of the list instantiation: it imports the single code theory
       \<open>Network_Simplex_Initial_Basis_Code\<close> (all executable definitions) and adds the
       cost-flow-network and acyclic-flow-instance interpretations, the eleven well-formedness
-      assumptions, the proof-only constants (bigM, sized, dfs_sized, is_free) and every lemma.\<close>
+      assumptions, the proof-only constants (bigM, sized, dfs\_sized, is\_free) and every lemma.\<close>
 
 locale initial_basis_lists =
   initial_basis_code_spec where capacity_list = capacity_list +
