@@ -107,6 +107,16 @@ definition heap_extract_min_imp :: "'ai::{heap, linorder} heap_imp \<Rightarrow>
      }
    })"
 
+definition heap_extract_min_key_imp :: "'ai::{heap, linorder} heap_imp \<Rightarrow> (nat \<times> 'ai) option Heap" where
+  "heap_extract_min_key_imp Hi = (case Hi of (Ha, Pa, Ka, Sr) \<Rightarrow> do {
+     sz \<leftarrow> !Sr;
+     if sz = 0 then return None
+     else do {
+       x \<leftarrow> Array.nth Ha 0;
+       k \<leftarrow> Array.nth Ka x;
+       r \<leftarrow> heap_extract_min_imp Hi;
+       return (map_option (\<lambda>y. (y, k)) r) } })"
+
 locale indexed_heap_imp =
   fixes n :: nat
     and U :: "nat set"
@@ -512,11 +522,13 @@ proof -
       by (sep_auto heap: main)
   qed
 qed
-
+(*
 subsection \<open>The heap is a key-value queue\<close>
 
-sublocale iheap: key_value_queue_imp U heap_empty heap_extract_min heap_decrease_key heap_insert
-    "heap_invar U" heap_abstract queue_key heap_assn "heap_empty_imp n k0" heap_extract_min_imp
+sublocale iheap: key_value_queue_imp U heap_empty heap_extract_min
+ heap_decrease_key heap_insert
+    "heap_invar U" heap_abstract  queue_key heap_assn "heap_empty_imp n k0" 
+heap_extract_min_imp
     heap_decrease_key_imp heap_insert_imp
 proof (rule key_value_queue_imp.intro[OF heap_key_value_queue], unfold_locales, goal_cases)
   case 1 show ?case by (rule heap_empty_imp_rule)
@@ -539,6 +551,174 @@ next
   thus ?case using heap_decrease_key_imp_rule 4 H Hi by simp
 qed
 
+qed
+*)
 end
+definition heap_clear_imp :: "'ai heap_imp \<Rightarrow> unit Heap" where
+  "heap_clear_imp Hi = (case Hi of (Ha, Pa, Ka, Sr) \<Rightarrow> (Sr := 0))"
 
+definition heap_key_of_imp :: "'ai::{heap, linorder} heap_imp \<Rightarrow> nat \<Rightarrow> 'ai option Heap" where
+  "heap_key_of_imp Hi x = (case Hi of (Ha, Pa, Ka, Sr) \<Rightarrow> do {
+     sz \<leftarrow> !Sr;
+     i \<leftarrow> Array.nth Pa x;
+     if i < sz then do {
+       y \<leftarrow> Array.nth Ha i;
+       if y = x then do { k \<leftarrow> Array.nth Ka x; return (Some k) } else return None }
+     else return None })"
+
+context indexed_heap_imp
+begin
+
+subsection \<open>Reading the Heap\<close>
+
+lemma heap_read_size_rule:
+  "<heap_assn (hs, ks) (Ha, Pa, Ka, Sr)> !Sr
+   <\<lambda>r. heap_assn (hs, ks) (Ha, Pa, Ka, Sr) * \<up>(r = length hs)>"
+  by sep_auto
+
+lemma heap_read_at_rule:
+  "i < length hs \<Longrightarrow>
+   <heap_assn (hs, ks) (Ha, Pa, Ka, Sr)> Array.nth Ha i
+   <\<lambda>r. heap_assn (hs, ks) (Ha, Pa, Ka, Sr) * \<up>(r = hs ! i)>"
+  by (sep_auto simp: heap_rel_def)
+
+lemma heap_read_pos_rule:
+  "x < n \<Longrightarrow>
+   <heap_assn (hs, ks) (Ha, Pa, Ka, Sr)> Array.nth Pa x
+   <\<lambda>r. heap_assn (hs, ks) (Ha, Pa, Ka, Sr) * \<up>(x \<in> set hs \<longrightarrow> r = idx hs x)>"
+proof -
+  assume x: "x < n"
+  have "\<And>hl pl. heap_rel hs hl pl \<Longrightarrow> x < length pl \<and> (x \<in> set hs \<longrightarrow> pl ! x = idx hs x)"
+    using x heap_rel_len heap_rel_pos by metis
+  thus ?thesis by sep_auto
+qed
+
+lemma heap_read_key_rule:
+  "\<lbrakk>x \<in> set hs; x < n\<rbrakk> \<Longrightarrow>
+   <heap_assn (hs, ks) (Ha, Pa, Ka, Sr)> Array.nth Ka x
+   <\<lambda>r. heap_assn (hs, ks) (Ha, Pa, Ka, Sr) * \<up>(queue_key r = ks x)>"
+proof -
+  assume x: "x \<in> set hs" "x < n"
+  have "\<And>kl. key_rel ks hs kl \<Longrightarrow> x < length kl \<and> queue_key (kl ! x) = ks x"
+    using x unfolding key_rel_def by simp
+  thus ?thesis by sep_auto
+qed
+
+subsection \<open>The Additional Operations\<close>
+
+lemma heap_clear_imp_rule:
+  "<heap_assn H (Ha, Pa, Ka, Sr)> heap_clear_imp (Ha, Pa, Ka, Sr)
+   <\<lambda>_. heap_assn heap_empty (Ha, Pa, Ka, Sr)>"
+  by (cases H) (sep_auto simp: heap_clear_imp_def heap_empty_def heap_rel_def key_rel_def)
+
+lemma heap_key_of_imp_rule:
+  assumes "heap_invar U (hs, ks)" "x \<in> U"
+  shows "<heap_assn (hs, ks) (Ha, Pa, Ka, Sr)> heap_key_of_imp (Ha, Pa, Ka, Sr) x
+         <\<lambda>r. heap_assn (hs, ks) (Ha, Pa, Ka, Sr) *
+              \<up>(case r of None \<Rightarrow> x \<notin> set hs | Some k \<Rightarrow> x \<in> set hs \<and> queue_key k = ks x)>"
+proof -
+  have xn: "x < n" using assms(2) U_bound by auto
+  note heap_assn.simps[simp del]
+  show ?thesis
+  proof (cases "x \<in> set hs")
+    case True
+    have i: "idx hs x < length hs" using True by (rule idx_less)
+    have pos: "<heap_assn (hs, ks) (Ha, Pa, Ka, Sr)> Array.nth Pa x
+               <\<lambda>r. heap_assn (hs, ks) (Ha, Pa, Ka, Sr) * \<up>(r = idx hs x)>"
+      by (sep_auto heap: heap_read_pos_rule[OF xn] simp: True)
+    show ?thesis
+      unfolding heap_key_of_imp_def prod.case
+      by (sep_auto heap: heap_read_size_rule pos heap_read_at_rule[OF i]
+                         heap_read_key_rule[OF True xn]
+                   simp: i True)
+  next
+    case False
+    hence nx: "x \<notin> set hs" .
+    have pos: "<heap_assn (hs, ks) (Ha, Pa, Ka, Sr)> Array.nth Pa x
+               <\<lambda>r. heap_assn (hs, ks) (Ha, Pa, Ka, Sr)>"
+      by (sep_auto heap: heap_read_pos_rule[OF xn])
+    have at: "\<And>i. i < length hs \<Longrightarrow> <heap_assn (hs, ks) (Ha, Pa, Ka, Sr)> Array.nth Ha i
+               <\<lambda>r. heap_assn (hs, ks) (Ha, Pa, Ka, Sr) * \<up>(r \<noteq> x)>"
+      using nx by (sep_auto heap: heap_read_at_rule)
+    show ?thesis
+      unfolding heap_key_of_imp_def prod.case
+      by (sep_auto heap: heap_read_size_rule pos at simp: nx)
+  qed
+qed
+
+lemma heap_extract_min_key_imp_rule:
+  assumes "heap_invar U (hs, ks)"
+  shows "<heap_assn (hs, ks) (Ha, Pa, Ka, Sr)> heap_extract_min_key_imp (Ha, Pa, Ka, Sr)
+         <\<lambda>r. heap_assn (fst (heap_extract_min (hs, ks))) (Ha, Pa, Ka, Sr) *
+              \<up>(map_option fst r = snd (heap_extract_min (hs, ks)) \<and>
+                (\<forall>x k. r = Some (x, k) \<longrightarrow> x \<in> set hs \<and> queue_key k = ks x))>"
+proof(cases "hs = []")
+  case True
+  thus ?thesis
+    unfolding heap_extract_min_key_imp_def prod.case
+    by (sep_auto heap: heap_read_size_rule)
+next
+  case False
+  have h0: "hs ! 0 \<in> set hs" using False by simp
+  have h0n: "hs ! 0 < n" using assms h0 U_bound by auto
+  have ex: "snd (heap_extract_min (hs, ks)) = Some (hs ! 0)" using False by simp
+  show ?thesis
+    unfolding heap_extract_min_key_imp_def prod.case
+    using False
+    by (sep_auto heap: heap_read_size_rule heap_read_at_rule heap_read_key_rule[OF h0 h0n]
+                       heap_extract_min_imp_rule[OF assms] simp: ex)
+qed
+
+subsection \<open>The Heap is a Queue for the Hungarian Method\<close>
+
+lemma heap_key_value_queue_hungarian:
+  "key_value_queue U heap_empty heap_extract_min heap_decrease_key heap_insert
+     (heap_invar U) heap_abstract"
+  using heap_key_value_queue
+  unfolding key_value_queue_def  .
+
+sublocale hqueue: key_value_queue_imp U heap_empty heap_extract_min heap_decrease_key
+    heap_insert "heap_invar U" heap_abstract queue_key heap_assn "heap_empty_imp n k0"
+    heap_clear_imp heap_extract_min_key_imp heap_key_of_imp heap_decrease_key_imp heap_insert_imp
+proof (rule key_value_queue_imp.intro[OF heap_key_value_queue_hungarian], unfold_locales,
+       goal_cases)
+  case 1 show ?case by (rule heap_empty_imp_rule)
+next
+  case (2 H Hi)
+  obtain hs ks where H: "H = (hs, ks)" by fastforce
+  obtain Ha Pa Ka Sr where Hi: "Hi = (Ha, Pa, Ka, Sr)" by (cases Hi) auto
+  show ?case unfolding H Hi by (rule heap_clear_imp_rule)
+next
+  case (3 H Hi)
+  obtain hs ks where H: "H = (hs, ks)" by fastforce
+  obtain Ha Pa Ka Sr where Hi: "Hi = (Ha, Pa, Ka, Sr)" by (cases Hi) auto
+  note heap_assn.simps[simp del]
+  show ?case
+    unfolding H Hi
+    by (rule ht_cons_post[OF heap_extract_min_key_imp_rule[OF 3[unfolded H]]]) sep_auto
+next
+  case (4 H x Hi)
+  obtain hs ks where H: "H = (hs, ks)" by fastforce
+  obtain Ha Pa Ka Sr where Hi: "Hi = (Ha, Pa, Ka, Sr)" by (cases Hi) auto
+  note heap_assn.simps[simp del]
+  show ?case
+    unfolding H Hi
+    by (rule ht_cons_post[OF heap_key_of_imp_rule[OF 4(1)[unfolded H] 4(2)]])
+       (sep_auto split: option.splits)
+next
+  case (5 H x Hi k)
+  obtain hs ks where H: "H = (hs, ks)" by fastforce
+  obtain Ha Pa Ka Sr where Hi: "Hi = (Ha, Pa, Ka, Sr)" by (cases Hi) auto
+  have "x \<notin> set hs" using 5(3) H by auto
+  thus ?case unfolding H Hi by (rule heap_insert_imp_rule[OF 5(1)[unfolded H] 5(2)])
+next
+  case (6 H x k' k Hi)
+  obtain hs ks where H: "H = (hs, ks)" by fastforce
+  obtain Ha Pa Ka Sr where Hi: "Hi = (Ha, Pa, Ka, Sr)" by (cases Hi) auto
+  have "x \<in> set hs" using 6(3) H by auto
+  thus ?case unfolding H Hi by (rule heap_decrease_key_imp_rule[OF 6(1)[unfolded H]])
+qed
+
+
+end
 end

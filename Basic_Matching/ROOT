@@ -5,7 +5,10 @@ session Basic_Matching = "Undirected_Set_Graphs" +
     Undirected_Set_Graphs
     Graph_Algorithms_Dev
     Alternating_Lists
-  (*directories*)
+    Data_Structures
+    
+  directories
+    Refinements
 
   theories
     Matching
@@ -16,6 +19,9 @@ session Basic_Matching = "Undirected_Set_Graphs" +
     Alternating_Forest_Executable
     Matching_Augmentation_Executable
     WBP_Matching_Reductions_Exec
+
+    "Refinements/Alternating_Forest_Imperative"
+    "Refinements/Matching_Augmentation_Imperative"
 		
     
 

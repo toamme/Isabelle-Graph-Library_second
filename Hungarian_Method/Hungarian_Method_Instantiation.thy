@@ -45,6 +45,176 @@ global_interpretation forest_manipulation_spec_i: forest_manipulation_spec
   by(auto intro!: forest_manipulation_spec.intro aug_a_matching.buddy_map.Map_axioms
       simp add: RBT_Set.empty_def set.Set_axioms)
 
+subsection \<open>A Collection of Iterable Neighbourhoods\<close>
+
+text \<open>A purely functional implementation of the indexed collection of iterable sets used by
+      the path search. The neighbourhood of a left vertex \<open>v\<close> is the list of elements of the
+      red-black tree @{term "N v"}. The collection itself maps every vertex to the list of its
+      neighbours that are still to be iterated (the cursor).\<close>
+
+definition "nb_list N v = (case N v of None \<Rightarrow> [] | Some T \<Rightarrow> Tree2.inorder T)"
+definition "nb_cursor C v = (case lookup C v of None \<Rightarrow> [] | Some xs \<Rightarrow> xs)"
+
+definition "nb_invar K N C = 
+  (M.invar C \<and> (\<forall> v \<in> K. distinct (nb_list N v)) \<and>
+   (\<forall> v. \<exists> ys. nb_list N v = ys @ nb_cursor C v))"
+
+definition "nb_abstract N (C::('v::linorder \<times> 'v list) rbt) v = set (nb_list N v)"
+definition "nb_remaining C v = set (nb_cursor C v)"
+definition "nb_iterated N C v = set (nb_list N v) - set (nb_cursor C v)"
+definition "nb_has C v = (nb_cursor C v \<noteq> [])"
+definition "nb_current C v = hd (nb_cursor C v)"
+definition "nb_move C v = (case lookup C v of Some (x # xs) \<Rightarrow> update v xs C | _ \<Rightarrow> C)"
+definition "nb_reset N C v = update v (nb_list N v) C"
+
+lemma nb_cursor_update: 
+  "M.invar C \<Longrightarrow> nb_cursor (update v xs C) u = (if u = v then xs else nb_cursor C u)"
+  by(simp add: nb_cursor_def M.map_update)
+
+lemma distinct_suffix: "\<lbrakk>ys = zs @ xs; distinct ys\<rbrakk> \<Longrightarrow> distinct xs"
+  by simp
+
+lemma nb_invar_suffix: "nb_invar K N C \<Longrightarrow> \<exists> ys. nb_list N v = ys @ nb_cursor C v"
+  by(simp add: nb_invar_def)
+
+lemma nb_indexed_iterable_set:
+  "indexed_iterable_set (nb_invar K N) (nb_abstract N) nb_current nb_has
+                        (nb_iterated N) nb_remaining nb_move (nb_reset N) K"
+proof(unfold_locales, goal_cases)
+  case (1 C i)
+  then show ?case 
+    by(auto simp add: nb_iterated_def nb_remaining_def)
+next
+  case (2 C i)
+  obtain ys where "nb_list N i = ys @ nb_cursor C i"
+    using 2(1) by(auto simp add: nb_invar_def)
+  then show ?case 
+    by(auto simp add: nb_iterated_def nb_remaining_def nb_abstract_def)
+next
+  case (3 C i)
+  then show ?case 
+    by(simp add: nb_has_def nb_remaining_def)
+next
+  case (4 C i)
+  then show ?case 
+    by(simp add: nb_current_def nb_remaining_def)
+next
+  case (5 C i)
+  show ?case
+  proof(cases "nb_cursor C i")
+    case (Cons x xs)
+    hence lookup_is: "lookup C i = Some (x # xs)"
+      by(auto simp add: nb_cursor_def split: option.split_asm)
+    have "\<exists> ys. nb_list N v = ys @ nb_cursor (update i xs C) v" for v
+    proof(cases "v = i")
+      case True
+      then obtain ys where "nb_list N i = ys @ x # xs"
+        using nb_invar_suffix[OF 5(1), of i] Cons by auto
+      then show ?thesis 
+        using 5(1) True
+        by(auto intro!: exI[of _ "ys @ [x]"] simp add: nb_cursor_update nb_invar_def)
+    next
+      case False
+      then show ?thesis 
+        using 5(1) by(simp add: nb_cursor_update nb_invar_def)
+    qed
+    then show ?thesis 
+      using 5(1)
+      by(simp add: nb_move_def lookup_is nb_invar_def M.invar_update)
+  qed (insert 5(1), auto simp add: nb_move_def nb_cursor_def split: option.split list.split)
+next
+  case (6 C i j)
+  then show ?case 
+    by(simp add: nb_abstract_def)
+next
+  case (7 C i)
+  obtain x xs where Cons: "nb_cursor C i = x # xs"
+    using 7(3) by(cases "nb_cursor C i")(auto simp add: nb_remaining_def)
+  hence lookup_is: "lookup C i = Some (x # xs)"
+    by(auto simp add: nb_cursor_def split: option.split_asm)
+  obtain ys where "nb_list N i = ys @ x # xs" 
+    using nb_invar_suffix[OF 7(1), of i] Cons by auto
+  hence "x \<notin> set xs"
+    using 7(1,2) by(auto simp add: nb_invar_def)
+  then show ?case 
+    using 7(1) Cons
+    by(auto simp add: nb_move_def lookup_is nb_remaining_def nb_current_def
+                      nb_cursor_update nb_invar_def)
+next
+  case (8 C i)
+  obtain x xs where Cons: "nb_cursor C i = x # xs"
+    using 8(3) by(cases "nb_cursor C i")(auto simp add: nb_remaining_def)
+  hence lookup_is: "lookup C i = Some (x # xs)"
+    by(auto simp add: nb_cursor_def split: option.split_asm)
+  obtain ys where ys: "nb_list N i = ys @ x # xs" 
+    using nb_invar_suffix[OF 8(1), of i] Cons by auto
+  hence "x \<notin> set xs"
+    using 8(1,2) by(auto simp add: nb_invar_def)
+  then show ?case 
+    using 8(1) Cons ys
+    by(auto simp add: nb_move_def lookup_is nb_iterated_def nb_current_def
+                      nb_cursor_update nb_invar_def)
+next
+  case (9 C i j)
+  obtain x xs where Cons: "nb_cursor C i = x # xs"
+    using 9(3) by(cases "nb_cursor C i")(auto simp add: nb_remaining_def)
+  hence lookup_is: "lookup C i = Some (x # xs)"
+    by(auto simp add: nb_cursor_def split: option.split_asm)
+  then show ?case 
+    using 9(1,4)
+    by(auto simp add: nb_move_def nb_remaining_def nb_cursor_update nb_invar_def)
+next
+  case (10 C i j)
+  obtain x xs where Cons: "nb_cursor C i = x # xs"
+    using 10(3) by(cases "nb_cursor C i")(auto simp add: nb_remaining_def)
+  hence lookup_is: "lookup C i = Some (x # xs)"
+    by(auto simp add: nb_cursor_def split: option.split_asm)
+  then show ?case 
+    using 10(1,4)
+    by(auto simp add: nb_move_def nb_iterated_def nb_cursor_update nb_invar_def)
+next
+  case (11 C i)
+  then show ?case 
+    by(auto simp add: nb_reset_def nb_invar_def nb_cursor_update M.invar_update)
+next
+  case (12 C i j)
+  then show ?case 
+    by(simp add: nb_abstract_def)
+next
+  case (13 C i)
+  then show ?case 
+    by(simp add: nb_reset_def nb_iterated_def nb_invar_def nb_cursor_update)
+next
+  case (14 C i)
+  then show ?case 
+    by(simp add: nb_reset_def nb_remaining_def nb_abstract_def nb_invar_def nb_cursor_update)
+next
+  case (15 C i j)
+  then show ?case 
+    by(simp add: nb_reset_def nb_remaining_def nb_invar_def nb_cursor_update)
+next
+  case (16 C i j)
+  then show ?case 
+    by(simp add: nb_reset_def nb_iterated_def nb_invar_def nb_cursor_update)
+qed
+
+lemma nb_invar_init:
+  assumes "\<And> v T. \<lbrakk>v \<in> K; N v = Some T\<rbrakk> \<Longrightarrow> vset_inv T"
+  shows "nb_invar K N Leaf"
+proof-
+  have "distinct (nb_list N v)" if "v \<in> K" for v
+    using assms[OF that]
+    by(auto simp add: nb_list_def vset_inv_def intro: RBT_Map_Extension.bst_distinct_inorder 
+               split: option.split)
+  thus ?thesis
+    using M.invar_empty 
+    by(auto simp add: nb_invar_def nb_cursor_def RBT_Set.empty_def)
+qed
+
+lemma nb_abstract_is:
+  "N v = Some T \<Longrightarrow> nb_abstract N C v = vset_to_set T"
+  by(simp add: nb_abstract_def nb_list_def)
+
 global_interpretation pd_path_search_spec: primal_dual_path_search_spec
   (*the graph*)
   where G = G
@@ -52,7 +222,17 @@ global_interpretation pd_path_search_spec: primal_dual_path_search_spec
     and right = right
     and buddy = buddy
     and edge_costs = edge_costs
-    and right_neighbs = right_neighbs
+    and edge_costs_code = edge_costs
+    (*the neighbourhoods*)
+    and rnb_invar = "nb_invar (vset_to_set left) right_neighbs"
+    and rnb_abstract = "nb_abstract right_neighbs"
+    and rnb_current = nb_current
+    and rnb_has = nb_has
+    and rnb_iterated = "nb_iterated right_neighbs"
+    and rnb_remaining = nb_remaining
+    and rnb_move = nb_move
+    and rnb_reset = "nb_reset right_neighbs"
+    and rnb_init = Leaf
     (*the forest*)
     and evens = evens
     and odds = odds
@@ -106,6 +286,9 @@ defines search_path = pd_path_search_spec.search_path
   and init_best_even_neighbour = pd_path_search_spec.init_best_even_neighbour
   and update_best_even_neighbours = pd_path_search_spec.update_best_even_neighbours
   and update_best_even_neighbour = pd_path_search_spec.update_best_even_neighbour
+  and scan_neighbours = pd_path_search_spec.scan_neighbours
+  and relax_neighbour = pd_path_search_spec.relax_neighbour
+  and w\<^sub>\<pi>_code = pd_path_search_spec.w\<^sub>\<pi>_code
   and path_search_forest_roots = pd_path_search_spec.forest_roots
   by(auto intro!: primal_dual_path_search_spec.intro  Map_axioms_as_needed set.Set_axioms
       simp add: RBT_Set.empty_def)
@@ -379,7 +562,7 @@ global_interpretation hungarian_top_loop:
   hungarian_loop_spec
   where path_search =  "\<lambda> M P. search_path left (lookup M)
                      (edge_costs::('a::linorder) \<Rightarrow> 'a \<Rightarrow> real) 
-                     (default_neighb vset_empty right_neighbs) P potential_lookup potential_upd 
+                     right_neighbs P potential_lookup potential_upd 
                      (\<lambda> f T init. fold_rbt (\<lambda> x y. f y x) init T)
                      (\<lambda> f T init. fold_rbt (\<lambda> x y. f y x) init T)
                      (\<lambda> f T init. fold_rbt (\<lambda> x y. f y x) init T)
@@ -622,7 +805,7 @@ abbreviation "path_search_precond \<equiv>
 
 abbreviation "search_path_here \<equiv>
    (\<lambda> M \<pi>. search_path left (lookup M) edge_costs
-        (default_neighb vset_empty right_neighbs) \<pi> lookup
+        right_neighbs \<pi> lookup
         update (\<lambda> f T init. fold_rbt (\<lambda> x y. f y x) init T)
                      (\<lambda> f T init. fold_rbt (\<lambda> x y. f y x) init T)
                      (\<lambda> f T init. fold_rbt (\<lambda> x y. f y x) init T)
@@ -719,7 +902,17 @@ next
       and right = right
       and buddy = "lookup M"
       and edge_costs = edge_costs
-      and right_neighbs = "default_neighb vset_empty right_neighbs"
+      and edge_costs_code = edge_costs
+      (*the neighbourhoods*)
+      and rnb_invar = "nb_invar L right_neighbs"
+      and rnb_abstract = "nb_abstract right_neighbs"
+      and rnb_current = nb_current
+      and rnb_has = nb_has
+      and rnb_iterated = "nb_iterated right_neighbs"
+      and rnb_remaining = nb_remaining
+      and rnb_move = nb_move
+      and rnb_reset = "nb_reset right_neighbs"
+      and rnb_init = Leaf
       (*the forest*)
       and evens = evens
       and odds = odds
@@ -736,7 +929,7 @@ next
       and heap_decrease_key = queue_decrease_key
       and heap_empty = queue_empty
       and heap_extract_min = queue_extract_min
-      and heap_invar = queue_invar
+      and heap_invar = "queue_invar_in (Vs G)"
       and heap_abstract = queue_abstract
       (*the potential*)
       and initial_pot = \<pi>
@@ -775,24 +968,37 @@ next
   next
     case 2
     thus ?case
-      using key_value_queue_spec_satisfied.key_value_queue_axioms by simp
+      by(rule queue_key_value_queue)
   next
     case 3
-    have help1:
-      "v \<in> L \<Longrightarrow> vset_inv (default_neighb vset_empty right_neighbs v)" for v
-      by(auto simp add: default_neighb_def split: option.split
-          intro: vset G)
+    thus ?case
+      by(rule nb_indexed_iterable_set)
+  next
+    case 4
+    have help1: "nb_invar L right_neighbs Leaf"
+      using G(5) by(rule nb_invar_init)
     have help2: "v \<in> L \<Longrightarrow>
-         vset_to_set (default_neighb vset_empty right_neighbs v) = 
-          {u | u. {v, u} \<in> G}" for v
-      using G(6)
-      by(fastforce simp add: default_neighb_def vset(2) split: option.split)
+         nb_abstract right_neighbs Leaf v = {u | u. {v, u} \<in> G}" for v
+    proof(goal_cases)
+      case 1
+      then obtain N where N: "right_neighbs v = Some N"
+        "vset_to_set N = {u | u. {v, u} \<in> G}"
+        using G(6)[OF 1] by auto
+      show ?case
+        using nb_abstract_is[of right_neighbs v N, OF N(1)] N(2) by simp
+    qed
+    have help7: "edge_costs u v = edge_costs u v" for u v
+      by simp
     have help3: "{u, v} \<in> G \<Longrightarrow>
            abstract_real_map (lookup \<pi>) u +
            abstract_real_map (lookup \<pi>) v
            \<le> edge_costs u v" for u v
-      using feasible_min_perfect_dualD path_search_precondD(5) w_is_edge_costs
-      by fastforce
+    proof(goal_cases)
+      case 1
+      show ?case
+        using feasible_min_perfect_dualD[OF path_search_precondD(5) 1 refl]
+        by(simp add: w_is_edge_costs[OF 1])
+    qed
     have help4: "{u, v} \<in> matching_abstract M \<Longrightarrow>
            abstract_real_map (lookup \<pi>) u +
            abstract_real_map (lookup \<pi>) v =
@@ -801,7 +1007,8 @@ next
           simp add: tight_subgraph_def doubleton_eq_iff
           w_is_edge_costs \<M>_is symmetric_weights)
     have help5: "dom (lookup \<pi>) \<subseteq> L \<union> R"
-      using path_search_precondD(2)  G(1) bipartite_vs_subset by blast
+      using conjunct2[OF path_search_precondD(2)] bipartite_vs_subset[OF G(1)]
+      by(rule subset_trans)
     note help6 = symmetric_buddiesD[OF 
         matching_invarD(2)[OF path_search_precondD(1)]]
     show ?case
@@ -809,7 +1016,7 @@ next
           help3 | assumption)+
       by(unfold \<M>_is help6| intro help4 conjunct1[OF path_search_precondD(2)]
           potential best_even_neighbour vset missed help5 fold_rbt_as_needed' vset_is_empty
-          path_search_precondD(3)[simplified aug_a_matching.\<M>_def'] filter_rbt_as_needed
+          path_search_precondD(3)[simplified aug_a_matching.\<M>_def'] filter_rbt_as_needed refl
         | assumption)+
   qed
   have search_path_is:
@@ -843,7 +1050,8 @@ next
     proof(rule hungarian_top_loop.good_search_resultI, goal_cases)
       case 1
       then show ?case 
-        using search_path_in_this_case(5,6) G(4) by blast
+        using search_path_in_this_case(5) subset_trans[OF search_path_in_this_case(6) G(4)]
+        by simp
     next
       case 2
       show ?case

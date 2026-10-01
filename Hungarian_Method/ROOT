@@ -11,9 +11,16 @@ sessions
   Primal_Dual_Bipartite_Matching
   Verified_SAT_Based_AI_Planning
   Tutte_Theorem
+  Matching_LPs
+  Separation_Logic_Imperative_HOL_Partial
+  Directed_Set_Graphs
+
+directories
+  Refinements
 
 
 theories
+	Path_Search_Result
 	Ordered_Map_Heap
 	Egervary
 	Naive_Primal_Dual
@@ -22,6 +29,17 @@ theories
 	Hungarian_Method_Instantiation
 	WBP_Matching_Exec
 	Hungarian_Example	
+	Matching_Certificate_Spec
+	"Refinements/Init_Potential_Collection"
+	"Refinements/Init_Potential_Imperative"
+	"Refinements/Primal_Dual_Path_Search_Imperative"
+	"Refinements/Hungarian_Method_Top_Loop_Imperative"
+	"Refinements/Hungarian_Method_CSR_Instantiation"
+	"Refinements/Hungarian_CSR_Variants"
+	"Refinements/Hungarian_CSR_Example"
+	"Refinements/Matching_Certificate_Imperative"
+	"Refinements/Matching_Certificate_Arrays"
+	"Refinements/Matching_Certificate_Example"
 
 document_files
   "root.tex"

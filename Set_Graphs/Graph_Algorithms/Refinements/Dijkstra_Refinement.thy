@@ -102,7 +102,7 @@ locale dijkstra_impl_spec =
     and out_has_imp :: "'gi \<Rightarrow> 'v \<Rightarrow> bool Heap"
     and out_move_imp :: "'gi \<Rightarrow> 'v \<Rightarrow> unit Heap"
     and out_reset_imp :: "'gi \<Rightarrow> 'v \<Rightarrow> unit Heap"
-    and queue_extract_min_imp :: "'hi \<Rightarrow> 'v option Heap"
+    and queue_extract_min_imp :: "'hi \<Rightarrow> ('v \<times> 'n) option Heap"
     and queue_decrease_key_imp :: "'hi \<Rightarrow> 'v \<Rightarrow> 'n \<Rightarrow> unit Heap"
     and queue_insert_imp :: "'hi \<Rightarrow> 'v \<Rightarrow> 'n \<Rightarrow> unit Heap"
     and parent_lookup_imp :: "'pi \<Rightarrow> 'v \<Rightarrow> 'e option Heap"
@@ -175,10 +175,12 @@ partial_function (heap) dijkstra_loop_imp ::
             insert_source_imp s v;
             dijkstra_loop_imp s None }
           else do {
-            mo \<leftarrow> queue_extract_min_imp (dimp_heap s);
+            (mo) \<leftarrow> queue_extract_min_imp (dimp_heap s);
             (case mo of
                None \<Rightarrow> return None
-             | Some u \<Rightarrow> do {
+             | Some u \<Rightarrow> 
+               case u of (u, k) \<Rightarrow>
+               do {
                  sn \<leftarrow> seen_isin_imp (dimp_seen s) u;
                  if sn then dijkstra_loop_imp s None
                  else do {
@@ -445,9 +447,10 @@ qed
 lemma extract_min_state[sep_heap_rules]:
   "queue_invar (dij_heap st) \<Longrightarrow>
    <state_assn st si> queue_extract_min_imp (dimp_heap si)
-   <\<lambda>r. state_assn (st\<lparr>dij_heap := Product_Type.fst (queue_extract_min (dij_heap st))\<rparr>) si *
-        \<up>(r = Product_Type.snd (queue_extract_min (dij_heap st)))>"
-  unfolding state_assn_def by sep_auto
+   <\<lambda>r. state_assn (st\<lparr>dij_heap := Product_Type.fst (queue_extract_min (dij_heap st))\<rparr>) si 
+        * \<up>((case r of None \<Rightarrow> None | Some (v, k) \<Rightarrow> Some v) =
+            prod.snd (queue_extract_min (dij_heap st)))>"
+  unfolding state_assn_def by (sep_auto split: option.split)
 
 lemma seen_isin_state[sep_heap_rules]:
   "\<lbrakk>seen_invar (dij_seen st); u \<in> \<V>\<rbrakk> \<Longrightarrow>

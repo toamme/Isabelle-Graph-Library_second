@@ -14,12 +14,15 @@ session "Data_Structures" = "HOL-Data_Structures" +
     Fixed_Univ_Set_Specs
     Fixed_Univ_Map_Specs
     Iterable_Set_Specs
-    Key_Value_Queue_Spec
+    Fixed_Univ_Key_Value_Queue_Specs
+    Real_Embedding
     
     Fixed_Univ_Set_Specs_Imp
     Fixed_Univ_Map_Specs_Imp
     Iterable_Set_Specs_Imp
     Fixed_Univ_Key_Value_Queue_Specs_Imp  
+    Imp_Map_Set_Addons
+    Array_Map_Set_Addons
     
     "Implementations/Indexed_Heap" 
     "Implementations/Indexed_Heap_Imperative"

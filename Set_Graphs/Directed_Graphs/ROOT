@@ -45,7 +45,9 @@ session "Directed_Set_Graphs" = "HOL-Eisbach" +
     Multigraph_Potentials
     
     CSR_Buildup
-    "Refinements/CSR_Buildup"
+    "Refinements/CSR_Buildup_Imperative"
+    "Refinements/Weighted_Neighbourhoods_Imperative_Spec"
+    "Refinements/CSR_Graph"
     
     CSR_Buildup_Simple
     CSR_Graph_Simple

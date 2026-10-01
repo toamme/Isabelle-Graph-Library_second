@@ -1,6 +1,6 @@
 theory Dijkstra_Instantiation
   imports Dijkstra_Refinement Data_Structures.Indexed_Heap_Imperative 
-    "Directed_Set_Graphs.CSR_Buildup_Imperative"
+    "Directed_Set_Graphs.CSR_Graph"
 begin
 
 section \<open>An Instantiation of the Imperative Dijkstra\<close>
@@ -13,7 +13,8 @@ text \<open>The locale @{locale dijkstra_impl_refine} is instantiated with purel
         \<^item> the queue is the indexed heap of @{theory Data_Structures.Indexed_Heap_Imperative},
         \<^item> the sources are an array traversed by a cursor held in a reference, and
         \<^item> the graph is in compressed sparse row (CSR) form, built by
-          @{theory Directed_Set_Graphs.CSR_Buildup_Imperative}: an array \<open>B\<close> of block starts, an
+          @{theory Directed_Set_Graphs.CSR_Buildup_Imperative} and given in
+          @{theory Directed_Set_Graphs.CSR_Graph}: an array \<open>B\<close> of block starts, an
           array \<open>E\<close> of edges sorted by source, and a cursor array \<open>C\<close>, initially a copy of the start
           indices. Advancing the iterator of a vertex increments its cursor; resetting it copies the
           start index back.
@@ -214,321 +215,18 @@ qed
 end
 
 
-subsection \<open>The graph in CSR form with a cursor array\<close>
-
-text \<open>The out-edges of vertex \<open>v\<close> are the entries \<open>E!i\<close> for \<open>B!v \<le> i < B!(v+1)\<close>. The functional
-      model of the collection of iterators is the cursor function \<open>c\<close>: the edges before \<open>c v\<close> are
-      iterated, the ones from \<open>c v\<close> on remain. The arrays \<open>B\<close> and \<open>E\<close> are never modified, so the
-      start index needed for a reset is always available in \<open>B\<close>.\<close>
-
-lemma map_nth_upt_take_drop:
-  "b \<le> length xs \<Longrightarrow> map ((!) xs) [a..<b] = take (b - a) (drop a xs)"
-  by (rule nth_equalityI) auto
-
-locale csr_graph =
-  fixes n :: nat
-    and K :: "nat set"
-    and B :: "nat list"
-    and E :: "'e::heap list"
-  assumes K_bound: "K \<subseteq> {..<n}"
-    and B_length: "length B = Suc n"
-    and B_mono: "\<And>v. v < n \<Longrightarrow> B ! v \<le> B ! Suc v"
-    and B_bound: "\<And>v. v < n \<Longrightarrow> B ! Suc v \<le> length E"
-    and E_distinct: "distinct E"
-begin
-
-definition "seg a b = (!) E ` {a..<b}"
-
-definition "csr_invar c \<longleftrightarrow> (\<forall>v\<in>K. B ! v \<le> c v \<and> c v \<le> B ! Suc v)"
-definition "csr_abstract (c::nat \<Rightarrow> nat) v = seg (B ! v) (B ! Suc v)"
-definition "csr_current c v = E ! c v"
-definition "csr_has c v \<longleftrightarrow> c v < B ! Suc v"
-definition "csr_iterated c v = seg (B ! v) (c v)"
-definition "csr_remaining c v = seg (c v) (B ! Suc v)"
-definition "csr_move c v = (if c v < B ! Suc v then c(v := Suc (c v)) else c)"
-definition "csr_reset c v = c(v := B ! v)"
-
-lemma K_less: "v \<in> K \<Longrightarrow> v < n"
-  using K_bound by auto
-
-lemma seg_empty_iff: "seg a b = {} \<longleftrightarrow> b \<le> a"
-  by (auto simp: seg_def)
-
-lemma seg_Int:
-  assumes "b \<le> length E" "b' \<le> length E"
-  shows "seg a b \<inter> seg a' b' = (!) E ` ({a..<b} \<inter> {a'..<b'})"
-proof -
-  have "inj_on ((!) E) {..<length E}" using E_distinct by (simp add: inj_on_nth)
-  then show ?thesis unfolding seg_def using assms by (intro inj_on_image_Int[symmetric]) auto
-qed
-
-lemma seg_Un: "a \<le> b \<Longrightarrow> b \<le> c \<Longrightarrow> seg a b \<union> seg b c = seg a c"
-  unfolding seg_def by (metis image_Un ivl_disj_un_two(3))
-
-lemma seg_Suc:
-  assumes "a < b" "b \<le> length E"
-  shows "seg (Suc a) b = seg a b - {E ! a}"
-proof -
-  have "inj_on ((!) E) {..<length E}" using E_distinct by (simp add: inj_on_nth)
-  then have "(!) E ` ({a..<b} - {a}) = (!) E ` {a..<b} - (!) E ` {a}"
-    using assms by (intro inj_on_image_set_diff) auto
-  moreover have "{a..<b} - {a} = {Suc a..<b}" by auto
-  ultimately show ?thesis by (simp add: seg_def)
-qed
-
-lemma seg_snoc: "a \<le> b \<Longrightarrow> seg a (Suc b) = seg a b \<union> {E ! b}"
-  unfolding seg_def by (auto simp: less_Suc_eq)
-
-lemma remaining_ne: "csr_remaining c v \<noteq> {} \<longleftrightarrow> c v < B ! Suc v"
-  by (simp add: csr_remaining_def seg_empty_iff not_le)
-
-sublocale csr: indexed_iterable_set csr_invar csr_abstract csr_current csr_has csr_iterated
-    csr_remaining csr_move csr_reset K
-proof (unfold_locales, goal_cases)
-  case (1 C i)
-  then have "B ! Suc i \<le> length E" "C i \<le> length E" "C i \<le> B ! Suc i"
-    using B_bound[OF K_less] by (auto simp: csr_invar_def intro: order_trans)
-  then show ?case by (auto simp: csr_iterated_def csr_remaining_def seg_Int)
-next
-  case (2 C i) then show ?case
-    by (auto simp: csr_invar_def csr_iterated_def csr_remaining_def csr_abstract_def seg_Un)
-next
-  case (3 C i) then show ?case by (simp add: csr_has_def remaining_ne)
-next
-  case (4 C i) then show ?case
-    by (auto simp: csr_current_def csr_remaining_def remaining_ne seg_def)
-next
-  case (5 C i) then show ?case
-    by (auto simp: csr_invar_def csr_move_def)
-next
-  case (6 C i j) then show ?case by (simp add: csr_abstract_def)
-next
-  case (7 C i)
-  then have "C i < B ! Suc i" "B ! Suc i \<le> length E"
-    using B_bound[OF K_less] by (auto simp: remaining_ne)
-  then show ?case by (simp add: csr_remaining_def csr_move_def csr_current_def seg_Suc)
-next
-  case (8 C i)
-  then have "C i < B ! Suc i" "B ! i \<le> C i" by (auto simp: remaining_ne csr_invar_def)
-  then show ?case by (simp add: csr_iterated_def csr_move_def csr_current_def seg_snoc)
-next
-  case (9 C i j) then show ?case by (simp add: csr_remaining_def csr_move_def)
-next
-  case (10 C i j) then show ?case by (simp add: csr_iterated_def csr_move_def)
-next
-  case (11 C i) then show ?case
-    by (auto simp: csr_invar_def csr_reset_def B_mono K_less)
-next
-  case (12 C i j) then show ?case by (simp add: csr_abstract_def)
-next
-  case (13 C i) then show ?case by (simp add: csr_iterated_def csr_reset_def seg_def)
-next
-  case (14 C i) then show ?case by (simp add: csr_remaining_def csr_reset_def csr_abstract_def)
-next
-  case (15 C i j) then show ?case by (simp add: csr_remaining_def csr_reset_def)
-next
-  case (16 C i j) then show ?case by (simp add: csr_iterated_def csr_reset_def)
-qed
-
-end
-
-
-
-text \<open>The imperative collection: the arrays \<open>B\<close> and \<open>E\<close> and the cursor array \<open>C\<close> of size \<open>n\<close>.
-      The programs are global.\<close>
-
-definition csr_has_imp :: "nat array \<times> 'e::heap array \<times> nat array \<Rightarrow> nat \<Rightarrow> bool Heap" where
-  "csr_has_imp = (\<lambda>(Ba, Ea, Ca) v. do { i \<leftarrow> Array.nth Ca v; e \<leftarrow> Array.nth Ba (Suc v); return (i < e) })"
-
-definition csr_current_imp :: "nat array \<times> 'e::heap array \<times> nat array \<Rightarrow> nat \<Rightarrow> 'e Heap" where
-  "csr_current_imp = (\<lambda>(Ba, Ea, Ca) v. do { i \<leftarrow> Array.nth Ca v; Array.nth Ea i })"
-
-definition csr_move_imp :: "nat array \<times> 'e::heap array \<times> nat array \<Rightarrow> nat \<Rightarrow> unit Heap" where
-  "csr_move_imp = (\<lambda>(Ba, Ea, Ca) v. do { i \<leftarrow> Array.nth Ca v; _ \<leftarrow> Array.upd v (Suc i) Ca; return () })"
-
-definition csr_reset_imp :: "nat array \<times> 'e::heap array \<times> nat array \<Rightarrow> nat \<Rightarrow> unit Heap" where
-  "csr_reset_imp = (\<lambda>(Ba, Ea, Ca) v. do { s \<leftarrow> Array.nth Ba v; _ \<leftarrow> Array.upd v s Ca; return () })"
-
-text \<open>The cursor array is initialised as a copy of the start indices.\<close>
-
-partial_function (heap) csr_copy_imp :: "nat \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow> nat \<Rightarrow> unit Heap" where
-  "csr_copy_imp n Ba Ca i =
-     (if i < n then do {
-        s \<leftarrow> Array.nth Ba i;
-        _ \<leftarrow> Array.upd i s Ca;
-        csr_copy_imp n Ba Ca (Suc i) }
-      else return ())"
-
-definition csr_cursor_init :: "nat \<Rightarrow> nat array \<Rightarrow> nat array Heap" where
-  "csr_cursor_init n Ba = do { Ca \<leftarrow> Array.new n 0; csr_copy_imp n Ba Ca 0; return Ca }"
-
-context csr_graph
-begin
-
-definition csr_assn :: "(nat \<Rightarrow> nat) \<Rightarrow> nat array \<times> 'e array \<times> nat array \<Rightarrow> assn" where
-  "csr_assn c = (\<lambda>(Ba, Ea, Ca). Ba \<mapsto>\<^sub>a B * Ea \<mapsto>\<^sub>a E *
-     (\<exists>\<^sub>Al. Ca \<mapsto>\<^sub>a l * \<up>(length l = n \<and> (\<forall>v\<in>K. l ! v = c v))))"
-
-lemma csr_has_imp_rule:
-  assumes "v \<in> K"
-  shows "<csr_assn c (Ba, Ea, Ca)> csr_has_imp (Ba, Ea, Ca) v
-         <\<lambda>r. csr_assn c (Ba, Ea, Ca) * \<up>(r = csr_has c v)>"
-  using K_less[OF assms] assms B_length
-  by (sep_auto simp: csr_assn_def csr_has_imp_def csr_has_def)
-
-lemma csr_current_imp_rule:
-  assumes "v \<in> K" "csr_invar c" "csr_remaining c v \<noteq> {}"
-  shows "<csr_assn c (Ba, Ea, Ca)> csr_current_imp (Ba, Ea, Ca) v
-         <\<lambda>r. csr_assn c (Ba, Ea, Ca) * \<up>(r = csr_current c v)>"
-proof -
-  have "c v < length E"
-    using assms B_bound[OF K_less[OF assms(1)]] by (auto simp: remaining_ne)
-  then show ?thesis
-    using K_less[OF assms(1)] assms(1)
-    by (sep_auto simp: csr_assn_def csr_current_imp_def csr_current_def)
-qed
-
-lemma csr_move_imp_rule:
-  assumes "v \<in> K" "csr_remaining c v \<noteq> {}"
-  shows "<csr_assn c (Ba, Ea, Ca)> csr_move_imp (Ba, Ea, Ca) v
-         <\<lambda>_. csr_assn (csr_move c v) (Ba, Ea, Ca)>"
-proof -
-  have m: "csr_move c v = c(v := Suc (c v))"
-    using assms(2) by (simp add: csr_move_def remaining_ne)
-  show ?thesis
-    using K_less[OF assms(1)] assms(1)
-    by (sep_auto simp: csr_assn_def csr_move_imp_def m nth_list_update)
-qed
-
-lemma csr_reset_imp_rule:
-  assumes "v \<in> K"
-  shows "<csr_assn c (Ba, Ea, Ca)> csr_reset_imp (Ba, Ea, Ca) v
-         <\<lambda>_. csr_assn (csr_reset c v) (Ba, Ea, Ca)>"
-  using K_less[OF assms] assms B_length
-  by (sep_auto simp: csr_assn_def csr_reset_imp_def csr_reset_def nth_list_update)
-
-sublocale csr_imp: indexed_iterable_set_imp csr_invar csr_abstract csr_current csr_has
-    csr_iterated csr_remaining csr_move csr_reset K csr_assn csr_current_imp csr_has_imp
-    csr_move_imp csr_reset_imp
-proof (unfold_locales, goal_cases)
-  case (1 C i Ci) then show ?case
-    by (cases Ci) (simp add: csr_current_imp_rule)
-next
-  case (2 C i Ci) then show ?case
-    by (cases Ci) (simp add: csr_has_imp_rule)
-next
-  case (3 C i Ci) then show ?case
-    by (cases Ci) (simp add: csr_move_imp_rule)
-next
-  case (4 C i Ci) then show ?case
-    by (cases Ci) (simp add: csr_reset_imp_rule)
-qed
-
-lemma csr_copy_imp_rule:
-  "\<lbrakk>i \<le> n; length l = n; \<forall>j<i. l ! j = B ! j\<rbrakk> \<Longrightarrow>
-   <Ba \<mapsto>\<^sub>a B * Ca \<mapsto>\<^sub>a l> csr_copy_imp n Ba Ca i
-   <\<lambda>_. Ba \<mapsto>\<^sub>a B * (\<exists>\<^sub>Al'. Ca \<mapsto>\<^sub>a l' * \<up>(length l' = n \<and> (\<forall>j<n. l' ! j = B ! j)))>"
-proof (induction "n - i" arbitrary: i l)
-  case 0
-  then have "i = n" by simp
-  with 0 show ?case by (subst csr_copy_imp.simps) sep_auto
-next
-  case (Suc k)
-  then have i: "i < n" by simp
-  have IH: "<Ba \<mapsto>\<^sub>a B * Ca \<mapsto>\<^sub>a l[i := B ! i]> csr_copy_imp n Ba Ca (Suc i)
-            <\<lambda>_. Ba \<mapsto>\<^sub>a B * (\<exists>\<^sub>Al'. Ca \<mapsto>\<^sub>a l' * \<up>(length l' = n \<and> (\<forall>j<n. l' ! j = B ! j)))>"
-    by (rule Suc.hyps(1)) (use Suc i in \<open>auto simp: nth_list_update less_Suc_eq\<close>)
-  show ?case
-    using i B_length Suc.prems by (subst csr_copy_imp.simps) (sep_auto heap: IH)
-qed
-
-lemma csr_cursor_init_rule:
-  "<Ba \<mapsto>\<^sub>a B * Ea \<mapsto>\<^sub>a E> csr_cursor_init n Ba <\<lambda>Ca. csr_assn (\<lambda>v. B ! v) (Ba, Ea, Ca)>"
-proof -
-  have K': "\<And>l' v. length l' = n \<Longrightarrow> v \<in> K \<Longrightarrow> v < length l'" using K_less by auto
-  show ?thesis
-    unfolding csr_cursor_init_def csr_assn_def
-    by (sep_auto heap: csr_copy_imp_rule simp: K')
-qed
-
-end
-
-subsection \<open>Edges and the input\<close>
-
-text \<open>The graph is given by two lists of equal length \<open>m\<close> holding the first and the second
-      endpoints; the \<open>i\<close>-th entries become the edge \<open>(u, v, i)\<close>.\<close>
-
-type_synonym edge = "nat \<times> nat \<times> nat"
-
-definition e_src :: "edge \<Rightarrow> nat" where "e_src e = fst e"
-definition e_tgt :: "edge \<Rightarrow> nat" where "e_tgt e = fst (snd e)"
-definition e_id :: "edge \<Rightarrow> nat" where "e_id e = snd (snd e)"
-
-definition mk_edge :: "nat list \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> edge" where
-  "mk_edge fs ts i = (fs ! i, ts ! i, i)"
-
-lemma mk_edge_simps[simp]:
-  "e_src (mk_edge fs ts i) = fs ! i" "e_tgt (mk_edge fs ts i) = ts ! i" "e_id (mk_edge fs ts i) = i"
-  by (simp_all add: mk_edge_def e_src_def e_tgt_def e_id_def)
-
-definition edge_seq :: "nat list \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> edge list" where
-  "edge_seq fs ts i = map (mk_edge fs ts) [i..<length fs]"
-
-definition edge_next :: "nat list \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> (edge \<times> nat) option" where
-  "edge_next fs ts i = (if i < length fs then Some (mk_edge fs ts i, Suc i) else None)"
-
-definition edges :: "nat list \<Rightarrow> nat list \<Rightarrow> edge set" where
-  "edges fs ts = set (edge_seq fs ts 0)"
-
-abbreviation verts :: "nat list \<Rightarrow> nat list \<Rightarrow> nat set" where
-  "verts fs ts \<equiv> dVs (multigraph_spec.make_pair e_src e_tgt ` edges fs ts)"
-
-lemma edge_seq_distinct: "distinct (edge_seq fs ts i)"
-  unfolding edge_seq_def by (simp add: distinct_map inj_on_def mk_edge_def)
-
-lemma edges_iff: "e \<in> edges fs ts \<longleftrightarrow> (\<exists>i<length fs. e = mk_edge fs ts i)"
-  by (auto simp: edges_def edge_seq_def)
-
-lemma edge_iterator: "iterator (edge_next fs ts) (edge_seq fs ts) (\<lambda>_. True)"
-  by unfold_locales (auto simp: edge_next_def edge_seq_def upt_conv_Cons split: if_splits)
-
-text \<open>The imperative input iterator: the container is the pair of endpoint arrays, the iterator
-      state is the position.\<close>
-
-definition edge_has_next :: "nat array \<times> nat array \<Rightarrow> nat \<Rightarrow> bool Heap" where
-  "edge_has_next = (\<lambda>(Fa, Ta) i. do { l \<leftarrow> Array.len Fa; return (i < l) })"
-
-definition edge_cur :: "nat array \<times> nat array \<Rightarrow> nat \<Rightarrow> edge Heap" where
-  "edge_cur = (\<lambda>(Fa, Ta) i. do { u \<leftarrow> Array.nth Fa i; v \<leftarrow> Array.nth Ta i; return (u, v, i) })"
-
-definition edge_adv :: "nat array \<times> nat array \<Rightarrow> nat \<Rightarrow> nat Heap" where
-  "edge_adv = (\<lambda>_ i. return (Suc i))"
-
-definition edge_key :: "edge \<Rightarrow> nat Heap" where
-  "edge_key e = return (e_src e)"
-
-
 section \<open>The Code\<close>
 
-text \<open>The two global interpretations: the CSR buildup for the input iterator and the refined
-      Dijkstra. Both locales, @{locale imp_csr_buildup_code} and @{locale dijkstra_impl_spec}, only fix
-      operations and have no assumptions.\<close>
-
-global_interpretation csr_code: imp_csr_buildup_code n edge_has_next edge_cur edge_adv edge_key
-  for n
-  defines csr_build_edges = csr_code.csr_build_imp
-    and csr_count_edges = csr_code.count_imp
-    and csr_prefix_sums = csr_code.prefix_imp
-    and csr_init_edges = csr_code.init_E_imp
-    and csr_fill_edges = csr_code.fill_imp
-  done
+text \<open>The global interpretation of the refined Dijkstra. The locale @{locale dijkstra_impl_spec}
+      only fixes operations and has no assumptions. The CSR buildup for the input iterator is
+      interpreted in @{theory Directed_Set_Graphs.CSR_Graph}.\<close>
 
 global_interpretation dijkstra_code: dijkstra_impl_spec unreached "bset_isin_imp id" "\<lambda>Al. Al" early_stop
     "\<lambda>e. return (e_tgt e)" "arr_lookup_imp e_id" "arr_upd_imp id" "arr_lookup_imp id"
     "arr_upd_imp id" "bset_insert_imp id" "bset_isin_imp id"
     ait_current_imp ait_has_imp ait_move_imp
     csr_current_imp csr_has_imp csr_move_imp csr_reset_imp
-    heap_extract_min_imp heap_decrease_key_imp heap_insert_imp
+    heap_extract_min_key_imp heap_decrease_key_imp heap_insert_imp
     "arr_lookup_imp id" "\<lambda>e. return (e_src e)"
   for unreached :: "'n::{linordered_ab_group_add, heap}" and early_stop :: bool
   defines dijkstra_relax_code = dijkstra_code.relax_edge_imp
@@ -801,12 +499,14 @@ sublocale dij: dijkstra_impl_refine where
   and src_assn = src.ait_assn and src_current_imp = ait_current_imp
   and src_has_imp = ait_has_imp and src_move_imp = ait_move_imp
   and queue_assn = hp.heap_assn and queue_empty_imp = "heap_empty_imp n 0"
-  and queue_extract_min_imp = heap_extract_min_imp
+  and queue_extract_min_imp = heap_extract_min_key_imp
   and queue_decrease_key_imp = heap_decrease_key_imp
   and queue_insert_imp = heap_insert_imp
   and snd_imp = "\<lambda>e. return (e_tgt e)" and fst_imp = "\<lambda>e. return (e_src e)" and W = wt
   and target_imp = "bset_isin_imp id" and target_assn = "seen.bset_assn (Collect target)"
   and allowed_imp = "\<lambda>Al. Al" and allowed_assn = allowed_assn
+  and queue_clear_imp = heap_clear_imp
+  and queue_key_of_imp = heap_key_of_imp
 proof (intro_locales, goal_cases)
   case 1 show ?case
   proof (unfold_locales, goal_cases)
@@ -832,7 +532,8 @@ proof (intro_locales, goal_cases)
 next
   case 2 show ?case
     by unfold_locales
-      (simp_all add: arr_lookup_def allowed_imp_rule, (sep_auto heap: seen.bset_isin_rule)+)
+       (simp_all add: arr_lookup_def allowed_imp_rule,
+       (sep_auto heap: seen.bset_isin_rule)+)
 qed
 
 text \<open>The code part of this interpretation is the instance of @{locale dijkstra_impl_spec} that is
@@ -1167,8 +868,7 @@ section \<open>Running the Code\<close>
 
 text \<open>The heap @{command partial_function}s do not register their equations for code generation.\<close>
 
-declare csr_code.count_imp.simps[code] csr_code.prefix_imp.simps[code] csr_code.fill_imp.simps[code]
-  csr_copy_imp.simps[code] dijkstra_code.dijkstra_loop_imp.simps[code]
+declare dijkstra_code.dijkstra_loop_imp.simps[code]
   dijkstra_code.path_rev_imp.simps[code] sift_up_imp.simps[code] sift_down_imp.simps[code]
 
 text \<open>A test harness. \<open>dijkstra_prepare\<close> copies the input lists into arrays, among them the target

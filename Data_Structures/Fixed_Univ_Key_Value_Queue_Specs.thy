@@ -2,6 +2,15 @@ theory Fixed_Univ_Key_Value_Queue_Specs
   imports Main
 begin
 
+section \<open>Specification of Queue as used by Hungarian Method\<close>
+
+text \<open>The key-value priority queue, restricted to a fixed universe @{term U} of elements: every
+      element stored in a well-formed queue lies in @{term U} (@{text queue_universe}), and elements
+      may only be inserted, or have their key decreased, when they lie in @{term U}. An
+      implementation may therefore be an indexed heap of size \<open>|U|\<close>. Extracting from an empty
+      queue leaves it empty, so that the queue returned by the last, unsuccessful extraction is
+      still specified. This is the specification used by Dijkstra's algorithm.\<close>
+
 locale key_value_queue =
   fixes U :: "'v set"
    and queue_empty::'queue
@@ -15,7 +24,7 @@ locale key_value_queue =
  and queue_empty: "queue_invar queue_empty"
                      "queue_abstract queue_empty = {}"
  and queue_extract_min:
-  "\<And> H. queue_invar H \<Longrightarrow> queue_invar (fst (queue_extract_min H))"
+ "\<And> H. queue_invar H \<Longrightarrow> queue_invar (fst (queue_extract_min H))"
  "\<And> H x.  \<lbrakk>queue_invar H; Some x = snd (queue_extract_min H)\<rbrakk> \<Longrightarrow>
            \<exists> k. ((x, k) \<in> queue_abstract H \<and>
                 (\<forall> x' k'. (x', k') \<in> queue_abstract H \<longrightarrow> k \<le> k'))"
