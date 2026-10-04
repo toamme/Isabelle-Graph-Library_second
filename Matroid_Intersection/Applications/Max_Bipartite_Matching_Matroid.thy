@@ -39,10 +39,10 @@ lemma indep1I:
    \<And> x e d. \<lbrakk>x \<in> X; e \<in> E; d \<in> E; x \<in> to_dbltn d; x \<in> to_dbltn e\<rbrakk> \<Longrightarrow> e = d\<rbrakk>
   \<Longrightarrow> indep1 E"
   by(auto simp add: indep1_def finite_edges finite_subset 
-            intro!: one_sided_matchingI iffD2[OF card_le_Suc0_iff_eq] 
+            intro!: one_sided_matchingI iffD2[OF card_le_Suc0_iff_eq]
                     inj_on_subset[OF to_dbltn_inj])+
 
-lemma indep1E: 
+lemma indep1E:
   assumes "indep1 E"
           "\<lbrakk>E \<subseteq> Edges; 
             \<And> x e d. \<lbrakk> x \<in> X; e \<in> E; d \<in> E; x \<in> to_dbltn d; x \<in> to_dbltn e\<rbrakk> \<Longrightarrow> e = d\<rbrakk> \<Longrightarrow> P"
@@ -75,10 +75,10 @@ lemma indep2I:
   "\<lbrakk>E \<subseteq> Edges; \<And> x e d.  \<lbrakk>x \<in> Y; e \<in> E; d \<in> E; x \<in> to_dbltn d; x \<in> to_dbltn e\<rbrakk> \<Longrightarrow> e = d\<rbrakk>
    \<Longrightarrow> indep2 E"
   by(auto simp add: indep2_def finite_edges finite_subset 
-            intro!: one_sided_matchingI iffD2[OF card_le_Suc0_iff_eq] 
+            intro!: one_sided_matchingI iffD2[OF card_le_Suc0_iff_eq]
                     inj_on_subset[OF to_dbltn_inj])+
 
-lemma indep2E: 
+lemma indep2E:
   assumes "indep2 E"
           "\<lbrakk>E \<subseteq> Edges; \<And> x e d. 
            \<lbrakk>x \<in> Y; e \<in> E; d \<in> E; x \<in> to_dbltn d; x \<in> to_dbltn e\<rbrakk> \<Longrightarrow> e = d\<rbrakk> \<Longrightarrow> P"
@@ -1314,25 +1314,27 @@ global_interpretation matching_by_matroid: unweighted_intersection_spec
   defines treat1=matching_by_matroid.treat1
     and     treat2=matching_by_matroid.treat2
     and     compute_graph=matching_by_matroid.compute_graph
-    and     augment=matching_by_matroid.augment
+    and     augment=matching_by_matroid.standard.augment
+    and     aux_path=matching_by_matroid.aux_path
     and     matroid_intersection_impl=matching_by_matroid.matroid_intersection_impl
     and     treat1_circuit=matching_by_matroid.treat1_circuit
     and     treat2_circuit=matching_by_matroid.treat2_circuit
     and     compute_graph_circuit=matching_by_matroid.compute_graph_circuit
+    and     aux_path_circuit=matching_by_matroid.aux_path_circuit
     and     matroid_intersection_circuit_impl=matching_by_matroid.matroid_intersection_circuit_impl
     and     add_edge=G.add_edge
-    and     initial_state=matching_by_matroid.initial_state
+    and     initial_state=matching_by_matroid.standard.initial_state
   by(auto intro!: unweighted_intersection_spec.intro simp add: G.Pair_Graph_Specs_axioms)
 
 definition "es = [(1::nat,6::nat), (1, 8), (1, 10), (3,6),(3,10),  (9,8), (7,10)]"
 definition "E_impl = a_edge_set es"
 
 value "matroid_intersection_circuit_impl fst snd (0,0) (1,1) E_impl initial_state"
-value "inorder (edges (sol 
+value "inorder (edges (solution 
 (matroid_intersection_circuit_impl fst snd (0,0) (1,1) E_impl initial_state)))"
 
 value "matroid_intersection_impl fst snd (0,0) (1,1) E_impl initial_state"
-value "inorder (edges (sol (matroid_intersection_impl fst snd (0,0) (1,1) E_impl initial_state)))"
+value "inorder (edges (solution (matroid_intersection_impl fst snd (0,0) (1,1) E_impl initial_state)))"
 
 context 
   fixes left_vertex::"'e::linorder \<Rightarrow> 'v::linorder" 
@@ -1535,11 +1537,11 @@ lemma same_card_dbltn: "X \<subseteq> Edges \<Longrightarrow> card (to_dbltn ` X
   by(auto intro!:  card_image inj_onI simp add: inj_on_def)
 
 theorem solution:"graph_matching (to_dbltn ` Edges)
-                  (to_dbltn ` (set_matching (sol (matroid_intersection_circuit_impl 
+                  (to_dbltn ` (set_matching (solution (matroid_intersection_circuit_impl 
                                   left_vertex right_vertex s t Edges_impl initial_state))))"
   (is ?thesis1)
   and   "\<nexists> M. graph_matching (to_dbltn ` Edges) M \<and>
-              card M > card  (set_matching (sol (matroid_intersection_circuit_impl 
+              card M > card  (set_matching (solution (matroid_intersection_circuit_impl 
                                  left_vertex right_vertex s t Edges_impl initial_state)))"
   (is ?thesis2)
 proof-
@@ -1547,17 +1549,18 @@ proof-
     using  matching_algorithm.indep_invar_def
              [of "matroid_intersection_circuit_impl left_vertex right_vertex s t Edges_impl initial_state"]
            matching_algorithm.is_max_def
-             [of "_ (sol (matroid_intersection_circuit_impl left_vertex right_vertex s t Edges_impl initial_state))"]
+             [of "_ (solution (matroid_intersection_circuit_impl left_vertex right_vertex s t Edges_impl initial_state))"]
             matching_algorithm.matroid_intersection_circuit_correctness(1)
     by( simp add: indep1_def indep2_def 
         matching_as_matroid_intersection.double_indep_to_graph_matching
-        matroid_intersection_circuit_impl_def  initial_state_def matching_algorithm.same_results(2))
+        matching_by_matroid.matroid_intersection_circuit_impl_def aux_path_circuit_def
+        initial_state_def matching_algorithm.same_results(2))
   show ?thesis2
   proof(rule ccontr, goal_cases)
     case 1
     then obtain M where M_prop:"graph_matching (local.to_dbltn ` local.Edges) M"
       "card
-           (set_matching (sol
+           (set_matching (solution
              (matroid_intersection_circuit_impl left_vertex right_vertex s t Edges_impl initial_state)))
           < card M" by auto
     then obtain M_impl where M_impl_prop:" M = local.to_dbltn ` M_impl"
@@ -1567,14 +1570,15 @@ proof-
       using calculation(1) calculation(2) matching_algorithm.matroid1.indep_subset_carrier 
       by (simp add: indep1_def same_card_dbltn)
     moreover have "card
-           (set_matching (sol 
+           (set_matching (solution 
              (matroid_intersection_circuit_impl left_vertex right_vertex s t
                      Edges_impl initial_state)))
           \<ge> card M_impl"
       using M_impl_prop(2,3)  matching_algorithm.indep_invar_def matching_algorithm.is_max_def
         matching_algorithm.matroid_intersection_circuit_correctness(1,2) 
       by(auto simp add: indep1_def indep2_def 
-          matroid_intersection_circuit_impl_def matching_algorithm.same_results(2) initial_state_def)
+          matching_by_matroid.matroid_intersection_circuit_impl_def aux_path_circuit_def
+          matching_algorithm.same_results(2) initial_state_def)
     ultimately show ?case 
       using M_prop(2) by linarith
   qed

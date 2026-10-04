@@ -210,6 +210,19 @@ lemma visited_dists_parents_imp_rule:
   using initial_refine BFS_refine
   by (sep_auto simp: state_assn_def)
 
+lemma visited_dists_parents_imp_frontier_rule:
+ "<imp_vis_assn vset_empty empty_vis * imp_src_assn srcs srcs_imp * imp_dist_assn some_dist imp_some_dist
+   * imp_par_assn some_parent imp_some_par * graph_assn G G_imp> 
+   visited_dists_parents_imp empty_vis srcs_imp imp_some_dist imp_some_par
+  <\<lambda> (visi, di, pari). graph_assn G G_imp *
+      imp_vis_assn (BFS_dist_state.visited (BFS_par_impl initial_par_state)) visi *
+      imp_dist_assn (BFS_dist_state.dists (BFS_par_impl initial_par_state)) di *
+      imp_par_assn (BFS_par_state.parent (BFS_par_impl initial_par_state)) pari *
+      (\<exists>\<^sub>A cf cfi. imp_cf_assn cf cfi)>" 
+  unfolding visited_dists_parents_imp_def
+  using initial_refine BFS_refine
+  by (sep_auto simp: state_assn_def)
+
 text \<open>The main properties of @{thm [source] BFS_par_correct} carry over to the returned visited
       set, distances and parents.\<close>
 
@@ -455,19 +468,20 @@ begin
 definition "Vs (G::nat \<Rightarrow> nat list option) = \<Union> {{u, v} | u v vs. G u = Some vs \<and> v \<in> set vs }"
 
 
-definition "front_assn G vis (front::nat list) fronti frontp = 
+definition "front_assn L Fh G vis (front::nat list) fronti frontp = 
   (\<exists>\<^sub>A frontlist. fronti \<mapsto>\<^sub>a frontlist * \<up> (length frontlist > card (Vs G) \<and>
      frontp < length frontlist - card (Vs G) + card vis \<and> frontp \<le> length frontlist \<and>
         rev (take frontp (frontlist)) = front
-     \<and> vis \<subseteq> (Vs G) \<and> set front \<subseteq> (Vs G)))"
+     \<and> vis \<subseteq> (Vs G) \<and> set front \<subseteq> (Vs G) \<and> length frontlist = L \<and> fronti = Fh))"
 
-definition "imp_par_assn G p pari 
+definition "imp_par_assn L Pa G p pari 
    = (\<exists>\<^sub>A plist. pari \<mapsto>\<^sub>a plist *
-          \<up>((\<forall> i \<in> Vs G. i < length plist \<and> p i = plist ! i)))"
+          \<up>((\<forall> i \<in> Vs G. i < length plist \<and> p i = plist ! i) \<and> pari = Pa \<and> length plist = L))"
 
 lemma imp_par_upd_rule[sep_heap_rules]:
   "x \<in> Vs G \<Longrightarrow>
-   <imp_par_assn G p pari> Array.upd x u pari <\<lambda> r. imp_par_assn G (p(x := u)) pari * \<up> (r = pari)>"
+   <imp_par_assn L Pa G p pari> Array.upd x u pari 
+   <\<lambda> r. imp_par_assn L Pa G (p(x := u)) pari * \<up> (r = pari)>"
   unfolding imp_par_assn_def
   by (sep_auto simp: nth_list_update)
 
@@ -478,18 +492,18 @@ lemma inner_loop_rule:
             (front, vis, p) (case G u of None \<Rightarrow> [] | Some ys \<Rightarrow> ys)"
           "finite (Vs G)"
   shows "<graph_assn G Gi
-          * is_visited_set (Vs G) (set vis) visi * front_assn G (set vis) front fronti frontp
-          * imp_par_assn G p pari>
+          * is_visited_set (Vs G) (set vis) visi * front_assn L Fh G (set vis) front fronti frontp
+          * imp_par_assn L' Pa G p pari>
   inner_loop Gi pari u (fronti, frontp, visi)
  <\<lambda> (fronti', frontp', visi'). 
    graph_assn G Gi
-       * is_visited_set (Vs G) (set vis') visi' * front_assn G (set vis') front' fronti' frontp'
-       * imp_par_assn G p' pari>"
+       * is_visited_set (Vs G) (set vis') visi' * front_assn L Fh G (set vis') front' fronti' frontp'
+       * imp_par_assn L' Pa G p' pari>"
 proof-
   define acc_assn where 
     "acc_assn = (\<lambda> (front, vis, p) (fronti, frontp, visi). 
-        is_visited_set (Vs G) (set vis) visi * front_assn G (set vis) front fronti frontp
-        * imp_par_assn G p pari)"
+        is_visited_set (Vs G) (set vis) visi * front_assn L Fh G (set vis) front fronti frontp
+        * imp_par_assn L' Pa G p pari)"
   define fi where "fi = (\<lambda> (u::nat) (v::nat) (front, frontpt, vis) . 
           do {b \<leftarrow> visited_memb v vis;
               if \<not> b then do { front' \<leftarrow> Array.upd frontpt v front;
@@ -527,14 +541,13 @@ proof-
           apply(subst (2) if_P)
            using 1 apply force
            unfolding prod.case 
-           using x_in_Vs apply sep_auto
-           subgoal for xa ha r hb ra
-             using distinct_ins_rule[of "(Vs G)" "set vis" visi x] x_in_Vs apply sep_auto
-             apply(rule mod_exI[of _ "xa[frontp:= x]"])
-               apply (sep_auto simp: mod_pure_star_dist)
-               apply(subst take_Suc_conv_app_nth)
-               apply simp
-             by (metis take_Suc_conv_app_nth take_update_last)
+           using x_in_Vs 1 distinct_ins_rule[of "(Vs G)" "set vis" visi x] apply sep_auto
+           subgoal for xa h ha r hb 
+            apply(rule mod_exI[of _ "xa[frontp := x]"])
+            apply (sep_auto simp: mod_pure_star_dist)
+            apply(subst take_Suc_conv_app_nth)
+            apply simp
+            by (metis take_Suc_conv_app_nth take_update_last)
            subgoal
              using 1 by simp
            done
@@ -544,16 +557,35 @@ proof-
            by sep_auto
        qed
      qed
-    using assms_1' assms(1)
-    by (sep_auto split: option.split prod.split 
-                  simp: acc_assn_def prod.case  ex_assn_move_out(2) front_assn_def)
+     subgoal
+       unfolding acc_assn_def prod.case 
+       by sep_auto
+     subgoal for x
+       apply(clarsimp split!: option.split prod.split)
+       subgoal for front frontpt vis
+         unfolding acc_assn_def front_assn_def prod.case ex_assn_move_out(2)
+         using assms(1)
+         by sep_auto
+       subgoal for vs front frontpt vis
+         unfolding acc_assn_def front_assn_def prod.case
+         apply(clarsimp split!: option.split prod.split)
+         subgoal premises prems for a b c
+         proof-
+           have "(front', vis', p') = (a, b, c)"
+             using prems by (simp add: assms_1')
+           thus ?thesis
+             by sep_auto
+         qed
+         done
+       done
+     done
  qed
 
 
-definition "old_front_assn G (front::nat list) fronti frontp = 
+definition "old_front_assn L G (front::nat list) fronti frontp = 
   (\<exists>\<^sub>A frontlist. 
     fronti \<mapsto>\<^sub>a frontlist * \<up> ( frontp < length frontlist \<and> rev (take frontp (frontlist)) = front
-    \<and> card (Vs G) < length frontlist))"
+    \<and> card (Vs G) < length frontlist \<and> length frontlist = L))"
 
 lemma outer_loop_rule:
   assumes "(front', vis', p') = 
@@ -564,18 +596,18 @@ lemma outer_loop_rule:
    (front, vis, p) (rev old_front)"
           "finite (Vs G)"
   shows "<graph_assn G Gi
-          * is_visited_set (Vs G) (set vis) visi * front_assn G (set vis) front fronti frontp
-          * imp_par_assn G p pari * old_front_assn G old_front old_fronti old_frontp>
+          * is_visited_set (Vs G) (set vis) visi * front_assn L Fh G (set vis) front fronti frontp
+          * imp_par_assn L' Pa G p pari * old_front_assn L G old_front old_fronti old_frontp>
   outer_loop Gi pari (old_fronti, old_frontp) (fronti, frontp, visi)
  <\<lambda> (fronti', frontp', visi'). 
    graph_assn G Gi
-       * is_visited_set (Vs G) (set vis') visi' * front_assn G (set vis') front' fronti' frontp'
-       * imp_par_assn G p' pari * old_front_assn G old_front old_fronti old_frontp>"
+       * is_visited_set (Vs G) (set vis') visi' * front_assn L Fh G (set vis') front' fronti' frontp'
+       * imp_par_assn L' Pa G p' pari * old_front_assn L G old_front old_fronti old_frontp>"
 proof-
   define acc_assn where 
     "acc_assn = (\<lambda> (front, vis, p) (fronti, frontp, visi). 
-        is_visited_set (Vs G) (set vis) visi * front_assn G (set vis) front fronti frontp
-        * imp_par_assn G p pari)"
+        is_visited_set (Vs G) (set vis) visi * front_assn L Fh G (set vis) front fronti frontp
+        * imp_par_assn L' Pa G p pari)"
   define f where "f = (\<lambda>  (nf, vis, p) u.
       foldl (\<lambda>x y. case x of (nf, vis, p) \<Rightarrow>
                if y \<notin> set vis then (y # nf, y # vis, p(y := u)) else (nf, vis, p))
@@ -591,7 +623,7 @@ proof-
       apply(rule iterate_range_strict_rule[of old_front_list 0 old_frontp acc_assn 
           "graph_assn G Gi 
            * \<up> (old_frontp < length old_front_list \<and> rev (take old_frontp (old_front_list)) = old_front
-                \<and> card (Vs G) < length old_front_list)" 
+                \<and> card (Vs G) < length old_front_list \<and> length old_front_list = L)" 
            "inner_loop Gi pari" f old_fronti "(front, vis, p)" "(fronti, frontp, visi)"
              ])
     subgoal for acc acci x
@@ -603,7 +635,7 @@ proof-
                  and front = front and vis = vis and p = p and G = G],
               where R = "\<up> (old_frontp < length old_front_list \<and> 
                 rev (take old_frontp (old_front_list)) = old_front \<and>
-                   card (Vs G) < length old_front_list)"])
+                   card (Vs G) < length old_front_list \<and> length old_front_list = L)"])
         by(sep_auto simp: f_def assms(2))
       done
       using assms(1)
@@ -613,16 +645,17 @@ proof-
 qed
 
 fun imp_cf_assn where 
-   "imp_cf_assn (G::nat \<Rightarrow> nat list option) front (fronti, frontp, buffer_fronti) =
+   "imp_cf_assn L Fr Bf (G::nat \<Rightarrow> nat list option) front (fronti, frontp, buffer_fronti) =
       (\<exists>\<^sub>A frontlist buffer_frontlist. fronti \<mapsto>\<^sub>a frontlist *  buffer_fronti \<mapsto>\<^sub>a buffer_frontlist *
        \<up> (length frontlist > card (Vs G) \<and> frontp < length frontlist  \<and> 
           rev (take frontp (frontlist)) = front \<and> length buffer_frontlist > card (Vs G)
-          \<and> set front \<subseteq> (Vs G)))"
+          \<and> set front \<subseteq> (Vs G) \<and> length frontlist = L \<and> length buffer_frontlist = L
+          \<and> {fronti, buffer_fronti} = {Fr, Bf}))"
 
 definition "imp_src_assn = imp_cf_assn"
 
 lemma imp_cf_is_empty_rule:
-  "<imp_cf_assn G S Si> imp_cf_is_empty Si <\<lambda>b. imp_cf_assn G S Si * \<up> (b = (S = []))>"
+  "<imp_cf_assn L Fr Bf G S Si> imp_cf_is_empty Si <\<lambda>b. imp_cf_assn L Fr Bf G S Si * \<up> (b = (S = []))>"
   by(cases Si) sep_auto
 term inner_loop
 
@@ -631,9 +664,9 @@ lemma foldl_insert:"foldl (\<lambda>S x. if x \<in> S then S else Set.insert x S
   by(induction xs arbitrary: A) auto
 
 lemma set_srcs_visited_rule:
-      "<imp_src_assn G S Si * is_visited_set (Vs G) {} empty_vis> 
+      "<imp_src_assn L Fr Bf G S Si * is_visited_set (Vs G) {} empty_vis> 
           set_srcs_visited empty_vis Si
-        <\<lambda>r. is_visited_set (Vs G) (set S) r * imp_src_assn G S Si>"
+        <\<lambda>r. is_visited_set (Vs G) (set S) r * imp_src_assn L Fr Bf G S Si>"
   unfolding imp_src_assn_def
   apply(cases Si)
   subgoal for fronti frontp buffer_fronti
@@ -645,7 +678,8 @@ lemma set_srcs_visited_rule:
         apply(rule iterate_range_strict_rule[where acc_assn = "is_visited_set (Vs G)"
              and F = "buffer_fronti \<mapsto>\<^sub>a buffer_frontlist *
     \<up> (card (Vs G) < length frontlist \<and>
-       frontp < length frontlist \<and> rev (take frontp frontlist) = S \<and> card (Vs G) < length buffer_frontlist \<and> set S \<subseteq> Vs G)"
+       frontp < length frontlist \<and> rev (take frontp frontlist) = S \<and> card (Vs G) < length buffer_frontlist \<and> set S \<subseteq> Vs G
+       \<and> length frontlist = L \<and> length buffer_frontlist = L \<and> {fronti, buffer_fronti} = {Fr, Bf})"
          and f = "\<lambda> S x. if x \<notin> S then Set.insert x S else S" and list = frontlist and acc = Set.empty])
      by (sep_auto simp: foldl_insert nths_intervall_strict_as_drop_and_take)
    done
@@ -655,9 +689,9 @@ abbreviation "imp_dist_assn_raw G dlist d di
    \<equiv> (di \<mapsto>\<^sub>a dlist * 
           \<up>((\<forall> i \<in> dom G. i < length dlist \<and> d i = dlist ! i)))"
 
-definition "imp_dist_assn G d di 
+definition "imp_dist_assn L Da G d di 
    = (\<exists>\<^sub>A dlist. di \<mapsto>\<^sub>a dlist * 
-          \<up>((\<forall> i \<in> Vs G. i < length dlist \<and> d i = dlist ! i)))"
+          \<up>((\<forall> i \<in> Vs G. i < length dlist \<and> d i = dlist ! i) \<and> di = Da \<and> length dlist = L))"
 
 
 lemma foldl_fun_upd_same: "foldl (\<lambda>d x y. if x = y then n else d y) d xs =
@@ -665,8 +699,8 @@ lemma foldl_fun_upd_same: "foldl (\<lambda>d x y. if x = y then n else d y) d xs
   by(induction xs arbitrary: d)  auto
 
 lemma set_all_dists_in_front_imp_rule:
-  "<imp_dist_assn G d di * imp_cf_assn G cf cfi> set_all_dists_in_front_imp di cfi n
-    <\<lambda>r. imp_dist_assn G (\<lambda>y. if y \<in> set cf then n else d y) r * imp_cf_assn G cf cfi>"
+  "<imp_dist_assn L' Da G d di * imp_cf_assn L Fr Bf G cf cfi> set_all_dists_in_front_imp di cfi n
+    <\<lambda>r. imp_dist_assn L' Da G (\<lambda>y. if y \<in> set cf then n else d y) r * imp_cf_assn L Fr Bf G cf cfi>"
   apply(cases cfi) 
   subgoal for fronti frontp buffer_fronti
     apply simp 
@@ -675,10 +709,11 @@ lemma set_all_dists_in_front_imp_rule:
     apply(rule ht_cons_prec)
       defer defer
         apply(rule iterate_range_strict_rule[where list = frontlist
-               and acc_assn = "imp_dist_assn G" and acc = d
+               and acc_assn = "imp_dist_assn L' Da G" and acc = d
                and F = "buffer_fronti \<mapsto>\<^sub>a buffer_frontlist *
           \<up> (card (Vs G) < length frontlist \<and> frontp < length frontlist \<and>
-        rev (take frontp frontlist) = cf \<and> card (Vs G) < length buffer_frontlist \<and> set cf \<subseteq> Vs G)"
+        rev (take frontp frontlist) = cf \<and> card (Vs G) < length buffer_frontlist \<and> set cf \<subseteq> Vs G
+        \<and> length frontlist = L \<and> length buffer_frontlist = L \<and> {fronti, buffer_fronti} = {Fr, Bf})"
                and f = "\<lambda> d. \<lambda> x y. if x = y then n else d y"])
       by (sep_auto simp: imp_dist_assn_def nths_intervall_strict_as_drop_and_take 
          nths_intervall_strict_as_drop_and_take foldl_fun_upd_same)
@@ -873,12 +908,12 @@ lemma next_frontier_current_parents_imp_rule:
   fixes G::"nat \<Rightarrow> nat list option"
   assumes "finite (Vs G)" "next_frontier_current_parents G cf vis p = (cf', vis', p')"
   shows 
-    "<imp_cf_assn G cf imp_cf * is_visited_set (Vs G) (set vis) imp_vis * imp_par_assn G p pari *
-     graph_assn G Gi>
+    "<imp_cf_assn L Fr Bf G cf imp_cf * is_visited_set (Vs G) (set vis) imp_vis * 
+      imp_par_assn L' Pa G p pari * graph_assn G Gi>
     next_frontier_current_parents_imp Gi imp_cf imp_vis pari
     <\<lambda>(r1, r2, r3).
-        imp_cf_assn G cf' r1 * is_visited_set (Vs G) (set vis') r2 * imp_par_assn G p' r3 *
-        graph_assn G Gi>"
+        imp_cf_assn L Fr Bf G cf' r1 * is_visited_set (Vs G) (set vis') r2 * 
+        imp_par_assn L' Pa G p' r3 * graph_assn G Gi>"
 proof (cases imp_cf)
   case (fields fronti frontp buffer_fronti)
   have nf: "(cf', vis', p') = 
@@ -888,23 +923,26 @@ proof (cases imp_cf)
             (nf, vis, p) (case G u of None \<Rightarrow> [] | Some ys \<Rightarrow> ys)) 
    ([], vis, p) (rev cf)"
     using assms(2) unfolding next_frontier_current_parents_def by (rule sym)
-  have pre: "imp_cf_assn G cf (fronti, frontp, buffer_fronti) * is_visited_set (Vs G) (set vis) imp_vis *
-      imp_par_assn G p pari * graph_assn G Gi \<Longrightarrow>\<^sub>A
+  have pre: "imp_cf_assn L Fr Bf G cf (fronti, frontp, buffer_fronti) * 
+      is_visited_set (Vs G) (set vis) imp_vis * imp_par_assn L' Pa G p pari * graph_assn G Gi \<Longrightarrow>\<^sub>A
      graph_assn G Gi * is_visited_set (Vs G) (set vis) imp_vis *
-      front_assn G (set vis) [] buffer_fronti 0 * imp_par_assn G p pari * old_front_assn G cf fronti frontp"
+      front_assn L buffer_fronti G (set vis) [] buffer_fronti 0 * imp_par_assn L' Pa G p pari * 
+      old_front_assn L G cf fronti frontp * \<up>({fronti, buffer_fronti} = {Fr, Bf})"
     unfolding front_assn_def old_front_assn_def imp_cf_assn.simps
     apply(subst only_in_univ)
     by sep_auto
   have post: "graph_assn G Gi * is_visited_set (Vs G) (set vis') visi' *
-      front_assn G (set vis') cf' fronti' frontp' * imp_par_assn G p' pari * old_front_assn G cf fronti frontp
-     \<Longrightarrow>\<^sub>A imp_cf_assn G cf' (fronti', frontp', fronti) * is_visited_set (Vs G) (set vis') visi' *
-      imp_par_assn G p' pari * graph_assn G Gi" for fronti' frontp' visi'
+      front_assn L buffer_fronti G (set vis') cf' fronti' frontp' * imp_par_assn L' Pa G p' pari * 
+      old_front_assn L G cf fronti frontp * \<up>({fronti, buffer_fronti} = {Fr, Bf})
+     \<Longrightarrow>\<^sub>A imp_cf_assn L Fr Bf G cf' (fronti', frontp', fronti) * is_visited_set (Vs G) (set vis') visi' *
+      imp_par_assn L' Pa G p' pari * graph_assn G Gi" for fronti' frontp' visi'
     unfolding front_assn_def old_front_assn_def imp_cf_assn.simps
     using card_mono[OF assms(1), of "set vis'"]
-    by sep_auto
+    by (sep_auto simp: insert_commute)
   show ?thesis
     unfolding fields next_frontier_current_parents_imp.simps
-  proof(rule ht_bind[OF ht_cons_prec[OF pre ent_refl outer_loop_rule[OF nf assms(1)]]], goal_cases)
+  proof(rule ht_bind[OF ht_cons_prec[OF pre ent_refl ht_frame[OF outer_loop_rule[OF nf assms(1)]]]], 
+        goal_cases)
     case (1 x)
     show ?case
     proof(cases x)
@@ -926,30 +964,34 @@ text \<open>Introduction of the assertions from arrays allocated by the caller: 
 
 lemma imp_src_assn_intro:
   assumes "card (Vs G) < length fl" "card (Vs G) < length bl" "length ss < length fl"
-          "take (length ss) fl = ss" "set ss \<subseteq> Vs G"
-  shows "Fr \<mapsto>\<^sub>a fl * Bf \<mapsto>\<^sub>a bl \<Longrightarrow>\<^sub>A imp_src_assn G (rev ss) (Fr, length ss, Bf)"
+          "take (length ss) fl = ss" "set ss \<subseteq> Vs G" "length fl = L" "length bl = L"
+  shows "Fr \<mapsto>\<^sub>a fl * Bf \<mapsto>\<^sub>a bl \<Longrightarrow>\<^sub>A imp_src_assn L Fr Bf G (rev ss) (Fr, length ss, Bf)"
   unfolding imp_src_assn_def imp_cf_assn.simps
   by (intro ent_ex_postI[where x = fl] ent_ex_postI[where x = bl])
-     (unfold ent_pure_post_iff set_rev, intro conjI allI impI ent_refl, simp_all add: assms)
+     (unfold ent_pure_post_iff, use assms in \<open>simp add: ent_refl\<close>)
 
 lemma imp_dist_assn_intro:
-  "\<forall>i \<in> Vs G. i < length dl \<and> d i = dl ! i \<Longrightarrow> Da \<mapsto>\<^sub>a dl \<Longrightarrow>\<^sub>A imp_dist_assn G d Da"
+  "\<lbrakk>\<forall>i \<in> Vs G. i < length dl \<and> d i = dl ! i; length dl = L\<rbrakk> \<Longrightarrow> 
+   Da \<mapsto>\<^sub>a dl \<Longrightarrow>\<^sub>A imp_dist_assn L Da G d Da"
   unfolding imp_dist_assn_def
-  by (intro ent_ex_postI[where x = dl]) (unfold ent_pure_post_iff, intro conjI allI impI ent_refl, assumption)
+  by (intro ent_ex_postI[where x = dl]) (unfold ent_pure_post_iff, intro conjI allI impI ent_refl refl)
 
 lemma imp_par_assn_intro:
-  "\<forall>i \<in> Vs G. i < length pl \<and> p i = pl ! i \<Longrightarrow> Pa \<mapsto>\<^sub>a pl \<Longrightarrow>\<^sub>A imp_par_assn G p Pa"
+  "\<lbrakk>\<forall>i \<in> Vs G. i < length pl \<and> p i = pl ! i; length pl = L\<rbrakk> \<Longrightarrow> 
+   Pa \<mapsto>\<^sub>a pl \<Longrightarrow>\<^sub>A imp_par_assn L Pa G p Pa"
   unfolding imp_par_assn_def
-  by (intro ent_ex_postI[where x = pl]) (unfold ent_pure_post_iff, intro conjI allI impI ent_refl, assumption)
+  by (intro ent_ex_postI[where x = pl]) (unfold ent_pure_post_iff, intro conjI allI impI ent_refl refl)
 
 text \<open>Conversely, the distances and the parents can be read off the arrays.\<close>
 
 lemma imp_dist_assn_char:
-  "imp_dist_assn G d Da = (\<exists>\<^sub>A dl. Da \<mapsto>\<^sub>a dl * \<up>(\<forall>i \<in> Vs G. i < length dl \<and> d i = dl ! i))"
+  "imp_dist_assn L Dh G d Da = 
+   (\<exists>\<^sub>A dl. Da \<mapsto>\<^sub>a dl * \<up>((\<forall>i \<in> Vs G. i < length dl \<and> d i = dl ! i) \<and> Da = Dh \<and> length dl = L))"
   by (rule imp_dist_assn_def)
 
 lemma imp_par_assn_char:
-  "imp_par_assn G p Pa = (\<exists>\<^sub>A pl. Pa \<mapsto>\<^sub>a pl * \<up>(\<forall>i \<in> Vs G. i < length pl \<and> p i = pl ! i))"
+  "imp_par_assn L Ph G p Pa = 
+   (\<exists>\<^sub>A pl. Pa \<mapsto>\<^sub>a pl * \<up>((\<forall>i \<in> Vs G. i < length pl \<and> p i = pl ! i) \<and> Pa = Ph \<and> length pl = L))"
   by (rule imp_par_assn_def)
 
 end
@@ -967,8 +1009,14 @@ locale BFS_lists_instance = BFS_subprocedures_lists
   fixes G :: "nat \<Rightarrow> nat list option"
     and Gi :: 'g
     and srcs :: "nat list"
-  assumes finite_Vs:"finite (Vs G)"
+    and N :: nat
+    and Fr Bf Da Pa :: "nat array"
+  assumes Vs_bound: "Vs G \<subseteq> {..<N}"
 begin
+
+lemma finite_Vs: "finite (Vs G)"
+  using Vs_bound by (rule finite_subset) (rule finite_lessThan)
+
 
 sublocale imp_bfs: BFS_Imperative
 where empty = "\<lambda> x. None"
@@ -993,13 +1041,13 @@ where empty = "\<lambda> x. None"
   and next_frontier_and_current = next_frontier_and_current
 and next_frontier_current_parents = "next_frontier_current_parents G"
 and next_frontier_current_parents_imp = "next_frontier_current_parents_imp Gi"
-and imp_cf_assn = "imp_cf_assn G"
+and imp_cf_assn = "imp_cf_assn (Suc N) Fr Bf G"
 and expand_tree = expand_tree
 and graph_assn = "\<lambda> G Gi. graph_assn G Gi"
 and imp_vis_assn = "\<lambda> xs. is_visited_set (Vs G) (set xs)"
 and G_imp = Gi
 and imp_cf_is_empty = imp_cf_is_empty
-and imp_src_assn = "imp_src_assn G"
+and imp_src_assn = "imp_src_assn (Suc N) Fr Bf G"
 and imp_src_to_cf = imp_src_to_cf
 and set_srcs_visited = set_srcs_visited
 and in_vis = visited_memb
@@ -1007,12 +1055,12 @@ and dist_invar = "\<lambda> d S. S \<subseteq> (Vs G)"
 and dist_lookup = "\<lambda> d x. d x"
 and set_all_dists_in_set = "\<lambda> d S n. \<lambda> y. if y \<in> set S then n else d y"
 and some_dist = id
-and imp_dist_assn = "imp_dist_assn G"
+and imp_dist_assn = "imp_dist_assn N Da G"
 and set_all_dists_in_front_imp = set_all_dists_in_front_imp
 and parent_lookup = "\<lambda> p x. p x"
 and parent_invar = "\<lambda> _. True"
 and some_parent = id
-and imp_par_assn = "imp_par_assn G"
+and imp_par_assn = "imp_par_assn N Pa G"
 and dist_lookup_imp = "\<lambda> di x. Array.nth di x"
 and parent_lookup_imp = "\<lambda> pari x. Array.nth pari x"
 proof(unfold_locales, goal_cases)
@@ -1100,7 +1148,7 @@ next
 next
   case (20 empty_vis S Si)
   show ?case 
-    using set_srcs_visited_rule[of G S Si empty_vis] unfolding list.set(1) .
+    using set_srcs_visited_rule[of "Suc N" Fr Bf G S Si empty_vis] unfolding list.set(1) .
 next
   case (21 cf imp_cf vis imp_vis par imp_par)
   have "next_frontier_current_parents G cf vis par =

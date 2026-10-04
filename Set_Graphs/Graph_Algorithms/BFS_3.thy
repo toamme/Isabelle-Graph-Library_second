@@ -2857,6 +2857,46 @@ proof-
   then show ?thesis
     using parent_path_acc[OF assms, of "[]"] by simp
 qed
+
+lemma BFS_par_visited_inv:
+  "vset_inv (BFS_dist_state.visited (BFS_par_impl initial_par_state))"
+proof-
+  have "vset_inv (BFS_state.visited (local.BFS initial_state))"
+    using invar_1D(1)[OF invar_1_holds[OF BFS_axiom initial_state_props(4,1,2)[OF BFS_axiom]]] .
+  moreover have "BFS_state.visited (local.BFS initial_state) = 
+                 BFS_dist_state.visited (BFS_dist initial_dist_state)"
+    using distances_invarD(2)[OF BFS_axiom distances_invar_final[OF BFS_axiom]] .
+  ultimately show ?thesis
+    using BFS_par_final_fields(1) by simp
+qed
+
+lemma parent_path_shortest:
+  assumes "final_state = BFS_par_impl initial_par_state" 
+          "x \<in> t_set (BFS_dist_state.visited final_state)"
+  obtains u where "u \<in> t_set srcs"
+    "vwalk_bet (Graph.digraph_abs G) u (parent_path (dists final_state) (parent final_state) x []) x"
+    "\<And> u' p'. \<lbrakk>u' \<in> t_set srcs; vwalk_bet (Graph.digraph_abs G) u' p' x\<rbrakk> \<Longrightarrow>
+        length (parent_path (dists final_state) (parent final_state) x []) \<le> length p'"
+proof-
+  define pp where "pp = parent_path (dists final_state) (parent final_state) x []"
+  obtain u where u: "u \<in> t_set srcs" "vwalk_bet (Graph.digraph_abs G) u pp x"
+    "enat (length pp - 1) = distance_set (Graph.digraph_abs G) (t_set srcs) x"
+    using BFS_par_correct(4)[OF assms] by (auto simp add: pp_def)
+  have "length pp \<le> length p'"
+    if "u' \<in> t_set srcs" "vwalk_bet (Graph.digraph_abs G) u' p' x" for u' p'
+  proof-
+    have "enat (length pp - 1) \<le> enat (length p' - 1)"
+      using vwalk_bet_dist_set[OF that(2,1)] unfolding u(3)[symmetric] .
+    hence "length pp - 1 \<le> length p' - 1" 
+      by simp
+    moreover have "0 < length pp" "0 < length p'"
+      using that(2) u(2) by (auto simp add: vwalk_bet_def)
+    ultimately show ?thesis by linarith
+  qed
+  thus ?thesis
+    using that u(1,2) by (simp add: pp_def)
+qed
+
 end
 end
 end

@@ -26,4 +26,6 @@ session "Data_Structures" = "HOL-Data_Structures" +
     
     "Implementations/Indexed_Heap" 
     "Implementations/Indexed_Heap_Imperative"
+    "Implementations/Imp_Bool_Set"
+    "Implementations/Imp_Range_Iteration"
     

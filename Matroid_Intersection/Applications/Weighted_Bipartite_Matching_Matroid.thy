@@ -254,7 +254,7 @@ subsection \<open>The \<open>reach_set\<close> oracle, obtained from the existin
 
 text \<open>\<open>reach_set Src G\<close> computes the set of vertices reachable from \<open>Src\<close> in \<open>G\<close> (including
 \<open>Src\<close> itself), by running the BFS already interpreted concretely in 
-(via @{file "Compute_Path.thy"}). BFS's precondition needs every source vertex to already be a
+(via  \<open>Compute_Path.thy\<close>. BFS's precondition needs every source vertex to already be a
 vertex of the graph (\<open>t_set Src \<subseteq> dVs G\<close>); to satisfy this unconditionally we augment the graph
 with a self-loop at every source vertex before running BFS. The following lemma shows that this
 augmentation does not change which vertices are reachable via genuine walks.\<close>
@@ -534,7 +534,7 @@ text \<open>As in @{file "Max_Bipartite_Matching_Matroid.thy"}, we fix a concret
 build the weighted matroid intersection instance on top. The local definitions are named with a
 \<open>W\<close>-prefix to avoid colliding with the globally-exported \<open>Edges\<close>/\<open>X\<close>/\<open>Y\<close>/\<open>to_dbltn\<close> constants of
 the very same bottom context in @{file "Max_Bipartite_Matching_Matroid.thy"} (both files import
-@{file "Matroid_Intersection_Algorithm.thy"} into the same name space).\<close>
+ \<open>Matroid_Intersection_Algorithm.thy\<close> into the same name space).\<close>
 
 context
   fixes left_vertex::"'e::linorder \<Rightarrow> 'v::linorder"

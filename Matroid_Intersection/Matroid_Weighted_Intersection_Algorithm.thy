@@ -735,6 +735,8 @@ sublocale U: unweighted_intersection
     (fact set_insert set_delete set_empty weak_orcl1 weak_orcl2 inner_fold
        inner_fold_circuit outer_fold find_path complement circuit1 circuit2)+
 
+thm U.effect_of_augmentation
+
 subsubsection \<open>The loop invariant\<close>
 
 text \<open>At any split \<open>(c1, c2)\<close> the ambient double matroid is a \<^locale>\<open>weighted_intersection_graph\<close>
