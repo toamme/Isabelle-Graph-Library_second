@@ -15,6 +15,398 @@ text \<open>The imperative counterpart of the path search of
   targets are scanned directly. The result is that of the functional path search with the set
   model of solutions.\<close>
 
+(* NEW (weighted extension): subsection \<open>The BFS on a Filtered CSR\<close> *)
+subsection \<open>The BFS on a Filtered CSR\<close>
+
+(* MOVED (weighted extension): lemma mem_nbrs, was in locale unweighted_intersection_exchange_imp (with the text before it) *)
+text \<open>The BFS core of the library on the graph of an edge list \<open>E\<close> below \<open>n\<close>, run with an
+  iterator \<open>nbs\<close> on a graph handle that walks the neighbours of a vertex in \<open>E\<close> (e.g. the CSR
+  neighbours of a constant larger graph, skipping the edges outside \<open>E\<close>). The visited set is exact
+  on all elements below \<open>n\<close> and its handle is fixed. The graph assertion holds the data of the
+  iterator and fixes the graph seen by the BFS to that of \<open>E\<close>.\<close>
+
+lemma mem_nbrs: "v \<in> set (nbrs es u) \<longleftrightarrow> (u, v) \<in> set es"
+  unfolding nbrs_def by force
+
+(* MOVED (weighted extension): lemma nbrs_append, was in locale unweighted_intersection_exchange_imp *)
+lemma nbrs_append: "nbrs (xs @ ys) u = nbrs xs u @ nbrs ys u"
+  unfolding nbrs_def by simp
+
+(* MOVED (weighted extension): lemma case_build_nhlists, was in locale unweighted_intersection_exchange_imp *)
+lemma case_build_nhlists: "(case build_nhlists es v of None \<Rightarrow> [] | Some vs \<Rightarrow> vs) = nbrs es v"
+  unfolding build_nhlists_def by simp
+
+(* MOVED (weighted extension): lemma foldl_filter_if, was in locale unweighted_intersection_exchange_imp *)
+lemma foldl_filter_if:
+  "foldl (\<lambda> a x. if p x then f a x else a) a xs = foldl f a (filter p xs)"
+  by (induction xs arbitrary: a) simp_all
+
+(* MOVED (weighted extension): lemma foldl_True, was in locale unweighted_intersection_exchange_imp *)
+lemma foldl_True: "foldl (\<lambda> a x. True) b xs = (b \<or> xs \<noteq> [])"
+  by (induction xs arbitrary: b) simp_all
+
+(* MOVED (weighted extension): lemma Vs_build_dVs, was in locale unweighted_intersection_exchange_imp *)
+lemma Vs_build_dVs: "BFS_subprocedures_lists.Vs (build_nhlists es) = dVs (set es)"
+  unfolding BFS_subprocedures_lists.Vs_def[OF BFS_subprocedures_lists_bset] dVs_def 
+  by (simp add: build_nhlists_edge)
+
+lemma len_intro: "length l = m \<Longrightarrow> a \<mapsto>\<^sub>a l \<Longrightarrow>\<^sub>A len_assn m a"
+  unfolding len_assn_def by (rule ent_ex_postI[where x = l]) simp
+
+(* MOVED (weighted extension): lemma len_fill_rule, was in locale unweighted_intersection_exchange_imp *)
+lemma len_fill_rule: "<len_assn n a> fill_range_imp f n a <\<lambda> r. a \<mapsto>\<^sub>a map f [0..<n] * \<up>(r = a)>"
+  unfolding len_assn_def by (rule ht_ex_pre) (sep_auto heap: fill_range_imp_rule)
+
+(* MOVED (weighted extension): lemma clear_len, was in locale unweighted_intersection_exchange_imp *)
+lemma clear_len: "<len_assn n Vi> xset_clear_imp n Vi <\<lambda> _. xset_assn n {} Vi>"
+  by (rule ht_cons_post[OF xset_clear_rule]) sep_auto
+
+(* MOVED (weighted extension): lemma fill_len, was in locale unweighted_intersection_exchange_imp *)
+lemma fill_len: "<len_assn n a> fill_range_imp f n a <\<lambda> _. a \<mapsto>\<^sub>a map f [0..<n]>"
+  by (rule ht_cons_post[OF len_fill_rule]) sep_auto
+
+(* MOVED (weighted extension): lemma pure_mid, was in locale unweighted_intersection_exchange_imp *)
+lemma pure_mid: 
+  assumes "b \<Longrightarrow> <P * Fm> c <Q>" 
+  shows "<P * \<up>b * Fm> c <Q>"
+  by (rule ht_cons_pre[OF _ ht_pure_pre[OF assms]]) (simp only: star_aci, rule ent_refl)
+
+(* MOVED (weighted extension): lemma ex_mid, was in locale unweighted_intersection_exchange_imp *)
+lemma ex_mid: 
+  assumes "\<And> x. <P x * Fm> c <Q>" 
+  shows "<(\<exists>\<^sub>A x. P x) * Fm> c <Q>"
+proof-
+  have "<\<exists>\<^sub>A x. P x * Fm> c <Q>"
+    by (rule ht_ex_pre) (rule assms)
+  then show ?thesis
+    by (rule ht_cons_pre[rotated]) sep_auto
+qed
+
+(* MOVED (weighted extension): lemma pull_len, was in locale unweighted_intersection_exchange_imp *)
+lemma pull_len:
+  assumes "\<And> l. length l = m \<Longrightarrow> <a \<mapsto>\<^sub>a l * Fm> c <Q>"
+  shows "<len_assn m a * Fm> c <Q>"
+proof-
+  have "<\<exists>\<^sub>A l. a \<mapsto>\<^sub>a l * Fm * \<up>(length l = m)> c <Q>"
+    by (rule ht_ex_pre, rule ht_pure_pre) (rule assms)
+  then show ?thesis
+    by (rule ht_cons_pre[rotated]) (unfold len_assn_def, sep_auto)
+qed
+
+(* MOVED (weighted extension): lemma parr_len, was in locale unweighted_intersection_exchange_imp *)
+lemma parr_len: "parr_assn n Ra = len_assn n Ra"
+  unfolding parr_assn_def len_assn_def by (rule refl)
+
+(* MOVED (weighted extension): lemma path_None, was in locale unweighted_intersection_exchange_imp *)
+lemma path_None: "path_assn n None None Ra = parr_assn n Ra"
+  unfolding path_assn_def parr_assn_def by simp
+
+(* MOVED (weighted extension): definition work_assn, was in locale unweighted_intersection_exchange_imp, and changed (with the text before it) *)
+text \<open>The work arrays of the BFS, with arbitrary contents.\<close>
+
+definition "work_assn n Vi Fr Bf Da Pa = 
+  len_assn n Vi * len_assn (Suc n) Fr * len_assn (Suc n) Bf * len_assn n Da * len_assn n Pa"
+
+(* NEW (weighted extension): locale csr_filtered_bfs *)
+locale csr_filtered_bfs =
+  fixes n :: nat
+    and E :: "(nat \<times> nat) list"
+    and nbs :: "'gh \<Rightarrow> nat \<Rightarrow>
+          (nat \<Rightarrow> nat \<Rightarrow> nat array \<times> nat \<times> bool array \<Rightarrow> (nat array \<times> nat \<times> bool array) Heap) \<Rightarrow>
+          nat array \<times> nat \<times> bool array \<Rightarrow> (nat array \<times> nat \<times> bool array) Heap"
+    and ga :: "'gh \<Rightarrow> assn"
+  assumes E_bound: "(u, v) \<in> set E \<Longrightarrow> u < n \<and> v < n"
+    and nbs_rule: "(\<And> acc acci x. x \<in> set (nbrs E u) \<Longrightarrow>
+               <A acc acci * F> fi u x acci <\<lambda> r. A (f u acc x) r * F>) \<Longrightarrow>
+         <ga Gh * (A :: nat list \<times> nat list \<times> (nat \<Rightarrow> nat) \<Rightarrow> nat array \<times> nat \<times> bool array \<Rightarrow> assn)
+            acc acci * F> nbs Gh u fi acci
+         <\<lambda> r. ga Gh * F * A (foldl (f u) acc (nbrs E u)) r>"
+begin
+
+(* NEW (weighted extension): abbreviation nbs_bfs (with the text before it) *)
+text \<open>The BFS core of the library with this iterator.\<close>
+
+abbreviation "nbs_bfs Gh \<equiv> BFS_Imperative_spec.visited_dists_parents_imp bfs_src_to_cf
+  bfs_set_srcs_visited (BFS_subprocedures_lists_code.next_frontier_current_parents_imp bset_memb
+  bset_ins nbs Gh) bfs_cf_is_empty bfs_set_dists"
+
+(* MOVED (weighted extension): definition xvis, was in locale unweighted_intersection_exchange_imp *)
+definition "xvis Vh U Ss a = xset_assn n Ss a * \<up>(Ss \<subseteq> U \<and> U \<subseteq> {..<n} \<and> a = Vh)"
+
+(* MOVED (weighted extension): definition gx, was in locale unweighted_intersection_exchange_imp, and changed *)
+definition "gx G Gh = ga Gh * \<up>(G = build_nhlists E)"
+
+(* MOVED (weighted extension): lemma xvis_only, was in locale unweighted_intersection_exchange_imp *)
+lemma xvis_only: "xvis Vh U Ss a = xvis Vh U Ss a * \<up>(Ss \<subseteq> U)"
+  unfolding xvis_def by (rule ent_iffI) sep_auto+
+
+(* MOVED (weighted extension): lemma xvis_memb, was in locale unweighted_intersection_exchange_imp *)
+lemma xvis_memb: 
+  "<xvis Vh U Ss a * \<up>(v \<in> U)> bset_memb v a <\<lambda> r. xvis Vh U Ss a * \<up>(r \<longleftrightarrow> v \<in> Ss)>"
+  unfolding xvis_def xset_assn_def bset_memb_def by (sep_auto simp: subset_iff)
+
+(* MOVED (weighted extension): lemma xvis_ins, was in locale unweighted_intersection_exchange_imp *)
+lemma xvis_ins: 
+  "<xvis Vh U Ss a * \<up>(v \<in> U \<and> v \<notin> Ss)> bset_ins v a <xvis Vh U (Set.insert v Ss)>"
+  unfolding xvis_def bset_ins_def by (sep_auto heap: xset_upd_rule simp: subset_iff)
+
+(* MOVED (weighted extension): lemma gx_iterate, was in locale unweighted_intersection_exchange_imp, and changed *)
+lemma gx_iterate:
+  fixes acc_assn :: "nat list \<times> nat list \<times> (nat \<Rightarrow> nat) \<Rightarrow> nat array \<times> nat \<times> bool array \<Rightarrow> assn"
+  assumes fi: "\<And> acc acci x vs. \<lbrakk>nhlists v = Some vs; x \<in> set vs\<rbrakk> \<Longrightarrow>
+               <acc_assn acc acci * F> fi v x acci <\<lambda> r. acc_assn (f v acc x) r * F>"
+  shows "<gx nhlists Gi * acc_assn acc acci * F> nbs Gi v fi acci
+         <\<lambda> r. gx nhlists Gi * F * 
+               acc_assn (foldl (f v) acc (case nhlists v of None \<Rightarrow> [] | Some vs \<Rightarrow> vs)) r>"
+proof(cases "nhlists = build_nhlists E")
+  case False
+  show ?thesis 
+    unfolding gx_def using False by sep_auto
+next
+  case True
+  have fi': "<acc_assn acc acci * F> fi v x acci <\<lambda> r. acc_assn (f v acc x) r * F>"
+    if "x \<in> set (nbrs E v)" for acc acci x
+    using that by (intro fi[of "nbrs E v"]) (auto simp: True build_nhlists_def)
+  show ?thesis
+    unfolding gx_def
+    by (rule ht_cons[OF _ _ nbs_rule[where u = v and A = acc_assn and F = F and fi = fi and f = f,
+                                      OF fi']])
+       (sep_auto simp: True case_build_nhlists)+
+qed
+
+(* MOVED (weighted extension): lemma BFS_sub, was in locale unweighted_intersection_exchange_imp, and changed *)
+lemma BFS_sub: "BFS_subprocedures_lists (xvis Vh) bset_memb bset_ins nbs gx"
+  by unfold_locales (rule xvis_only xvis_memb xvis_ins gx_iterate | assumption)+
+
+(* NEW (weighted extension): lemma Vs_E *)
+lemma Vs_E: "BFS_subprocedures_lists.Vs (build_nhlists E) \<subseteq> {..<n}"
+  unfolding Vs_build_dVs using E_bound by (force simp: dVs_def)
+
+(* MOVED (weighted extension): lemma card_Vs (moved within this theory), and changed *)
+lemma card_Vs: "card (BFS_subprocedures_lists.Vs (build_nhlists E)) \<le> n"
+  using card_mono[OF finite_lessThan Vs_E] by simp
+
+(* NEW (weighted extension): context "" *)
+context
+  fixes ss
+  assumes b: "bfs_csr n E ss"
+begin
+
+(* NEW (weighted extension): interpretation b: bfs_csr n E ss *)
+interpretation b: bfs_csr n E ss
+  by (rule b)
+
+(* CHANGED (weighted extension): interpretation inst: BFS_lists_instance where is_visited_set = "xvis Vh" *)
+interpretation inst: BFS_lists_instance where is_visited_set = "xvis Vh"
+  and visited_memb = bset_memb and distinct_ins = bset_ins and iterate_neighbourhood = nbs
+  and graph_assn = gx and G = "build_nhlists E" and Gi = Gh and srcs = "rev ss"
+  and N = n and Fr = Fr and Bf = Bf and Da = Da and Pa = Pa for Vh Gh Fr Bf Da Pa
+  using BFS_sub Vs_E
+  by (auto intro!: BFS_lists_instance.intro BFS_lists_instance_axioms.intro)
+
+(* CHANGED (weighted extension): lemma code_eqs *)
+lemma code_eqs:
+  "inst.imp_bfs.visited_dists_parents_imp Gh = nbs_bfs Gh" "inst.imp_bfs.path_imp = bfs_path"
+  by (simp_all add: bfs_path_def bfs_src_to_cf_def bfs_set_srcs_visited_def bfs_cf_is_empty_def
+                    bfs_set_dists_def)
+
+definition "fin = inst.imp_bfs.BFS_par_impl inst.imp_bfs.initial_par_state"
+
+lemma BFS_axiom: "inst.imp_bfs.BFS_axiom"
+  by (rule b.BFS_axiom)
+
+(* CHANGED (weighted extension): lemma cf_len *)
+lemma cf_len: "inst.imp_cf_assn (Suc n) Fr Bf G cf cfi \<Longrightarrow>\<^sub>A len_assn (Suc n) Fr * len_assn (Suc n) Bf"
+proof-
+  obtain a b c where cfi: "cfi = (a, b, c)"
+    by (cases cfi rule: prod_cases3)
+  have e: "a \<mapsto>\<^sub>a l1 * c \<mapsto>\<^sub>a l2 \<Longrightarrow>\<^sub>A len_assn (Suc n) Fr * len_assn (Suc n) Bf"
+    if l: "length l1 = Suc n" "length l2 = Suc n" and ac: "a = Fr \<and> c = Bf \<or> a = Bf \<and> c = Fr"
+    for l1 l2
+  proof(cases "a = Fr \<and> c = Bf")
+    case True
+    show ?thesis
+      using ent_star_mono[OF len_intro[OF l(1), of a] len_intro[OF l(2), of c]] True by simp
+  next
+    case False
+    then have "a = Bf" "c = Fr"
+      using ac by blast+
+    then show ?thesis
+      using ent_star_mono[OF len_intro[OF l(2), of c] len_intro[OF l(1), of a]]
+      by (simp add: mult.commute)
+  qed
+  show ?thesis
+    unfolding cfi inst.imp_cf_assn.simps doubleton_eq_iff
+    by (intro ent_ex_preI, unfold ent_pure_pre_iff, intro impI, elim conjE, rule e) assumption+
+qed
+
+(* CHANGED (weighted extension): lemma bfs_rule *)
+lemma bfs_rule:
+  assumes "length fl = Suc n" "take (length ss) fl = ss" "length bl = Suc n"
+  shows "<xset_assn n {} Vi * Fr \<mapsto>\<^sub>a fl * Bf \<mapsto>\<^sub>a bl * Da \<mapsto>\<^sub>a map id [0..<n] *
+          Pa \<mapsto>\<^sub>a map id [0..<n] * ga Gh>
+           nbs_bfs Gh Vi (Fr, length ss, Bf) Da Pa
+         <\<lambda> _. ga Gh * xset_assn n (set (BFS_dist_state.visited fin)) Vi *
+            inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) Da *
+            inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) Pa *
+            len_assn (Suc n) Fr * len_assn (Suc n) Bf>"
+proof-
+  let ?G = "build_nhlists E"
+  have sV: "set ss \<subseteq> BFS_subprocedures_lists.Vs ?G"
+    using b.ss_in_graph unfolding Vs_build_dVs .
+  have ls: "length ss \<le> n"
+    using card_mono[OF finite_subset[OF Vs_E finite_lessThan] sV] distinct_card[OF b.ss_distinct]
+          card_Vs by simp
+  have ids: "\<forall>i \<in> BFS_subprocedures_lists.Vs ?G. i < length (map id [0..<n]) \<and> id i = map id [0..<n] ! i"
+    using Vs_E by auto
+  have pre: "xset_assn n {} Vi * Fr \<mapsto>\<^sub>a fl * Bf \<mapsto>\<^sub>a bl * Da \<mapsto>\<^sub>a map id [0..<n] *
+             Pa \<mapsto>\<^sub>a map id [0..<n] * ga Gh
+             \<Longrightarrow>\<^sub>A xvis Vi (BFS_subprocedures_lists.Vs ?G) (set []) Vi *
+             inst.imp_src_assn (Suc n) Fr Bf ?G (rev ss) (Fr, length ss, Bf) *
+             inst.imp_dist_assn n Da ?G id Da * inst.imp_par_assn n Pa ?G id Pa * gx ?G Gh"
+    if "length bl = Suc n" for bl
+  proof-
+    have v: "xset_assn n {} Vi \<Longrightarrow>\<^sub>A xvis Vi (BFS_subprocedures_lists.Vs ?G) (set []) Vi"
+      unfolding xvis_def using Vs_E by sep_auto
+    have g: "ga Gh \<Longrightarrow>\<^sub>A gx ?G Gh"
+      unfolding gx_def by sep_auto
+    have s: "Fr \<mapsto>\<^sub>a fl * Bf \<mapsto>\<^sub>a bl \<Longrightarrow>\<^sub>A inst.imp_src_assn (Suc n) Fr Bf ?G (rev ss) (Fr, length ss, Bf)"
+      by (rule inst.imp_src_assn_intro) (use assms that card_Vs ls sV in simp_all)
+    show ?thesis
+      by (rule ent_trans[OF _ ent_star_mono[OF ent_star_mono[OF ent_star_mono[OF ent_star_mono[OF v s]
+             inst.imp_dist_assn_intro[OF ids] ] inst.imp_par_assn_intro[OF ids]] g]])
+         (simp_all add: star_aci)
+  qed
+  have post: "gx ?G Gh * xvis Vi (BFS_subprocedures_lists.Vs ?G) (set V) visi *
+              inst.imp_dist_assn n Da ?G d di * inst.imp_par_assn n Pa ?G p pari *
+              (\<exists>\<^sub>A cf cfi. inst.imp_cf_assn (Suc n) Fr Bf ?G cf cfi)
+              \<Longrightarrow>\<^sub>A ga Gh * xset_assn n (set V) Vi * inst.imp_dist_assn n Da ?G d Da *
+              inst.imp_par_assn n Pa ?G p Pa * len_assn (Suc n) Fr * len_assn (Suc n) Bf"
+    for V visi d di p pari
+  proof-
+    have c: "(\<exists>\<^sub>A cf cfi. inst.imp_cf_assn (Suc n) Fr Bf ?G cf cfi)
+             \<Longrightarrow>\<^sub>A len_assn (Suc n) Fr * len_assn (Suc n) Bf"
+      by (intro ent_ex_preI) (rule cf_len)
+    show ?thesis
+      unfolding gx_def xvis_def inst.imp_dist_assn_char inst.imp_par_assn_char
+      by (rule ent_trans[OF ent_star_mono[OF ent_refl c]]) sep_auto
+  qed
+  show ?thesis
+    by (rule ht_cons[OF pre[OF assms(3)] _
+           inst.imp_bfs.visited_dists_parents_imp_frontier_rule[unfolded code_eqs, folded fin_def]])
+       (unfold split_paired_all prod.case, rule ent_trans[OF post], sep_auto)
+qed
+
+(* CHANGED (weighted extension): lemma path_rule *)
+lemma path_rule:
+  assumes "find (\<lambda> y. y \<in> set (BFS_dist_state.visited fin)) ts = Some t" "length rl = n"
+  shows "<inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) di *
+          inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) pari * Ra \<mapsto>\<^sub>a rl>
+           bfs_path di pari Ra t
+         <\<lambda> k. inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) di *
+               inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) pari *
+               path_assn n (Some (inst.imp_bfs.parent_path (BFS_dist_state.dists fin)
+                                   (BFS_par_state.parent fin) t [])) (Some k) Ra>"
+proof-
+  let ?pp = "inst.imp_bfs.parent_path (BFS_dist_state.dists fin) (BFS_par_state.parent fin) t []"
+  have t: "t \<in> set (BFS_dist_state.visited fin)"
+    by (rule conjunct1[OF find_SomeD[OF assms(1)]])
+  have len: "length ?pp \<le> n"
+  proof-
+    have "length ?pp \<le> card (dVs (set E))"
+      using inst.imp_bfs.parent_path_length[OF BFS_axiom fin_def t]
+      unfolding b.digraph_abs_build b.\<E>_def .
+    then show ?thesis
+      using card_Vs[unfolded Vs_build_dVs] by (rule le_trans)
+  qed
+  have p: "bfs_path di pari Ra t = inst.imp_bfs.path_rev_imp di pari Ra t 0"
+    unfolding code_eqs(2)[symmetric] inst.imp_bfs.path_imp_def by (rule refl)
+  have r: "<inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) di *
+            inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) pari * Ra \<mapsto>\<^sub>a r>
+             bfs_path di pari Ra t
+           <\<lambda> k. inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) di *
+                 inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) pari *
+                 path_assn n (Some ?pp) (Some k) Ra>" if "length r = n" for r
+    unfolding p path_assn_def option.case(2)
+    by (rule ht_cons_post[OF inst.imp_bfs.path_rev_imp_rule[OF BFS_axiom fin_def t]])
+       (use len that in \<open>sep_auto\<close>)+
+  show ?thesis
+    by (rule r[OF assms(2)])
+qed
+
+(* NEW (weighted extension): lemma dist_len *)
+lemma dist_len: "inst.imp_dist_assn n Da (build_nhlists E) d di \<Longrightarrow>\<^sub>A len_assn n Da"
+  unfolding inst.imp_dist_assn_char len_assn_def by sep_auto
+
+(* NEW (weighted extension): lemma par_len *)
+lemma par_len: "inst.imp_par_assn n Pa (build_nhlists E) p pari \<Longrightarrow>\<^sub>A len_assn n Pa"
+  unfolding inst.imp_par_assn_char len_assn_def by sep_auto
+
+(* CHANGED (weighted extension): lemma work_ent *)
+lemma work_ent:
+  "xset_assn n V Vi * inst.imp_dist_assn n Da (build_nhlists E) d di *
+   inst.imp_par_assn n Pa (build_nhlists E) p pari * len_assn (Suc n) Fr * len_assn (Suc n) Bf
+   \<Longrightarrow>\<^sub>A work_assn n Vi Fr Bf Da Pa"
+proof-
+  note d = dist_len and p = par_len
+  show ?thesis
+    unfolding work_assn_def
+    by (rule ent_trans[OF ent_star_mono[OF ent_star_mono[OF ent_star_mono[OF ent_star_mono[OF xset_len d] p]
+                                    ent_refl] ent_refl]])
+       (simp only: star_aci, rule ent_refl)
+qed
+
+(* CHANGED (weighted extension): lemma bfs_len_rule *)
+lemma bfs_len_rule:
+  assumes "length fl = Suc n" "take (length ss) fl = ss"
+  shows "<len_assn (Suc n) Bf * (xset_assn n {} Vi * Fr \<mapsto>\<^sub>a fl * Da \<mapsto>\<^sub>a map id [0..<n] *
+          Pa \<mapsto>\<^sub>a map id [0..<n] * ga Gh)>
+           nbs_bfs Gh Vi (Fr, length ss, Bf) Da Pa
+         <\<lambda> _. ga Gh * xset_assn n (set (BFS_dist_state.visited fin)) Vi *
+            inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) Da *
+            inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) Pa *
+            len_assn (Suc n) Fr * len_assn (Suc n) Bf>"
+proof(rule pull_len)
+  fix bl :: "nat list"
+  assume bl: "length bl = Suc n"
+  show "<Bf \<mapsto>\<^sub>a bl * (xset_assn n {} Vi * Fr \<mapsto>\<^sub>a fl * Da \<mapsto>\<^sub>a map id [0..<n] *
+          Pa \<mapsto>\<^sub>a map id [0..<n] * ga Gh)>
+           nbs_bfs Gh Vi (Fr, length ss, Bf) Da Pa
+         <\<lambda> _. ga Gh * xset_assn n (set (BFS_dist_state.visited fin)) Vi *
+            inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) Da *
+            inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) Pa *
+            len_assn (Suc n) Fr * len_assn (Suc n) Bf>"
+    by (rule ht_cons_pre[OF _ bfs_rule[OF assms bl]]) (simp only: star_aci, rule ent_refl)
+qed
+
+(* CHANGED (weighted extension): lemma path_len_rule *)
+lemma path_len_rule:
+  assumes "find (\<lambda> y. y \<in> set (BFS_dist_state.visited fin)) ts = Some t"
+  shows "<parr_assn n Ra * (inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) di *
+          inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) pari)>
+           bfs_path di pari Ra t
+         <\<lambda> k. inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) di *
+               inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) pari *
+               path_assn n (Some (inst.imp_bfs.parent_path (BFS_dist_state.dists fin)
+                                   (BFS_par_state.parent fin) t [])) (Some k) Ra>"
+  unfolding parr_len
+proof(rule pull_len)
+  fix rl :: "nat list"
+  assume rl: "length rl = n"
+  show "<Ra \<mapsto>\<^sub>a rl * (inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) di *
+          inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) pari)>
+           bfs_path di pari Ra t
+         <\<lambda> k. inst.imp_dist_assn n Da (build_nhlists E) (BFS_dist_state.dists fin) di *
+               inst.imp_par_assn n Pa (build_nhlists E) (BFS_par_state.parent fin) pari *
+               path_assn n (Some (inst.imp_bfs.parent_path (BFS_dist_state.dists fin)
+                                   (BFS_par_state.parent fin) t [])) (Some k) Ra>"
+    by (rule ht_cons_pre[OF _ path_rule[OF assms rl]]) (simp only: star_aci, rule ent_refl)
+qed
+
+end
+
+end
+
 subsection \<open>Code\<close>
 
 locale unweighted_intersection_exchange_imp_spec =
@@ -59,20 +451,23 @@ definition "bfs_run Gh = BFS_Imperative_spec.visited_dists_parents_imp bfs_src_t
 
 definition "has_nb_imp Gc Si y = xnbs (Si, Gc) y (\<lambda> _ _ _. return True) False"
 
-definition "st_imp Si y = do {
-   b \<leftarrow> smemb_imp y Si;
-   if b then return False
-   else do { s \<leftarrow> ins1_imp Si y; if s then ins2_imp Si y else return False } }"
+(* NEW (weighted extension): definition s_imp (with the text before it) *)
+text \<open>Sources and targets (elements outside the solution insertable in the first resp. second
+  matroid), sources that are targets, sources having an exchange edge, and visited targets.\<close>
 
-definition "src_imp Gc Si y = do {
-   b \<leftarrow> smemb_imp y Si;
-   if b then return False
-   else do { s \<leftarrow> ins1_imp Si y; if s then has_nb_imp Gc Si y else return False } }"
+definition "s_imp Si y = do { b \<leftarrow> smemb_imp y Si; if b then return False else ins1_imp Si y }"
 
-definition "tgt_imp Si Vi y = do {
-   v \<leftarrow> Array.nth Vi y;
-   if v then do { b \<leftarrow> smemb_imp y Si; if b then return False else ins2_imp Si y }
-   else return False }"
+(* NEW (weighted extension): definition t_imp *)
+definition "t_imp Si y = do { b \<leftarrow> smemb_imp y Si; if b then return False else ins2_imp Si y }"
+
+(* CHANGED (weighted extension): definition st_imp *)
+definition "st_imp Si y = do { s \<leftarrow> s_imp Si y; if s then ins2_imp Si y else return False }"
+
+(* CHANGED (weighted extension): definition src_imp *)
+definition "src_imp Gc Si y = do { s \<leftarrow> s_imp Si y; if s then has_nb_imp Gc Si y else return False }"
+
+(* CHANGED (weighted extension): definition tgt_imp *)
+definition "tgt_imp Si Vi y = do { v \<leftarrow> Array.nth Vi y; if v then t_imp Si y else return False }"
 
 text \<open>One search: a source that is a target is a path on its own. Otherwise, the sources having
   an exchange edge are written into the frontier array, the visited, distance and parent arrays
@@ -122,6 +517,7 @@ locale unweighted_intersection_exchange_imp =
                      \<not> ins_orcl2 (orcl_prep2 X) u; exch_orcl2 (orcl_prep2 X) v u\<rbrakk> \<Longrightarrow> (u, v) \<in> set es0"
 begin
 
+(* REMOVED (weighted extension): interpretation b: bfs_csr n "EE X" ss *)
 subsubsection \<open>The Exchange Neighbours\<close>
 
 definition "S0 X = {y. y < n \<and> y \<notin> X \<and> ins_orcl1 (orcl_prep1 X) y}"
@@ -134,11 +530,6 @@ definition "exch_nb X u v =
 
 abbreviation "EE X \<equiv> csr.exch_edges (csr.exch_ctx X)"
 
-lemma mem_nbrs: "v \<in> set (nbrs es u) \<longleftrightarrow> (u, v) \<in> set es"
-  unfolding nbrs_def by force
-
-lemma nbrs_append: "nbrs (xs @ ys) u = nbrs xs u @ nbrs ys u"
-  unfolding nbrs_def by simp
 
 lemma nbrs_concat:
   "nbrs (concat (map (\<lambda> x. map (Pair x) (L x)) xs)) u = concat (map (\<lambda> x. if x = u then L x else []) xs)"
@@ -148,8 +539,6 @@ lemma concat_if_distinct:
   "distinct xs \<Longrightarrow> concat (map (\<lambda> x. if x = u then L x else []) xs) = (if u \<in> set xs then L u else [])"
   by (induction xs) auto
 
-lemma case_build_nhlists: "(case build_nhlists es v of None \<Rightarrow> [] | Some vs \<Rightarrow> vs) = nbrs es v"
-  unfolding build_nhlists_def by simp
 
 lemma ctx_parts:
   "ctx_o1 (csr.exch_ctx X) = orcl_prep1 X" "ctx_o2 (csr.exch_ctx X) = orcl_prep2 X"
@@ -279,9 +668,6 @@ subsubsection \<open>The Iterator\<close>
 
 definition "gxs X Si Gc = sol_assn X Si * ost1 * ost2 * csr3_assn (build_nhlists es0) Gc"
 
-lemma foldl_filter_if:
-  "foldl (\<lambda> a x. if p x then f a x else a) a xs = foldl f a (filter p xs)"
-  by (induction xs arbitrary: a) simp_all
 
 text \<open>(A triple must not start with \<open><sol_assn\<close> here, which is read as another token.)\<close>
 
@@ -403,117 +789,28 @@ qed
 
 subsubsection \<open>The BFS on the Exchange Graph\<close>
 
-text \<open>The visited set is exact on all elements below \<open>n\<close> and its handle is fixed. The graph
+(* REMOVED (weighted extension): lemma Vs_EE *)
+(* CHANGED (weighted extension): text "\<open>The BFS of @{locale csr_filtered_bfs} on th" *)
+text \<open>The BFS of @{locale csr_filtered_bfs} on the exchange graph of a solution. The graph
   handle is the pair of the solution handle and the CSR; its assertion holds the solution, the
-  static data of the oracles and the CSR, and fixes the graph seen by the BFS to the exchange
-  graph of the solution.\<close>
-
-definition "xvis Vh U Ss a = xset_assn n Ss a * \<up>(Ss \<subseteq> U \<and> U \<subseteq> {..<n} \<and> a = Vh)"
-
-definition "gx X G Gh = (case Gh of (Si, Gc) \<Rightarrow> gxs X Si Gc * \<up>(G = build_nhlists (EE X)))"
-
-lemma xvis_only: "xvis Vh U Ss a = xvis Vh U Ss a * \<up>(Ss \<subseteq> U)"
-  unfolding xvis_def by (rule ent_iffI) sep_auto+
-
-lemma xvis_memb: 
-  "<xvis Vh U Ss a * \<up>(v \<in> U)> bset_memb v a <\<lambda> r. xvis Vh U Ss a * \<up>(r \<longleftrightarrow> v \<in> Ss)>"
-  unfolding xvis_def xset_assn_def bset_memb_def by (sep_auto simp: subset_iff)
-
-lemma xvis_ins: 
-  "<xvis Vh U Ss a * \<up>(v \<in> U \<and> v \<notin> Ss)> bset_ins v a <xvis Vh U (Set.insert v Ss)>"
-  unfolding xvis_def bset_ins_def by (sep_auto heap: xset_upd_rule simp: subset_iff)
-
-lemma gx_iterate:
-  assumes X: "finite X" "X \<subseteq> {0..<n}" "indep1 X" "indep2 X"
-    and fi: "\<And> acc acci x vs. \<lbrakk>nhlists v = Some vs; x \<in> set vs\<rbrakk> \<Longrightarrow>
-               <acc_assn acc acci * F> fi v x acci <\<lambda> r. acc_assn (f v acc x) r * F>"
-  shows "<gx X nhlists Gi * acc_assn acc acci * F> xnbs Gi v fi acci
-         <\<lambda> r. gx X nhlists Gi * F * 
-               acc_assn (foldl (f v) acc (case nhlists v of None \<Rightarrow> [] | Some vs \<Rightarrow> vs)) r>"
-proof-
-  obtain Si Gc where Gi: "Gi = (Si, Gc)"
-    by (cases Gi)
-  show ?thesis
-  proof(cases "nhlists = build_nhlists (EE X)")
-    case False
-    show ?thesis 
-      unfolding gx_def Gi prod.case using False by sep_auto
-  next
-    case True
-    have fi': "<acc_assn acc acci * F> fi v x acci <\<lambda> r. acc_assn (f v acc x) r * F>"
-      if "x \<in> set (nbrs (EE X) v)" for acc acci x
-      using that by (intro fi[of "nbrs (EE X) v"]) (auto simp: True build_nhlists_def)
-    show ?thesis
-      unfolding gx_def Gi prod.case
-      by (rule ht_cons[OF _ _ xnbs_rule[where u = v and A = acc_assn and F = F and fi = fi and f = f,
-                                         OF X fi']])
-         (sep_auto simp: True case_build_nhlists)+
-  qed
-qed
-
-lemma BFS_sub:
-  assumes X: "finite X" "X \<subseteq> {0..<n}" "indep1 X" "indep2 X"
-  shows "BFS_subprocedures_lists (xvis Vh) bset_memb bset_ins xnbs (gx X)"
-  by unfold_locales (rule xvis_only xvis_memb xvis_ins gx_iterate[OF X] | assumption)+
-
-lemma Vs_build_dVs: "BFS_subprocedures_lists.Vs (build_nhlists es) = dVs (set es)"
-  unfolding BFS_subprocedures_lists.Vs_def[OF BFS_subprocedures_lists_bset] dVs_def 
-  by (simp add: build_nhlists_edge)
-lemma Vs_EE:
-  assumes X: "finite X" "X \<subseteq> {0..<n}" "indep1 X" "indep2 X"
-  shows "BFS_subprocedures_lists.Vs (build_nhlists (EE X)) \<subseteq> {..<n}"
-  unfolding Vs_build_dVs using EE_bound[OF X] by (force simp: dVs_def)
-
-lemma foldl_True: "foldl (\<lambda> a x. True) b xs = (b \<or> xs \<noteq> [])"
-  by (induction xs arbitrary: b) simp_all
-
-lemma len_fill_rule: "<len_assn n a> fill_range_imp f n a <\<lambda> r. a \<mapsto>\<^sub>a map f [0..<n] * \<up>(r = a)>"
-  unfolding len_assn_def by (rule ht_ex_pre) (sep_auto heap: fill_range_imp_rule)
-
-lemma clear_len: "<len_assn n Vi> xset_clear_imp n Vi <\<lambda> _. xset_assn n {} Vi>"
-  by (rule ht_cons_post[OF xset_clear_rule]) sep_auto
-
-lemma fill_len: "<len_assn n a> fill_range_imp f n a <\<lambda> _. a \<mapsto>\<^sub>a map f [0..<n]>"
-  by (rule ht_cons_post[OF len_fill_rule]) sep_auto
-
-lemma pure_mid: 
-  assumes "b \<Longrightarrow> <P * Fm> c <Q>" 
-  shows "<P * \<up>b * Fm> c <Q>"
-  by (rule ht_cons_pre[OF _ ht_pure_pre[OF assms]]) (simp only: star_aci, rule ent_refl)
-
-lemma ex_mid: 
-  assumes "\<And> x. <P x * Fm> c <Q>" 
-  shows "<(\<exists>\<^sub>A x. P x) * Fm> c <Q>"
-proof-
-  have "<\<exists>\<^sub>A x. P x * Fm> c <Q>"
-    by (rule ht_ex_pre) (rule assms)
-  then show ?thesis
-    by (rule ht_cons_pre[rotated]) sep_auto
-qed
-
-lemma pull_len:
-  assumes "\<And> l. length l = m \<Longrightarrow> <a \<mapsto>\<^sub>a l * Fm> c <Q>"
-  shows "<len_assn m a * Fm> c <Q>"
-proof-
-  have "<\<exists>\<^sub>A l. a \<mapsto>\<^sub>a l * Fm * \<up>(length l = m)> c <Q>"
-    by (rule ht_ex_pre, rule ht_pure_pre) (rule assms)
-  then show ?thesis
-    by (rule ht_cons_pre[rotated]) (unfold len_assn_def, sep_auto)
-qed
-
-lemma parr_len: "parr_assn n Ra = len_assn n Ra"
-  unfolding parr_assn_def len_assn_def by (rule refl)
-
-lemma path_None: "path_assn n None None Ra = parr_assn n Ra"
-  unfolding path_assn_def parr_assn_def by simp
-
-definition "work_assn Vi Fr Bf Da Pa = 
-  len_assn n Vi * len_assn (Suc n) Fr * len_assn (Suc n) Bf * len_assn n Da * len_assn n Pa"
+  static data of the oracles and the CSR.\<close>
 
 context
   fixes X
   assumes X: "finite X" "X \<subseteq> {0..<n}" "indep1 X" "indep2 X"
 begin
+
+(* NEW (weighted extension): interpretation fb: csr_filtered_bfs n "EE X" xnbs "\<lambda> (Si, Gc). gxs X Si Gc" *)
+interpretation fb: csr_filtered_bfs n "EE X" xnbs "\<lambda> (Si, Gc). gxs X Si Gc"
+proof(unfold_locales, goal_cases)
+  case (1 u v)
+  then show ?case
+    by (rule EE_bound[OF X])
+next
+  case (2 u A F fi f Gh acc acci)
+  then show ?case
+    by (cases Gh) (simp only: prod.case, rule xnbs_rule[OF X], rule 2)
+qed
 
 subsubsection \<open>The Functional Values\<close>
 
@@ -579,10 +876,21 @@ lemma nb_char:
 
 subsubsection \<open>The Steps of a Search\<close>
 
+(* NEW (weighted extension): lemma s_imp_rule *)
+lemma s_imp_rule:
+  "y < n \<Longrightarrow> <gxs X Si Gc> s_imp Si y <\<lambda> r. gxs X Si Gc * \<up>(r = (y \<notin> X \<and> y \<in> S0 X))>"
+  unfolding s_imp_def gxs_def S0_def by (sep_auto heap: smemb_rule o1.ins_imp)
+
+(* NEW (weighted extension): lemma t_imp_rule *)
+lemma t_imp_rule:
+  "y < n \<Longrightarrow> <gxs X Si Gc> t_imp Si y <\<lambda> r. gxs X Si Gc * \<up>(r = (y \<notin> X \<and> y \<in> T0 X))>"
+  unfolding t_imp_def gxs_def T0_def by (sep_auto heap: smemb_rule o2.ins_imp)
+
+(* CHANGED (weighted extension): lemma st_imp_rule *)
 lemma st_imp_rule:
   "y < n \<Longrightarrow> <gxs X Si Gc> st_imp Si y
    <\<lambda> r. gxs X Si Gc * \<up>(r = ((y \<notin> X \<and> y \<in> S0 X) \<and> y \<in> T0 X))>"
-  unfolding st_imp_def gxs_def S0_def T0_def by (sep_auto heap: smemb_rule o1.ins_imp o2.ins_imp)
+  unfolding st_imp_def s_imp_def gxs_def S0_def T0_def by (sep_auto heap: smemb_rule o1.ins_imp o2.ins_imp)
 
 lemma find_st_rule:
   "<gxs X Si Gc> find_range_imp (st_imp Si) 0 n
@@ -602,11 +910,12 @@ proof-
     by (rule ht_cons[OF _ _ r]) (sep_auto simp: foldl_True)+
 qed
 
+(* CHANGED (weighted extension): lemma src_imp_rule *)
 lemma src_imp_rule:
   "y < n \<Longrightarrow> <gxs X Si Gc> src_imp Gc Si y
    <\<lambda> r. gxs X Si Gc * \<up>(r = ((y \<notin> X \<and> y \<in> S0 X) \<and> 
             (y \<notin> T0 X \<and> find (\<lambda> x. x \<in> X \<and> exch_orcl2 (orcl_prep2 X) x y) [0..<n] \<noteq> None)))>"
-  unfolding src_imp_def 
+  unfolding src_imp_def s_imp_def
   by (sep_auto heap: smemb_rule[where X = X] o1.ins_imp has_nb_rule[unfolded gxs_def] 
                simp: gxs_def S0_def nb_char)
 
@@ -619,10 +928,11 @@ lemma collect_src_rule:
                  take k fl' = filter (csr.has_nb (csr.exch_ctx X)) (csr.srcs (csr.exch_ctx X)))>"
   unfolding eq_srcs[symmetric] by (rule collect_range_imp_rule[OF src_imp_rule assms])
 
+(* CHANGED (weighted extension): lemma tgt_imp_rule *)
 lemma tgt_imp_rule:
   "y < n \<Longrightarrow> <xset_assn n V Vi * gxs X Si Gc> tgt_imp Si Vi y
    <\<lambda> r. xset_assn n V Vi * gxs X Si Gc * \<up>(r = ((y \<notin> X \<and> y \<in> T0 X) \<and> y \<in> V))>"
-  unfolding tgt_imp_def gxs_def T0_def by (sep_auto heap: xset_memb_rule smemb_rule o2.ins_imp)
+  unfolding tgt_imp_def t_imp_def gxs_def T0_def by (sep_auto heap: xset_memb_rule smemb_rule o2.ins_imp)
 
 lemma find_tgt_rule:
   "<xset_assn n V Vi * gxs X Si Gc> find_range_imp (tgt_imp Si Vi) 0 n
@@ -646,233 +956,42 @@ context
   assumes b: "bfs_csr n (EE X) ss"
 begin
 
-interpretation b: bfs_csr n "EE X" ss
-  by (rule b)
-
-interpretation inst: BFS_lists_instance where is_visited_set = "xvis Vh" 
+(* NEW (weighted extension): interpretation inst: BFS_lists_instance where is_visited_set = "fb.xvis Vh" *)
+interpretation inst: BFS_lists_instance where is_visited_set = "fb.xvis Vh" 
   and visited_memb = bset_memb and distinct_ins = bset_ins and iterate_neighbourhood = xnbs
-  and graph_assn = "gx X" and G = "build_nhlists (EE X)" and Gi = Gh and srcs = "rev ss" 
+  and graph_assn = fb.gx and G = "build_nhlists (EE X)" and Gi = Gh and srcs = "rev ss" 
   and N = n and Fr = Fr and Bf = Bf and Da = Da and Pa = Pa for Vh Gh Fr Bf Da Pa
-  using BFS_sub[OF X] Vs_EE[OF X]
+  using fb.BFS_sub fb.Vs_E
   by (auto intro!: BFS_lists_instance.intro BFS_lists_instance_axioms.intro)
 
-lemma code_eqs: 
-  "inst.imp_bfs.visited_dists_parents_imp Gh = bfs_run Gh" "inst.imp_bfs.path_imp = bfs_path"
-  by (simp_all add: bfs_run_def xround_def bfs_path_def bfs_src_to_cf_def bfs_set_srcs_visited_def 
-                    bfs_cf_is_empty_def bfs_set_dists_def)
+(* CHANGED (weighted extension): lemma fin_eq *)
+lemma fin_eq: "csr.bfs_final (build_nhlists (EE X)) ss = fb.fin ss"
+  unfolding csr.bfs_final_def fb.fin_def[OF b] by (rule refl)
 
-definition "fin = inst.imp_bfs.BFS_par_impl inst.imp_bfs.initial_par_state"
 
-lemma fin_eq: "csr.bfs_final (build_nhlists (EE X)) ss = fin"
-  unfolding csr.bfs_final_def fin_def by (rule refl)
-
-lemma BFS_axiom: "inst.imp_bfs.BFS_axiom"
-  by (rule b.BFS_axiom)
-
-lemma card_Vs: "card (BFS_subprocedures_lists.Vs (build_nhlists (EE X))) \<le> n"
-  using card_mono[OF finite_lessThan Vs_EE[OF X]] by simp
-
-lemma len_intro: "length l = m \<Longrightarrow> a \<mapsto>\<^sub>a l \<Longrightarrow>\<^sub>A len_assn m a"
-  unfolding len_assn_def by (rule ent_ex_postI[where x = l]) simp
-
-lemma cf_len: "inst.imp_cf_assn (Suc n) Fr Bf G cf cfi \<Longrightarrow>\<^sub>A len_assn (Suc n) Fr * len_assn (Suc n) Bf"
-proof-
-  obtain a b c where cfi: "cfi = (a, b, c)"
-    by (cases cfi rule: prod_cases3)
-  have e: "a \<mapsto>\<^sub>a l1 * c \<mapsto>\<^sub>a l2 \<Longrightarrow>\<^sub>A len_assn (Suc n) Fr * len_assn (Suc n) Bf"
-    if l: "length l1 = Suc n" "length l2 = Suc n" and ac: "a = Fr \<and> c = Bf \<or> a = Bf \<and> c = Fr" 
-    for l1 l2
-  proof(cases "a = Fr \<and> c = Bf")
-    case True
-    show ?thesis
-      using ent_star_mono[OF len_intro[OF l(1), of a] len_intro[OF l(2), of c]] True by simp
-  next
-    case False
-    then have "a = Bf" "c = Fr"
-      using ac by blast+
-    then show ?thesis
-      using ent_star_mono[OF len_intro[OF l(2), of c] len_intro[OF l(1), of a]] 
-      by (simp add: mult.commute)
-  qed
-  show ?thesis
-    unfolding cfi inst.imp_cf_assn.simps doubleton_eq_iff
-    by (intro ent_ex_preI, unfold ent_pure_pre_iff, intro impI, elim conjE, rule e) assumption+
-qed
-
-lemma bfs_rule:
-  assumes "length fl = Suc n" "take (length ss) fl = ss" "length bl = Suc n"
-  shows "<xset_assn n {} Vi * Fr \<mapsto>\<^sub>a fl * Bf \<mapsto>\<^sub>a bl * Da \<mapsto>\<^sub>a map id [0..<n] * 
-          Pa \<mapsto>\<^sub>a map id [0..<n] * gxs X Si Gc>
-           bfs_run (Si, Gc) Vi (Fr, length ss, Bf) Da Pa
-         <\<lambda> _. gxs X Si Gc * xset_assn n (set (BFS_dist_state.visited fin)) Vi * 
-            inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) Da *
-            inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) Pa * 
-            len_assn (Suc n) Fr * len_assn (Suc n) Bf>"
-proof-
-  let ?G = "build_nhlists (EE X)"
-  have sV: "set ss \<subseteq> BFS_subprocedures_lists.Vs ?G"
-    using b.ss_in_graph unfolding Vs_build_dVs .
-  have ls: "length ss \<le> n"
-    using card_mono[OF finite_subset[OF Vs_EE[OF X] finite_lessThan] sV] distinct_card[OF b.ss_distinct]
-          card_Vs by simp
-  have ids: "\<forall>i \<in> BFS_subprocedures_lists.Vs ?G. i < length (map id [0..<n]) \<and> id i = map id [0..<n] ! i"
-    using Vs_EE[OF X] by auto
-  have pre: "xset_assn n {} Vi * Fr \<mapsto>\<^sub>a fl * Bf \<mapsto>\<^sub>a bl * Da \<mapsto>\<^sub>a map id [0..<n] * 
-             Pa \<mapsto>\<^sub>a map id [0..<n] * gxs X Si Gc \<Longrightarrow>\<^sub>A
-             xvis Vi (BFS_subprocedures_lists.Vs ?G) (set []) Vi * 
-             inst.imp_src_assn (Suc n) Fr Bf ?G (rev ss) (Fr, length ss, Bf) *
-             inst.imp_dist_assn n Da ?G id Da * inst.imp_par_assn n Pa ?G id Pa * gx X ?G (Si, Gc)"
-    if "length bl = Suc n" for bl
-  proof-
-    have v: "xset_assn n {} Vi \<Longrightarrow>\<^sub>A xvis Vi (BFS_subprocedures_lists.Vs ?G) (set []) Vi"
-      unfolding xvis_def using Vs_EE[OF X] by sep_auto
-    have g: "gxs X Si Gc \<Longrightarrow>\<^sub>A gx X ?G (Si, Gc)"
-      unfolding gx_def by sep_auto
-    have s: "Fr \<mapsto>\<^sub>a fl * Bf \<mapsto>\<^sub>a bl \<Longrightarrow>\<^sub>A inst.imp_src_assn (Suc n) Fr Bf ?G (rev ss) (Fr, length ss, Bf)"
-      by (rule inst.imp_src_assn_intro) (use assms that card_Vs ls sV in simp_all)
-    show ?thesis
-      by (rule ent_trans[OF _ ent_star_mono[OF ent_star_mono[OF ent_star_mono[OF ent_star_mono[OF v s] 
-             inst.imp_dist_assn_intro[OF ids] ] inst.imp_par_assn_intro[OF ids]] g]])
-         (simp_all add: star_aci)
-  qed
-  have post: "gx X ?G (Si, Gc) * xvis Vi (BFS_subprocedures_lists.Vs ?G) (set V) visi *
-              inst.imp_dist_assn n Da ?G d di * inst.imp_par_assn n Pa ?G p pari *
-              (\<exists>\<^sub>A cf cfi. inst.imp_cf_assn (Suc n) Fr Bf ?G cf cfi) \<Longrightarrow>\<^sub>A
-              gxs X Si Gc * xset_assn n (set V) Vi * inst.imp_dist_assn n Da ?G d Da *
-              inst.imp_par_assn n Pa ?G p Pa * len_assn (Suc n) Fr * len_assn (Suc n) Bf" 
-    for V visi d di p pari
-  proof-
-    have c: "(\<exists>\<^sub>A cf cfi. inst.imp_cf_assn (Suc n) Fr Bf ?G cf cfi) \<Longrightarrow>\<^sub>A 
-             len_assn (Suc n) Fr * len_assn (Suc n) Bf"
-      by (intro ent_ex_preI) (rule cf_len)
-    show ?thesis
-      unfolding gx_def xvis_def prod.case inst.imp_dist_assn_char inst.imp_par_assn_char
-      by (rule ent_trans[OF ent_star_mono[OF ent_refl c]]) sep_auto
-  qed
-  show ?thesis
-    by (rule ht_cons[OF pre[OF assms(3)] _ 
-           inst.imp_bfs.visited_dists_parents_imp_frontier_rule[unfolded code_eqs, folded fin_def]])
-       (unfold split_paired_all prod.case, rule ent_trans[OF post], sep_auto)
-qed
-
-lemma path_rule:
-  assumes "find (\<lambda> y. y \<in> set (BFS_dist_state.visited fin)) ts = Some t" "length rl = n"
-  shows "<inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-          inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari * Ra \<mapsto>\<^sub>a rl>
-           bfs_path di pari Ra t
-         <\<lambda> k. inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-               inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari *
-               path_assn n (Some (inst.imp_bfs.parent_path (BFS_dist_state.dists fin)
-                                   (BFS_par_state.parent fin) t [])) (Some k) Ra>"
-proof-
-  let ?pp = "inst.imp_bfs.parent_path (BFS_dist_state.dists fin) (BFS_par_state.parent fin) t []"
-  have t: "t \<in> set (BFS_dist_state.visited fin)"
-    by (rule conjunct1[OF find_SomeD[OF assms(1)]])
-  have len: "length ?pp \<le> n"
-  proof-
-    have "length ?pp \<le> card (dVs (set (EE X)))"
-      using inst.imp_bfs.parent_path_length[OF BFS_axiom fin_def t] 
-      unfolding b.digraph_abs_build b.\<E>_def .
-    then show ?thesis
-      using card_Vs[unfolded Vs_build_dVs] by (rule le_trans)
-  qed
-  have p: "bfs_path di pari Ra t = inst.imp_bfs.path_rev_imp di pari Ra t 0"
-    unfolding code_eqs(2)[symmetric] inst.imp_bfs.path_imp_def by (rule refl)
-  have r: "<inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-            inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari * Ra \<mapsto>\<^sub>a r>
-             bfs_path di pari Ra t
-           <\<lambda> k. inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-                 inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari *
-                 path_assn n (Some ?pp) (Some k) Ra>" if "length r = n" for r
-    unfolding p path_assn_def option.case(2)
-    by (rule ht_cons_post[OF inst.imp_bfs.path_rev_imp_rule[OF BFS_axiom fin_def t]])
-       (use len that in \<open>sep_auto\<close>)+
-  show ?thesis
-    by (rule r[OF assms(2)])
-qed
-
+(* CHANGED (weighted extension): lemma target_path_eq *)
 lemma target_path_eq:
   "csr.target_path (build_nhlists (EE X)) ss ts = 
-   (case find (\<lambda> y. y \<in> set (BFS_dist_state.visited fin)) ts of
+   (case find (\<lambda> y. y \<in> set (BFS_dist_state.visited (fb.fin ss))) ts of
       None \<Rightarrow> None
-    | Some t \<Rightarrow> Some (inst.imp_bfs.parent_path (BFS_dist_state.dists fin) (BFS_par_state.parent fin) t []))"
+    | Some t \<Rightarrow> Some (inst.imp_bfs.parent_path (BFS_dist_state.dists (fb.fin ss)) (BFS_par_state.parent (fb.fin ss)) t []))"
   unfolding csr.target_path_def Let_def fin_eq by (rule refl)
 
-lemma work_ent:
-  "xset_assn n V Vi * inst.imp_dist_assn n Da (build_nhlists (EE X)) d di * 
-   inst.imp_par_assn n Pa (build_nhlists (EE X)) p pari * len_assn (Suc n) Fr * len_assn (Suc n) Bf 
-   \<Longrightarrow>\<^sub>A work_assn Vi Fr Bf Da Pa"
-proof-
-  have d: "inst.imp_dist_assn n Da (build_nhlists (EE X)) d di \<Longrightarrow>\<^sub>A len_assn n Da"
-    unfolding inst.imp_dist_assn_char len_assn_def by sep_auto
-  have p: "inst.imp_par_assn n Pa (build_nhlists (EE X)) p pari \<Longrightarrow>\<^sub>A len_assn n Pa"
-    unfolding inst.imp_par_assn_char len_assn_def by sep_auto
-  show ?thesis
-    unfolding work_assn_def
-    by (rule ent_trans[OF ent_star_mono[OF ent_star_mono[OF ent_star_mono[OF ent_star_mono[OF xset_len d] p] 
-                                    ent_refl] ent_refl]])
-       (simp only: star_aci, rule ent_refl)
-qed
-
-lemma bfs_len_rule:
-  assumes "length fl = Suc n" "take (length ss) fl = ss"
-  shows "<len_assn (Suc n) Bf * (xset_assn n {} Vi * Fr \<mapsto>\<^sub>a fl * Da \<mapsto>\<^sub>a map id [0..<n] * 
-          Pa \<mapsto>\<^sub>a map id [0..<n] * gxs X Si Gc)>
-           bfs_run (Si, Gc) Vi (Fr, length ss, Bf) Da Pa
-         <\<lambda> _. gxs X Si Gc * xset_assn n (set (BFS_dist_state.visited fin)) Vi * 
-            inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) Da *
-            inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) Pa * 
-            len_assn (Suc n) Fr * len_assn (Suc n) Bf>"
-proof(rule pull_len)
-  fix bl :: "nat list"
-  assume bl: "length bl = Suc n"
-  show "<Bf \<mapsto>\<^sub>a bl * (xset_assn n {} Vi * Fr \<mapsto>\<^sub>a fl * Da \<mapsto>\<^sub>a map id [0..<n] * 
-          Pa \<mapsto>\<^sub>a map id [0..<n] * gxs X Si Gc)>
-           bfs_run (Si, Gc) Vi (Fr, length ss, Bf) Da Pa
-         <\<lambda> _. gxs X Si Gc * xset_assn n (set (BFS_dist_state.visited fin)) Vi * 
-            inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) Da *
-            inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) Pa * 
-            len_assn (Suc n) Fr * len_assn (Suc n) Bf>"
-    by (rule ht_cons_pre[OF _ bfs_rule[OF assms bl]]) (simp only: star_aci, rule ent_refl)
-qed
-
-lemma path_len_rule:
-  assumes "find (\<lambda> y. y \<in> set (BFS_dist_state.visited fin)) ts = Some t"
-  shows "<parr_assn n Ra * (inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-          inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari)>
-           bfs_path di pari Ra t
-         <\<lambda> k. inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-               inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari *
-               path_assn n (Some (inst.imp_bfs.parent_path (BFS_dist_state.dists fin)
-                                   (BFS_par_state.parent fin) t [])) (Some k) Ra>"
-  unfolding parr_len
-proof(rule pull_len)
-  fix rl :: "nat list"
-  assume rl: "length rl = n"
-  show "<Ra \<mapsto>\<^sub>a rl * (inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-          inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari)>
-           bfs_path di pari Ra t
-         <\<lambda> k. inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-               inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari *
-               path_assn n (Some (inst.imp_bfs.parent_path (BFS_dist_state.dists fin)
-                                   (BFS_par_state.parent fin) t [])) (Some k) Ra>"
-    by (rule ht_cons_pre[OF _ path_rule[OF assms rl]]) (simp only: star_aci, rule ent_refl)
-qed
-
+(* CHANGED (weighted extension): lemma tail_rule *)
 lemma tail_rule:
-  "<xset_assn n (set (BFS_dist_state.visited fin)) Vi * gxs X Si Gc * parr_assn n Ra *
-    (inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-     inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari)>
+  "<xset_assn n (set (BFS_dist_state.visited (fb.fin ss))) Vi * gxs X Si Gc * parr_assn n Ra *
+    (inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists (fb.fin ss)) di *
+     inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent (fb.fin ss)) pari)>
      tail_imp Si Ra (Vi, di, pari)
    <\<lambda> res. gxs X Si Gc * 
            path_assn n (csr.target_path (build_nhlists (EE X)) ss (csr.tgts (csr.exch_ctx X))) res Ra *
-           (xset_assn n (set (BFS_dist_state.visited fin)) Vi * 
-            inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-            inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari)>"
+           (xset_assn n (set (BFS_dist_state.visited (fb.fin ss))) Vi * 
+            inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists (fb.fin ss)) di *
+            inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent (fb.fin ss)) pari)>"
 proof-
-  let ?V = "set (BFS_dist_state.visited fin)" and ?ts = "csr.tgts (csr.exch_ctx X)"
-  let ?DP = "inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) di *
-             inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) pari"
+  let ?V = "set (BFS_dist_state.visited (fb.fin ss))" and ?ts = "csr.tgts (csr.exch_ctx X)"
+  let ?DP = "inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists (fb.fin ss)) di *
+             inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent (fb.fin ss)) pari"
   let ?f = "find (\<lambda> y. y \<in> ?V) ?ts"
   have f: "<xset_assn n ?V Vi * gxs X Si Gc * parr_assn n Ra * ?DP> find_range_imp (tgt_imp Si Vi) 0 n
            <\<lambda> r. xset_assn n ?V Vi * gxs X Si Gc * (parr_assn n Ra * ?DP) * \<up>(r = ?f)>"
@@ -890,12 +1009,12 @@ proof-
           rule ht_cons_pre[OF _ ht_return_wp]) (simp only: path_None star_aci, rule ent_refl)
   next
     case (Some t)
-    let ?pp = "inst.imp_bfs.parent_path (BFS_dist_state.dists fin) (BFS_par_state.parent fin) t []"
+    let ?pp = "inst.imp_bfs.parent_path (BFS_dist_state.dists (fb.fin ss)) (BFS_par_state.parent (fb.fin ss)) t []"
     have tp: "csr.target_path (build_nhlists (EE X)) ss ?ts = Some ?pp"
       unfolding target_path_eq Some option.case(2) by (rule refl)
     have p: "<parr_assn n Ra * ?DP * (xset_assn n ?V Vi * gxs X Si Gc)> bfs_path di pari Ra t
              <\<lambda> k. ?DP * path_assn n (Some ?pp) (Some k) Ra * (xset_assn n ?V Vi * gxs X Si Gc)>"
-      using ht_frame[OF path_len_rule[OF Some], where R = "xset_assn n ?V Vi * gxs X Si Gc"]
+      using ht_frame[OF fb.path_len_rule[OF b Some], where R = "xset_assn n ?V Vi * gxs X Si Gc"]
       by (simp only: mult.assoc)
     show ?thesis
       unfolding tail_imp_def prod.case tp
@@ -905,6 +1024,7 @@ proof-
   qed
 qed
 
+(* CHANGED (weighted extension): lemma round_rule *)
 lemma round_rule:
   assumes "length fl = Suc n" "take (length ss) fl = ss"
   shows "<Fr \<mapsto>\<^sub>a fl * gxs X Si Gc * parr_assn n Ra * len_assn n Vi * len_assn (Suc n) Bf * 
@@ -912,18 +1032,18 @@ lemma round_rule:
            round_imp Gc Vi Fr Bf Da Pa Si Ra (length ss)
          <\<lambda> res. gxs X Si Gc * 
                  path_assn n (csr.target_path (build_nhlists (EE X)) ss (csr.tgts (csr.exch_ctx X))) res Ra *
-                 work_assn Vi Fr Bf Da Pa>"
+                 work_assn n Vi Fr Bf Da Pa>"
 proof-
   let ?Fl = "Fr \<mapsto>\<^sub>a fl" and ?G = "gxs X Si Gc" and ?R = "parr_assn n Ra" and ?B = "len_assn (Suc n) Bf"
-  let ?V = "set (BFS_dist_state.visited fin)"
-  let ?D = "inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists fin) Da"
-  let ?P = "inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent fin) Pa"
+  let ?V = "set (BFS_dist_state.visited (fb.fin ss))"
+  let ?D = "inst.imp_dist_assn n Da (build_nhlists (EE X)) (BFS_dist_state.dists (fb.fin ss)) Da"
+  let ?P = "inst.imp_par_assn n Pa (build_nhlists (EE X)) (BFS_par_state.parent (fb.fin ss)) Pa"
   let ?T = "csr.target_path (build_nhlists (EE X)) ss (csr.tgts (csr.exch_ctx X))"
   have raw: "<?Fl * ?G * ?R * len_assn n Vi * ?B * len_assn n Da * len_assn n Pa>
                round_imp Gc Vi Fr Bf Da Pa Si Ra (length ss)
              <\<lambda> res. ?G * path_assn n ?T res Ra * 
                     (xset_assn n ?V Vi * ?D * ?P * len_assn (Suc n) Fr * ?B)>"
-    unfolding round_imp_def
+    unfolding round_imp_def bfs_run_def xround_def
     by (rule ht_bind[OF ht_frame_ac[OF clear_len[where Vi = Vi], 
                        where R = "?Fl * ?G * ?R * ?B * len_assn n Da * len_assn n Pa"]],
         (simp only: star_aci, rule ent_refl), rule ent_refl,
@@ -933,8 +1053,9 @@ proof-
         rule ht_bind[OF ht_frame_ac[OF fill_len[where a = Pa and f = id], 
                        where R = "Da \<mapsto>\<^sub>a map id [0..<n] * (xset_assn n {} Vi * (?Fl * ?G * ?R * ?B))"]],
         (simp only: star_aci, rule ent_refl), rule ent_refl,
-        rule ht_bind[OF ht_frame_ac[OF bfs_len_rule[OF assms, where Bf = Bf and Vi = Vi and Fr = Fr and
-                                       Da = Da and Pa = Pa and Si = Si and Gc = Gc], where R = ?R]],
+        rule ht_bind[OF ht_frame_ac[OF fb.bfs_len_rule[OF b assms, where Bf = Bf and Vi = Vi and Fr = Fr and
+                                       Da = Da and Pa = Pa and Gh = "(Si, Gc)", unfolded prod.case],
+                                    where R = ?R]],
         (simp only: star_aci, rule ent_refl), rule ent_refl,
         rule ht_frame_ac[OF tail_rule[where Vi = Vi and Si = Si and Gc = Gc and Ra = Ra and Da = Da and
                                        Pa = Pa and di = Da and pari = Pa], 
@@ -942,7 +1063,7 @@ proof-
        (simp only: star_aci, rule ent_refl)+
   show ?thesis
     by (rule ht_cons_post[OF raw]) 
-       (rule ent_true_drop(2), rule ent_star_mono[OF ent_refl work_ent])
+       (rule ent_true_drop(2), rule ent_star_mono[OF ent_refl fb.work_ent[OF b]])
 qed
 
 end
@@ -978,9 +1099,10 @@ lemma collect_src_none:
          \<up>(k = length (filter (csr.has_nb (csr.exch_ctx X)) (csr.srcs (csr.exch_ctx X))))>"
   by (rule ht_cons_post[OF collect_src_len]) (unfold len_assn_def, sep_auto)
 
+(* CHANGED (weighted extension): theorem aug_path_imp_rule *)
 theorem aug_path_imp_rule:
-  "<parr_assn n Ra * gxs X Si Gc * work_assn Vi Fr Bf Da Pa> aug_path_imp Gc Vi Fr Bf Da Pa Si Ra
-   <\<lambda> res. path_assn n (csr.augmenting_path X) res Ra * gxs X Si Gc * work_assn Vi Fr Bf Da Pa>"
+  "<parr_assn n Ra * gxs X Si Gc * work_assn n Vi Fr Bf Da Pa> aug_path_imp Gc Vi Fr Bf Da Pa Si Ra
+   <\<lambda> res. path_assn n (csr.augmenting_path X) res Ra * gxs X Si Gc * work_assn n Vi Fr Bf Da Pa>"
 proof(cases "find (csr.in_T (csr.exch_ctx X)) (csr.srcs (csr.exch_ctx X))")
   case (Some s)
   have "s \<in> S X"
@@ -994,18 +1116,18 @@ next
   case None
   let ?ss = "filter (csr.has_nb (csr.exch_ctx X)) (csr.srcs (csr.exch_ctx X))"
   let ?W = "parr_assn n Ra * len_assn n Vi * len_assn (Suc n) Bf * len_assn n Da * len_assn n Pa"
-  have st: "<parr_assn n Ra * gxs X Si Gc * work_assn Vi Fr Bf Da Pa> find_range_imp (st_imp Si) 0 n 
+  have st: "<parr_assn n Ra * gxs X Si Gc * work_assn n Vi Fr Bf Da Pa> find_range_imp (st_imp Si) 0 n 
             <\<lambda> r. gxs X Si Gc * \<up>(r = find (csr.in_T (csr.exch_ctx X)) (csr.srcs (csr.exch_ctx X))) * 
-                  (parr_assn n Ra * work_assn Vi Fr Bf Da Pa)>"
+                  (parr_assn n Ra * work_assn n Vi Fr Bf Da Pa)>"
     by (rule ht_frame_ac[OF find_st_rule[where Si = Si and Gc = Gc], 
-                         where R = "parr_assn n Ra * work_assn Vi Fr Bf Da Pa"]) 
+                         where R = "parr_assn n Ra * work_assn n Vi Fr Bf Da Pa"]) 
        (simp only: star_aci, rule ent_refl)+
   show ?thesis
   proof(cases "?ss = []")
     case True
     have ap: "csr.augmenting_path X = None"
       unfolding ap_char None option.case(1) if_P[OF True] by (rule refl)
-    have co: "<gxs X Si Gc * (parr_assn n Ra * work_assn Vi Fr Bf Da Pa)> 
+    have co: "<gxs X Si Gc * (parr_assn n Ra * work_assn n Vi Fr Bf Da Pa)> 
                 collect_range_imp (src_imp Gc Si) n Fr
               <\<lambda> k. len_assn (Suc n) Fr * gxs X Si Gc * \<up>(k = length ?ss) * ?W>"
       by (rule ht_frame_ac[OF collect_src_none[where Fr = Fr and Si = Si and Gc = Gc], where R = ?W])
@@ -1018,7 +1140,7 @@ next
          (simp only: path_None work_assn_def star_aci, rule ent_refl)
   next
     case False
-    have co: "<gxs X Si Gc * (parr_assn n Ra * work_assn Vi Fr Bf Da Pa)> 
+    have co: "<gxs X Si Gc * (parr_assn n Ra * work_assn n Vi Fr Bf Da Pa)> 
                 collect_range_imp (src_imp Gc Si) n Fr
               <\<lambda> k. (\<exists>\<^sub>A fl'. Fr \<mapsto>\<^sub>a fl' * gxs X Si Gc * 
                        \<up>(length fl' = Suc n \<and> k = length ?ss \<and> take k fl' = ?ss)) * ?W>"
@@ -1041,8 +1163,10 @@ subsubsection \<open>The Path Search of the Imperative Loop\<close>
 
 text \<open>The static data of a search: the oracles, the CSR and the work arrays.\<close>
 
-definition "mst Gc Vi Fr Bf Da Pa = ost1 * ost2 * csr3_assn (build_nhlists es0) Gc * work_assn Vi Fr Bf Da Pa"
+(* CHANGED (weighted extension): definition mst *)
+definition "mst Gc Vi Fr Bf Da Pa = ost1 * ost2 * csr3_assn (build_nhlists es0) Gc * work_assn n Vi Fr Bf Da Pa"
 
+(* CHANGED (weighted extension): theorem imp_loop *)
 theorem imp_loop:
   "unweighted_intersection_imp_loop csr.augmenting_path indep1 indep2 {0..<n} n sol_assn smemb_imp 
      sins_imp sdel_imp (aug_path_imp Gc Vi Fr Bf Da Pa) (mst Gc Vi Fr Bf Da Pa)"
@@ -1050,7 +1174,7 @@ proof(intro unweighted_intersection_imp_loop.intro unweighted_intersection_imp_l
         allI impI, goal_cases)
   case 1
   show ?case
-    by (rule imp_nat_set_axioms)
+    by (rule intersection_augment_imp.intro[OF imp_nat_set_axioms])
 next
   case 2
   show ?case
@@ -1065,6 +1189,23 @@ next
     by (rule ht_cons[OF _ _ aug_path_imp_rule[OF 4]])
        ((simp only: mst_def gxs_def star_aci, rule ent_refl), 
         (rule ent_true_drop(2), simp only: mst_def gxs_def star_aci, rule ent_refl))
+qed
+
+(* NEW (weighted extension): theorem loop_correct, moved here from Matroid_Intersection_Imp (with the text before it) *)
+text \<open>The loop on preallocated arrays.\<close>
+
+theorem loop_correct:
+  "<(sol_assn {} Si) * parr_assn n Ra * mst Gc Vi Fr Bf Da Pa>
+     unweighted_intersection_imp_loop_spec.mi_loop_imp sins_imp sdel_imp
+       (aug_path_imp Gc Vi Fr Bf Da Pa) Si Ra
+   <\<lambda> _. \<exists>\<^sub>A X. sol_assn X Si * parr_assn n Ra * mst Gc Vi Fr Bf Da Pa * \<up>(is_max X)>"
+proof-
+  interpret l: unweighted_intersection_imp_loop csr.augmenting_path indep1 indep2
+    "{0..<n}" n sol_assn smemb_imp sins_imp sdel_imp "aug_path_imp Gc Vi Fr Bf Da Pa"
+    "mst Gc Vi Fr Bf Da Pa"
+    by (rule imp_loop)
+  show ?thesis
+    by (rule l.mi_loop_imp_correct)
 qed
 
 end

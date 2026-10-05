@@ -21,6 +21,7 @@ session "Matroid_Intersection" = "HOL-Data_Structures" +
 
     Matroid_Weighted_Intersection
     Matroid_Weighted_Intersection_Algorithm
+    Matroid_Weighted_Intersection_Path_Loop
     "Applications/Weighted_Bipartite_Matching_Matroid"
 
     Matroid_Partitioning
@@ -28,6 +29,7 @@ session "Matroid_Intersection" = "HOL-Data_Structures" +
     Exchange_Oracles
     Partition_Oracle
     Matroid_Intersection_Exchange_Graph
+    Matroid_Weighted_Intersection_Exchange_Graph
 
     "Refinements/Exchange_Oracles_Imp"
     "Refinements/Partition_Oracle_Imp"
@@ -37,10 +39,17 @@ session "Matroid_Intersection" = "HOL-Data_Structures" +
     "Refinements/Matroid_Intersection_Exchange_Graph_Imp"
     "Refinements/Matroid_Intersection_Imp"
 
+    "Refinements/Matroid_Weighted_Intersection_Imp_Loop"
+    "Refinements/Matroid_Weighted_Intersection_Exchange_Graph_CSR"
+    "Refinements/Matroid_Weighted_Intersection_Exchange_Graph_Imp"
+    "Refinements/Matroid_Weighted_Intersection_Imp"
+
     "Applications/Capacity_Partition_Oracle_Imp"
     "Applications/Bipartite_Arrays"
     "Applications/Bipartite_Matching_Imp"
     "Applications/Bipartite_B_Matching_Imp"
+    "Applications/Weighted_Bipartite_Matching_Imp"
+    "Applications/Weighted_Bipartite_B_Matching_Imp"
 
 document_files
   "root.tex"

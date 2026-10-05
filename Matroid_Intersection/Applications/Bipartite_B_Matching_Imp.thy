@@ -2,6 +2,9 @@ theory Bipartite_B_Matching_Imp
   imports Matroid_Intersection_Imp Bipartite_Arrays Capacity_Partition_Oracle_Imp
 begin
 
+(*TODO Once we have more b matching theory, set up own b-matching 
+    theory in Basic_Matching Session and put b-matching defs there.*)
+
 section \<open>Maximum Bipartite b-Matching in Imperative HOL\<close>
 
 subsection \<open>b-Matchings\<close>
@@ -63,6 +66,8 @@ global_interpretation bx: matroid_intersection_imp_spec n id id bb_memb bb_ins1 
     and bx_xround = bx.ids.xround
     and bx_bfs_run = bx.ids.bfs_run
     and bx_has_nb = bx.ids.has_nb_imp
+    and bx_s = bx.ids.s_imp
+    and bx_t = bx.ids.t_imp
     and bx_st = bx.ids.st_imp
     and bx_src = bx.ids.src_imp
     and bx_tgt = bx.ids.tgt_imp
@@ -101,16 +106,13 @@ declare xbbi.BFS_par_imp.simps[code]
 text \<open>The edges are \<open>{Fa[i], Ta[i]}\<close>, the capacity of vertex \<open>v\<close> is \<open>Ka[v]\<close>, and all vertices
   are below the length of \<open>Ka\<close>.\<close>
 
-definition "b_matching_imp Fa Ta Ka = do {
-   m \<leftarrow> Array.len Fa;
-   nv \<leftarrow> Array.len Ka;
-   H1 \<leftarrow> part_handle_imp m nv Fa;
-   H2 \<leftarrow> part_handle_imp m nv Ta;
-   Xi \<leftarrow> Array.new m False;
-   C1 \<leftarrow> Array.new nv 0;
-   C2 \<leftarrow> Array.new nv 0;
-   bx_mi m H1 H2 (Xi, C1, C2, Fa, Ta, Ka);
-   return Xi }"
+definition "bb_setup_imp Fa Ta Ka k = 
+   do { nv \<leftarrow> Array.len Ka; bm_setup_imp nv Fa Ta k }"
+
+definition "b_matching_imp Fa Ta Ka =
+   bb_setup_imp Fa Ta Ka (\<lambda> m H1 H2 Xi C1 C2. do {
+     bx_mi m H1 H2 (Xi, C1, C2, Fa, Ta, Ka);
+     return Xi })"
 
 export_code b_matching_imp checking SML_imp
 
@@ -177,10 +179,10 @@ begin
 
 abbreviation "sb \<equiv> bb_sol_assn (length fs) (length ks) fs ts (\<lambda> v. ks ! v)"
 
-interpretation lf: cap_partition_oracle "{0..<length fs}" "\<lambda> i. fs ! i" "\<lambda> v. ks ! v"
+sublocale lf: cap_partition_oracle "{0..<length fs}" "\<lambda> i. fs ! i" "\<lambda> v. ks ! v"
   by unfold_locales simp
 
-interpretation rt: cap_partition_oracle "{0..<length fs}" "\<lambda> i. ts ! i" "\<lambda> v. ks ! v"
+sublocale rt: cap_partition_oracle "{0..<length fs}" "\<lambda> i. ts ! i" "\<lambda> v. ks ! v"
   by unfold_locales simp
 
 text \<open>The degree of a vertex in the represented edge set counts the positions with this
@@ -272,16 +274,11 @@ lemma exch2_rule:
 
 text \<open>The elements are the positions themselves, so the indexation is the identity.\<close>
 
-interpretation m: matroid_intersection_imp where n = "length fs" and idx = id and elt = id
-  and smemb_imp = bb_memb and ins1_imp = bb_ins1 and exch1_imp = bb_exch1 and ins2_imp = bb_ins2 
-  and exch2_imp = bb_exch2 and sins_imp = bb_ins and sdel_imp = bb_del 
-  and pts1_imp = Array.nth and pts2_imp = Array.nth and carrier = "{0..<length fs}"
-  and sol_assn = sb and ost1 = emp and ost2 = emp
-  and orcl_prep1 = "\<lambda> X. X" and ins_orcl1 = lf.cap_ins and exch_orcl1 = lf.cap_exch
-  and orcl_prep2 = "\<lambda> X. X" and ins_orcl2 = rt.cap_ins and exch_orcl2 = rt.cap_exch
-  and indep1 = lf.cap_indep and indep2 = rt.cap_indep
-  and pts1 = "part_pts fs" and pst1 = "part_pst (length fs) fs"
-  and pts2 = "part_pts ts" and pst2 = "part_pst (length fs) ts"
+lemma mi_inst:
+  "matroid_intersection_imp (length fs) id id bb_memb bb_ins1 bb_exch1 bb_ins2 bb_exch2 bb_ins bb_del
+     Array.nth Array.nth {0..<length fs} (\<lambda> X. X) lf.cap_ins lf.cap_exch lf.cap_indep sb emp
+     (part_pts fs) (part_pst (length fs) fs) (\<lambda> X. X) rt.cap_ins rt.cap_exch rt.cap_indep emp
+     (part_pts ts) (part_pst (length fs) ts)"
   apply (intro matroid_intersection_imp.intro indexed_oracle_imp.intro matroid_ids.intro
         indexed_oracle_imp_axioms.intro matroid_intersection_imp_axioms.intro)
   subgoal by (rule bij_betw_id)
@@ -306,6 +303,18 @@ interpretation m: matroid_intersection_imp where n = "length fs" and idx = id an
   subgoal using bb_ins_rule by simp
   subgoal using bb_del_rule by simp
   done
+
+interpretation m: matroid_intersection_imp where n = "length fs" and idx = id and elt = id
+  and smemb_imp = bb_memb and ins1_imp = bb_ins1 and exch1_imp = bb_exch1 and ins2_imp = bb_ins2 
+  and exch2_imp = bb_exch2 and sins_imp = bb_ins and sdel_imp = bb_del 
+  and pts1_imp = Array.nth and pts2_imp = Array.nth and carrier = "{0..<length fs}"
+  and sol_assn = sb and ost1 = emp and ost2 = emp
+  and orcl_prep1 = "\<lambda> X. X" and ins_orcl1 = lf.cap_ins and exch_orcl1 = lf.cap_exch
+  and orcl_prep2 = "\<lambda> X. X" and ins_orcl2 = rt.cap_ins and exch_orcl2 = rt.cap_exch
+  and indep1 = lf.cap_indep and indep2 = rt.cap_indep
+  and pts1 = "part_pts fs" and pst1 = "part_pst (length fs) fs"
+  and pts2 = "part_pts ts" and pst2 = "part_pst (length fs) ts"
+  by (rule mi_inst)
 
 lemma is_max_b_matching:
   assumes "m.is_max X"
@@ -377,36 +386,39 @@ subsubsection \<open>The Program\<close>
 lemma caps_in: "Ka \<mapsto>\<^sub>a ks = caps_assn (length ks) (\<lambda> v. ks ! v) Ka"
   unfolding caps_assn_def map_nth ..
 
+text \<open>The allocation prologue of @{locale bipartite_matching_imp}, after reading the number of
+  vertices from the capacity array.\<close>
+
+lemma bb_setup_rule:
+  assumes k: "\<And> H1 H2 Xi C1 C2.
+    <F * caps_assn (length ks) (\<lambda> v. ks ! v) Ka * part_pst (length fs) fs H1 *
+       part_pst (length fs) ts H2 * xset_assn (length fs) {} Xi *
+       cnt_assn (length ks) fs {} C1 * cnt_assn (length ks) ts {} C2 *
+       blocks_assn (length fs) (length ks) fs Fa * blocks_assn (length fs) (length ks) ts Ta * true>
+      k (length fs) H1 H2 Xi C1 C2 <Q>"
+  shows "<F * Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Ka \<mapsto>\<^sub>a ks> bb_setup_imp Fa Ta Ka k <Q>"
+proof-
+  have len: "<F * Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Ka \<mapsto>\<^sub>a ks> Array.len Ka
+             <\<lambda> r. F * caps_assn (length ks) (\<lambda> v. ks ! v) Ka * Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * \<up>(r = length ks)>"
+    by (sep_auto simp: caps_assn_def map_nth)
+  show ?thesis
+    unfolding bb_setup_imp_def
+    by (rule ht_bind[OF len], rule ht_pure_pre, simp only:, rule bm_setup_rule[where F = "F * caps_assn (length ks) (\<lambda> v. ks ! v) Ka"
+          and Fa = Fa and Ta = Ta and k = k, OF k])
+qed
+
 theorem b_matching_imp_correct:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Ka \<mapsto>\<^sub>a ks> b_matching_imp Fa Ta Ka
    <\<lambda> Xi. \<exists>\<^sub>A X. xset_assn (length fs) X Xi * Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Ka \<mapsto>\<^sub>a ks * true *
               \<up>(max_card_b_matching ((\<lambda> i. {fs ! i, ts ! i}) ` {0..<length fs}) (\<lambda> v. ks ! v)
                                      ((\<lambda> i. {fs ! i, ts ! i}) ` X))>"
-proof-
-  let ?B = "blocks_assn (length fs) (length ks) fs Fa * blocks_assn (length fs) (length ks) ts Ta *
-            caps_assn (length ks) (\<lambda> v. ks ! v) Ka"
-  have len1: "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Ka \<mapsto>\<^sub>a ks> Array.len Fa <\<lambda> r. ?B * \<up>(r = length fs)>"
-    unfolding blocks_in caps_in by (sep_auto simp: blocks_assn_def)
-  have len2: "<?B> Array.len Ka <\<lambda> r. ?B * \<up>(r = length ks)>"
-    by (sep_auto simp: caps_assn_def)
-  have h1: "<?B> part_handle_imp (length fs) (length ks) Fa <\<lambda> H1. ?B * part_pst (length fs) fs H1 * true>"
-    by (sep_auto heap: part_handle_rule)
-  have h2: "<?B * part_pst (length fs) fs H1 * true> part_handle_imp (length fs) (length ks) Ta 
-            <\<lambda> H2. ?B * part_pst (length fs) fs H1 * part_pst (length fs) ts H2 * true>" for H1
-    by (sep_auto heap: part_handle_rule)
-  show ?thesis
-    unfolding b_matching_imp_def
-    apply (rule ht_bind[OF len1], rule ht_pure_pre, simp only:)
-    apply (rule ht_bind[OF len2], rule ht_pure_pre, simp only:)
-    apply (rule ht_bind[OF h1], rule ht_bind[OF h2])
-    apply (rule alloc_bind[OF xset_assn_new], rule alloc_bind[OF cnt_assn_new[of _ fs]], 
-           rule alloc_bind[OF cnt_assn_new[of _ ts]])
-    apply (rule ht_bind[OF ht_frame_ac[OF handles_correct, where R = true]])
-      prefer 3 apply (rule ht_return_wp)
-     apply (simp only: star_aci, rule ent_refl)
-    apply (sep_auto simp: blocks_assn_def caps_assn_def map_nth)
-    done
-qed
+  unfolding b_matching_imp_def
+  apply (rule ht_cons_pre[OF _ bb_setup_rule[where F = emp]], simp)
+  apply (rule ht_bind[OF ht_frame_ac[OF handles_correct, where R = true]])
+    prefer 3 apply (rule ht_return_wp)
+   apply (simp only: star_aci, rule ent_refl)
+  apply (sep_auto simp: blocks_assn_def caps_assn_def map_nth)
+  done
 
 end
 

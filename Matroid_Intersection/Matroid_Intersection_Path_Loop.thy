@@ -15,19 +15,81 @@ record 'sol intersection_state = solution::'sol
 lemma solution_remove: "solution (state \<lparr> solution:= new_sol \<rparr>) = new_sol"
   by auto
 
-locale unweighted_intersection_path_loop_spec =
+subsection \<open>Augmentation\<close>
+
+text \<open>Augmenting a solution along a path, shared by every loop that augments along
+  exchange-graph paths (unweighted and weighted).\<close>
+
+locale intersection_augment_spec =
 fixes set_insert::"'a \<Rightarrow> 'mset \<Rightarrow> 'mset"
   and set_delete::"'a \<Rightarrow> 'mset \<Rightarrow> 'mset"
   and to_set::"'mset \<Rightarrow> 'a set"
   and set_invar::"'mset \<Rightarrow> bool"
   and set_empty::"'mset"
-  and augmenting_path::"'mset \<Rightarrow> 'a list option"
 begin
 
 fun augment where
   "augment X Nil = X"|
   "augment X [x] = set_insert x X"|
   "augment X (x#y#xs) = augment (set_insert x (set_delete y X)) xs"
+
+lemmas [code] = augment.simps
+
+end
+
+locale intersection_augment =
+  intersection_augment_spec +
+  fixes carrier::"'a set"
+  assumes set_insert: "\<And> S x. \<lbrakk>set_invar S; x \<in> carrier\<rbrakk> \<Longrightarrow> set_invar (set_insert x S)"
+    "\<And> S x. \<lbrakk>set_invar S; x \<in> carrier\<rbrakk> \<Longrightarrow> to_set (set_insert x S) = Set.insert x (to_set S)"
+  assumes set_delete: "\<And> S x. \<lbrakk>set_invar S; x \<in> carrier\<rbrakk> \<Longrightarrow> set_invar (set_delete x S)"
+    "\<And> S x. \<lbrakk>set_invar S; x \<in> carrier\<rbrakk> \<Longrightarrow> to_set (set_delete x S) = (to_set S) - {x}"
+  assumes set_empty: "set_invar set_empty" "to_set set_empty = {}"
+begin
+
+lemma effect_of_augmentation:
+  assumes "set_invar X" "to_set X \<subseteq> carrier" "set p \<subseteq> carrier" "distinct p"
+    "X' = ((to_set X \<union> {p ! i | i. i < length p \<and> even i}) -  {p ! i | i. i < length p \<and> odd i})"
+  shows "set_invar (augment X p)" "to_set (augment X p) = X'"
+proof-
+  have "set p \<subseteq> carrier \<Longrightarrow> set_invar (augment X p)" for p
+    using  assms(1,2) 
+  proof(induction p arbitrary: X rule: induct_list012)
+    case (sucsuc x y zs)
+    note 3 = this
+    show ?case 
+      using 3(2-) 
+      by(auto intro!: 3(1) intro: set_insert set_delete simp add: set_insert set_delete)
+  qed (auto simp add: intro: set_insert set_delete)
+  thus "set_invar (augment X p)"
+    by (simp add: assms(3))
+  show "to_set (augment X p) = X'"
+    using assms
+  proof(induction p arbitrary: X X' rule: induct_list012)
+    case (sucsuc x y zs)
+    have same_set:"Set.insert x (to_set X - {y}) \<union> {zs ! i |i. i < length zs \<and> even i} - {zs ! i |i. i < length zs \<and> odd i} =
+    to_set X \<union> {(x # y # zs) ! i |i. i < length (x # y # zs) \<and> even i} -
+    {(x # y # zs) ! i |i. i < length (x # y # zs) \<and> odd i}"
+      using  "sucsuc.prems"(4)  
+      by (auto simp add: nth_eq_iff_index_eq less_Suc_eq_0_disj gr0_conv_Suc)
+        (metis dvd_0_right nth_Cons_0  nth_Cons_Suc even_Suc)+
+    have help1: "to_set (set_insert x (set_delete y X)) \<subseteq> carrier" 
+      using "sucsuc.prems"(1-3) local.set_insert(2) set_delete(1) set_delete(2) by auto
+    show ?case 
+      using sucsuc(2-) same_set set_insert set_delete
+      by (auto simp add:  sucsuc(1)[OF  _ help1 _ _ refl])
+  qed (auto simp add: set_insert)
+qed
+
+end
+
+subsection \<open>The Loop\<close>
+
+locale unweighted_intersection_path_loop_spec =
+  intersection_augment_spec set_insert set_delete to_set set_invar set_empty
+  for set_insert::"'a \<Rightarrow> 'mset \<Rightarrow> 'mset" and set_delete to_set set_invar set_empty +
+  fixes augmenting_path::"'mset \<Rightarrow> 'a list option"
+begin
 
 function (domintros) matroid_intersection::"'mset intersection_state\<Rightarrow> 'mset intersection_state"  where
   "matroid_intersection state =
@@ -116,7 +178,7 @@ lemma implementation_is_same:
 
 definition "initial_state = \<lparr> solution = set_empty \<rparr>"
 
-lemmas [code] = matroid_intersection_impl.simps augment.simps initial_state_def
+lemmas [code] = matroid_intersection_impl.simps initial_state_def
 
 end
 
@@ -127,14 +189,10 @@ text \<open>Specification of the path search: \<open>None\<close> iff there is n
 locale unweighted_intersection_path_loop =
   unweighted_intersection_path_loop_spec
   where set_insert = "set_insert::'a \<Rightarrow> 'mset \<Rightarrow> 'mset"
+    + intersection_augment where set_insert = set_insert and carrier = carrier
     + double_matroid 
   where carrier = "carrier::'a set"
   for set_insert carrier +
-  assumes set_insert: "\<And> S x. \<lbrakk>set_invar S; x \<in> carrier\<rbrakk> \<Longrightarrow> set_invar (set_insert x S)"
-    "\<And> S x. \<lbrakk>set_invar S; x \<in> carrier\<rbrakk> \<Longrightarrow> to_set (set_insert x S) = Set.insert x (to_set S)"
-  assumes set_delete: "\<And> S x. \<lbrakk>set_invar S; x \<in> carrier\<rbrakk> \<Longrightarrow> set_invar (set_delete x S)"
-    "\<And> S x. \<lbrakk>set_invar S; x \<in> carrier\<rbrakk> \<Longrightarrow> to_set (set_delete x S) = (to_set S) - {x}"
-  assumes set_empty: "set_invar set_empty" "to_set set_empty = {}"
   assumes augmenting_path:
     "\<And> X. \<lbrakk>set_invar X; to_set X \<subseteq> carrier; indep1 (to_set X); indep2 (to_set X)\<rbrakk>
       \<Longrightarrow> augmenting_path X = None \<longleftrightarrow> 
@@ -147,40 +205,6 @@ locale unweighted_intersection_path_loop =
              (\<nexists> p'. (vwalk_bet (A1 (to_set X) \<union> A2 (to_set X)) u p' v \<or> (p' = [u] \<and> u = v))
                          \<and> length p' < length p)"
 begin
-
-lemma effect_of_augmentation:
-  assumes "set_invar X" "to_set X \<subseteq> carrier" "set p \<subseteq> carrier" "distinct p"
-    "X' = ((to_set X \<union> {p ! i | i. i < length p \<and> even i}) -  {p ! i | i. i < length p \<and> odd i})"
-  shows "set_invar (augment X p)" "to_set (augment X p) = X'"
-proof-
-  have "set p \<subseteq> carrier \<Longrightarrow> set_invar (augment X p)" for p
-    using  assms(1,2) 
-  proof(induction p arbitrary: X rule: induct_list012)
-    case (sucsuc x y zs)
-    note 3 = this
-    show ?case 
-      using 3(2-) 
-      by(auto intro!: 3(1) intro: set_insert set_delete simp add: set_insert set_delete)
-  qed (auto simp add: intro: set_insert set_delete)
-  thus "set_invar (augment X p)"
-    by (simp add: assms(3))
-  show "to_set (augment X p) = X'"
-    using assms
-  proof(induction p arbitrary: X X' rule: induct_list012)
-    case (sucsuc x y zs)
-    have same_set:"Set.insert x (to_set X - {y}) \<union> {zs ! i |i. i < length zs \<and> even i} - {zs ! i |i. i < length zs \<and> odd i} =
-    to_set X \<union> {(x # y # zs) ! i |i. i < length (x # y # zs) \<and> even i} -
-    {(x # y # zs) ! i |i. i < length (x # y # zs) \<and> odd i}"
-      using  "sucsuc.prems"(4)  
-      by (auto simp add: nth_eq_iff_index_eq less_Suc_eq_0_disj gr0_conv_Suc)
-        (metis dvd_0_right nth_Cons_0  nth_Cons_Suc even_Suc)+
-    have help1: "to_set (set_insert x (set_delete y X)) \<subseteq> carrier" 
-      using "sucsuc.prems"(1-3) local.set_insert(2) set_delete(1) set_delete(2) by auto
-    show ?case 
-      using sucsuc(2-) same_set set_insert set_delete
-      by (auto simp add:  sucsuc(1)[OF  _ help1 _ _ refl])
-  qed (auto simp add: set_insert)
-qed
 
 definition "indep_invar state = 
    (indep1 (to_set (solution state)) \<and> (indep2 (to_set (solution state))))"

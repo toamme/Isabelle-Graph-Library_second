@@ -13,7 +13,7 @@ text \<open>The complete imperative algorithm for two matroids on the nats below
 
 subsection \<open>Code\<close>
 
-declare unweighted_intersection_imp_loop_spec.aug_imp.simps[code]
+declare intersection_augment_imp_spec.aug_imp.simps[code]
   unweighted_intersection_imp_loop_spec.mi_loop_imp.simps[code]
 
 locale matroid_intersection_imp_ids_spec =
@@ -39,18 +39,6 @@ definition "mi_imp H1 H2 Si = do {
 end
 
 subsection \<open>Correctness\<close>
-
-lemma alloc_bind:
-  assumes "<emp> c <Q>" "\<And> x. <Fm * Q x> f x <Qp>"
-  shows "<Fm> c \<bind> f <Qp>"
-proof-
-  have "<emp * Fm> c <\<lambda> x. Q x * Fm>"
-    by (rule ht_frame[OF assms(1)])
-  then have "<Fm> c <\<lambda> x. Fm * Q x>"
-    by (simp only: assn_one_left mult.commute[of "Q _" Fm])
-  then show ?thesis
-    by (rule ht_bind) (rule assms(2))
-qed
 
 text \<open>First for matroids on the ids below \<open>n\<close> themselves.\<close>
 
@@ -82,22 +70,6 @@ sublocale m: unweighted_intersection_exchange_imp where n = n and smemb_imp = sm
         o2.exchange_oracle_imp_axioms unweighted_intersection_exchange_imp_axioms.intro[OF 
         c.cand_bound c.cand_sorted c.cand_cover1 c.cand_cover2]])
 
-text \<open>The loop on preallocated arrays.\<close>
-
-theorem loop_correct:
-  "<(sol_assn {} Si) * parr_assn n Ra * m.mst Gc Vi Fr Bf Da Pa> 
-     unweighted_intersection_imp_loop_spec.mi_loop_imp sins_imp sdel_imp 
-       (aug_path_imp Gc Vi Fr Bf Da Pa) Si Ra
-   <\<lambda> _. \<exists>\<^sub>A X. sol_assn X Si * parr_assn n Ra * m.mst Gc Vi Fr Bf Da Pa * \<up>(is_max X)>"
-proof-
-  interpret l: unweighted_intersection_imp_loop csr.augmenting_path indep1 indep2
-    "{0..<n}" n sol_assn smemb_imp sins_imp sdel_imp "aug_path_imp Gc Vi Fr Bf Da Pa" 
-    "m.mst Gc Vi Fr Bf Da Pa"
-    by (rule m.imp_loop)
-  show ?thesis
-    by (rule l.mi_loop_imp_correct)
-qed
-
 text \<open>The whole program.\<close>
 
 theorem mi_imp_correct:
@@ -111,8 +83,8 @@ proof-
   show ?thesis
     unfolding mi_imp_def
     by (rule ht_bind[OF cand], (rule alloc_bind[OF len_assn_new])+,
-        rule ht_frame_ac[OF loop_correct, where R = "pst1 H1 * pst2 H2"]) 
-       ((simp only: m.mst_def m.work_assn_def m.parr_len star_aci, rule ent_refl),
+        rule ht_frame_ac[OF m.loop_correct, where R = "pst1 H1 * pst2 H2"]) 
+       ((simp only: m.mst_def work_assn_def parr_len star_aci, rule ent_refl),
         sep_auto simp: m.mst_def)
 qed
 
@@ -481,6 +453,23 @@ next
     unfolding o1.sol_ids_def by (sep_auto simp: o1.elt_diff heap: r)
 qed
 
+text \<open>The instance on the ids.\<close>
+
+lemma ids_imp:
+  "matroid_intersection_imp_ids o1.prep_ids o1.ins_ids o1.exch_ids o2.prep_ids o2.ins_ids o2.exch_ids
+     (o1.pull indep1) (o1.pull indep2) n (\<lambda> i. smemb_imp (elt i)) (\<lambda> Si i. ins1_imp Si (elt i))
+     (\<lambda> Si i j. exch1_imp Si (elt i) (elt j)) (\<lambda> Si i. ins2_imp Si (elt i))
+     (\<lambda> Si i j. exch2_imp Si (elt i) (elt j)) (\<lambda> i. sins_imp (elt i)) (\<lambda> i. sdel_imp (elt i))
+     (pts_ids_imp idx elt pts1_imp) (pts_ids_imp idx elt pts2_imp) (o1.sol_ids sol_assn)
+     ost1 ost2 o1.pts_ids pst1 o2.pts_ids pst2"
+  apply (intro matroid_intersection_imp_ids.intro unweighted_intersection_exchange_csr.intro
+      unweighted_intersection_exchange_matroids.intro double_matroid.intro
+      unweighted_intersection_exchange_matroids_axioms.intro exchange_candidates_imp.intro)
+  apply (rule ids_set o1.ids_matroid o2.ids_matroid o1.ids_indep_oracle o2.ids_indep_oracle)+
+  apply (simp_all only: finite_insert finite_Diff finite.emptyI set_upt distinct_upt refl simp_thms)
+  apply (rule o1.ids_oracle_imp o2.ids_oracle_imp o1.ids_partners o2.ids_partners)+
+  done
+
 theorem mi_imp_correct:
   "<(sol_assn {} Si) * ost1 * ost2 * pst1 H1 * pst2 H2> mi_imp H1 H2 Si 
    <\<lambda> _. \<exists>\<^sub>A X. sol_assn X Si * ost1 * ost2 * pst1 H1 * pst2 H2 * true * \<up>(is_max X)>"
@@ -497,13 +486,7 @@ proof-
     and orcl_prep2 = o2.prep_ids and ins_orcl2 = o2.ins_ids and exch_orcl2 = o2.exch_ids 
     and indep1 = "o1.pull indep1" and indep2 = "o1.pull indep2" 
     and pts1 = o1.pts_ids and pst1 = pst1 and pts2 = o2.pts_ids and pst2 = pst2
-    apply (intro matroid_intersection_imp_ids.intro unweighted_intersection_exchange_csr.intro
-        unweighted_intersection_exchange_matroids.intro double_matroid.intro
-        unweighted_intersection_exchange_matroids_axioms.intro exchange_candidates_imp.intro)
-    apply (rule ids_set o1.ids_matroid o2.ids_matroid o1.ids_indep_oracle o2.ids_indep_oracle)+
-    apply (simp_all only: finite_insert finite_Diff finite.emptyI set_upt distinct_upt refl simp_thms)
-    apply (rule o1.ids_oracle_imp o2.ids_oracle_imp o1.ids_partners o2.ids_partners)+
-    done
+    by (rule ids_imp)
   have mx: "is_max (elt ` I)" if a: "m.is_max I" for I
   proof-
     have I: "I \<subseteq> {0..<n}" "indep1 (elt ` I)" "indep2 (elt ` I)" 

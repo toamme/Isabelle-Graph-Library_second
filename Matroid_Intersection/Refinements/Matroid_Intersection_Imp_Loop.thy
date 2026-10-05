@@ -32,16 +32,15 @@ lemma rev_take_Suc_Suc:
   "Suc (Suc j) \<le> length ps \<Longrightarrow> rev (take (Suc (Suc j)) ps) = ps ! Suc j # ps ! j # rev (take j ps)"
   by (simp add: take_Suc_conv_app_nth)
 
-subsection \<open>Code\<close>
+subsection \<open>Augmentation\<close>
 
-locale unweighted_intersection_imp_loop_spec =
+locale intersection_augment_imp_spec =
   fixes sins_imp :: "nat \<Rightarrow> 'si \<Rightarrow> unit Heap"
     and sdel_imp :: "nat \<Rightarrow> 'si \<Rightarrow> unit Heap"
-    and aug_path_imp :: "'si \<Rightarrow> nat array \<Rightarrow> nat option Heap"
 begin
 
 text \<open>Augmentation along the path in the first \<open>k\<close> cells of the array, read from the end, i.e.
-  from the start of the path. Mirrors @{const unweighted_intersection_path_loop_spec.augment}.\<close>
+  from the start of the path. Mirrors @{const intersection_augment_spec.augment}.\<close>
 
 partial_function (heap) aug_imp :: "'si \<Rightarrow> nat array \<Rightarrow> nat \<Rightarrow> unit Heap" where
   "aug_imp Si Ra k =
@@ -50,31 +49,15 @@ partial_function (heap) aug_imp :: "'si \<Rightarrow> nat array \<Rightarrow> na
       else do { x \<leftarrow> Array.nth Ra (k - 1); y \<leftarrow> Array.nth Ra (k - 2);
                 sdel_imp y Si; sins_imp x Si; aug_imp Si Ra (k - 2) })"
 
-partial_function (heap) mi_loop_imp :: "'si \<Rightarrow> nat array \<Rightarrow> unit Heap" where
-  "mi_loop_imp Si Ra = do {
-     r \<leftarrow> aug_path_imp Si Ra;
-     (case r of None \<Rightarrow> return ()
-      | Some k \<Rightarrow> do { aug_imp Si Ra k; mi_loop_imp Si Ra }) }"
-
 end
 
-subsection \<open>Correctness\<close>
-
-text \<open>The path search refines the functional one on every solution reached by the loop. The
-  assertion \<open>st\<close> holds the data of the path search that the loop passes on untouched.\<close>
-
-locale unweighted_intersection_imp_loop =
-  unweighted_intersection_imp_loop_spec sins_imp sdel_imp aug_path_imp +
+locale intersection_augment_imp =
+  intersection_augment_imp_spec sins_imp sdel_imp +
   imp_nat_set n sol_assn smemb_imp sins_imp sdel_imp +
-  unweighted_intersection_path_loop where set_insert = "insert :: nat \<Rightarrow> nat set \<Rightarrow> nat set"
+  intersection_augment_spec where set_insert = "insert :: nat \<Rightarrow> nat set \<Rightarrow> nat set"
     and set_delete = "\<lambda> x X. X - {x}" and to_set = "\<lambda> X. X" and set_invar = finite
     and set_empty = "{}"
-  for n sol_assn smemb_imp sins_imp sdel_imp aug_path_imp +
-  fixes st :: assn
-  assumes carrier_bound: "carrier \<subseteq> {..<n}"
-    and aug_path_imp: "\<And> X Si Ra. \<lbrakk>finite X; X \<subseteq> carrier; indep1 X; indep2 X\<rbrakk> \<Longrightarrow>
-      <sol_assn X Si * parr_assn n Ra * st> aug_path_imp Si Ra
-      <\<lambda> res. sol_assn X Si * path_assn n (augmenting_path X) res Ra * st>"
+  for n sol_assn smemb_imp sins_imp sdel_imp
 begin
 
 lemma aug_imp_rule:
@@ -136,6 +119,44 @@ proof(induction k arbitrary: X rule: less_induct)
       by (sep_auto heap: sdel_rule sins_rule IH simp: x)
   qed
 qed
+
+end
+
+subsection \<open>Code\<close>
+
+locale unweighted_intersection_imp_loop_spec =
+  intersection_augment_imp_spec sins_imp sdel_imp
+  for sins_imp :: "nat \<Rightarrow> 'si \<Rightarrow> unit Heap"
+    and sdel_imp :: "nat \<Rightarrow> 'si \<Rightarrow> unit Heap" +
+  fixes aug_path_imp :: "'si \<Rightarrow> nat array \<Rightarrow> nat option Heap"
+begin
+
+partial_function (heap) mi_loop_imp :: "'si \<Rightarrow> nat array \<Rightarrow> unit Heap" where
+  "mi_loop_imp Si Ra = do {
+     r \<leftarrow> aug_path_imp Si Ra;
+     (case r of None \<Rightarrow> return ()
+      | Some k \<Rightarrow> do { aug_imp Si Ra k; mi_loop_imp Si Ra }) }"
+
+end
+
+subsection \<open>Correctness\<close>
+
+text \<open>The path search refines the functional one on every solution reached by the loop. The
+  assertion \<open>st\<close> holds the data of the path search that the loop passes on untouched.\<close>
+
+locale unweighted_intersection_imp_loop =
+  unweighted_intersection_imp_loop_spec sins_imp sdel_imp aug_path_imp +
+  intersection_augment_imp n sol_assn smemb_imp sins_imp sdel_imp +
+  unweighted_intersection_path_loop where set_insert = "insert :: nat \<Rightarrow> nat set \<Rightarrow> nat set"
+    and set_delete = "\<lambda> x X. X - {x}" and to_set = "\<lambda> X. X" and set_invar = finite
+    and set_empty = "{}"
+  for n sol_assn smemb_imp sins_imp sdel_imp aug_path_imp +
+  fixes st :: assn
+  assumes carrier_bound: "carrier \<subseteq> {..<n}"
+    and aug_path_imp: "\<And> X Si Ra. \<lbrakk>finite X; X \<subseteq> carrier; indep1 X; indep2 X\<rbrakk> \<Longrightarrow>
+      <sol_assn X Si * parr_assn n Ra * st> aug_path_imp Si Ra
+      <\<lambda> res. sol_assn X Si * path_assn n (augmenting_path X) res Ra * st>"
+begin
 
 context
   fixes X

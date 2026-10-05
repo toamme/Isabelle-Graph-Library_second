@@ -38,6 +38,8 @@ global_interpretation mx: matroid_intersection_imp_spec n id id bm_memb bm_ins1 
     and mx_xround = mx.ids.xround
     and mx_bfs_run = mx.ids.bfs_run
     and mx_has_nb = mx.ids.has_nb_imp
+    and mx_s = mx.ids.s_imp
+    and mx_t = mx.ids.t_imp
     and mx_st = mx.ids.st_imp
     and mx_src = mx.ids.src_imp
     and mx_tgt = mx.ids.tgt_imp
@@ -73,15 +75,10 @@ lemma mx_bfs_run_code [code]: "mx_bfs_run n Gh = xb_run n Gh"
 
 declare xbi.BFS_par_imp.simps[code]
 
-definition "matching_imp nv Fa Ta = do {
-   m \<leftarrow> Array.len Fa;
-   H1 \<leftarrow> part_handle_imp m nv Fa;
-   H2 \<leftarrow> part_handle_imp m nv Ta;
-   Xi \<leftarrow> Array.new m False;
-   C1 \<leftarrow> Array.new nv 0;
-   C2 \<leftarrow> Array.new nv 0;
-   mx_mi m H1 H2 (Xi, C1, C2, Fa, Ta);
-   return Xi }"
+definition "matching_imp nv Fa Ta =
+   bm_setup_imp nv Fa Ta (\<lambda> m H1 H2 Xi C1 C2. do {
+     mx_mi m H1 H2 (Xi, C1, C2, Fa, Ta);
+     return Xi })"
 
 export_code matching_imp checking SML_imp
 
@@ -109,11 +106,11 @@ begin
 
 abbreviation "sa \<equiv> bm_sol_assn (length fs) nv fs ts"
 
-interpretation lf: unit_partition_oracle "\<lambda> i. fs ! i" sorted_list_of_set "{}" Set.insert
+sublocale lf: unit_partition_oracle "\<lambda> i. fs ! i" sorted_list_of_set "{}" Set.insert
   "\<lambda> b B. b \<in> B" "{0..<length fs}" "\<lambda> X. X" finite "\<lambda> _. True" id
   by unfold_locales auto
 
-interpretation rt: unit_partition_oracle "\<lambda> i. ts ! i" sorted_list_of_set "{}" Set.insert
+sublocale rt: unit_partition_oracle "\<lambda> i. ts ! i" sorted_list_of_set "{}" Set.insert
   "\<lambda> b B. b \<in> B" "{0..<length fs}" "\<lambda> X. X" finite "\<lambda> _. True" id
   by unfold_locales auto
 
@@ -211,16 +208,11 @@ lemma exch2_rule:
 
 text \<open>The elements are the positions themselves, so the indexation is the identity.\<close>
 
-interpretation m: matroid_intersection_imp where n = "length fs" and idx = id and elt = id
-  and smemb_imp = bm_memb and ins1_imp = bm_ins1 and exch1_imp = bm_exch1 and ins2_imp = bm_ins2 
-  and exch2_imp = bm_exch2 and sins_imp = bm_ins and sdel_imp = bm_del 
-  and pts1_imp = Array.nth and pts2_imp = Array.nth and carrier = "{0..<length fs}"
-  and sol_assn = sa and ost1 = emp and ost2 = emp
-  and orcl_prep1 = lf.part_prep and ins_orcl1 = lf.part_ins and exch_orcl1 = lf.part_exch
-  and orcl_prep2 = rt.part_prep and ins_orcl2 = rt.part_ins and exch_orcl2 = rt.part_exch
-  and indep1 = lf.part_indep and indep2 = rt.part_indep 
-  and pts1 = "part_pts fs" and pst1 = "part_pst (length fs) fs"
-  and pts2 = "part_pts ts" and pst2 = "part_pst (length fs) ts"
+lemma mi_inst:
+  "matroid_intersection_imp (length fs) id id bm_memb bm_ins1 bm_exch1 bm_ins2 bm_exch2 bm_ins bm_del
+     Array.nth Array.nth {0..<length fs} lf.part_prep lf.part_ins lf.part_exch lf.part_indep sa emp
+     (part_pts fs) (part_pst (length fs) fs) rt.part_prep rt.part_ins rt.part_exch rt.part_indep emp
+     (part_pts ts) (part_pst (length fs) ts)"
   apply (intro matroid_intersection_imp.intro indexed_oracle_imp.intro matroid_ids.intro
         indexed_oracle_imp_axioms.intro matroid_intersection_imp_axioms.intro)
   subgoal by (rule bij_betw_id)
@@ -245,6 +237,18 @@ interpretation m: matroid_intersection_imp where n = "length fs" and idx = id an
   subgoal using bm_ins_rule by simp
   subgoal using bm_del_rule by simp
   done
+
+interpretation m: matroid_intersection_imp where n = "length fs" and idx = id and elt = id
+  and smemb_imp = bm_memb and ins1_imp = bm_ins1 and exch1_imp = bm_exch1 and ins2_imp = bm_ins2 
+  and exch2_imp = bm_exch2 and sins_imp = bm_ins and sdel_imp = bm_del 
+  and pts1_imp = Array.nth and pts2_imp = Array.nth and carrier = "{0..<length fs}"
+  and sol_assn = sa and ost1 = emp and ost2 = emp
+  and orcl_prep1 = lf.part_prep and ins_orcl1 = lf.part_ins and exch_orcl1 = lf.part_exch
+  and orcl_prep2 = rt.part_prep and ins_orcl2 = rt.part_ins and exch_orcl2 = rt.part_exch
+  and indep1 = lf.part_indep and indep2 = rt.part_indep 
+  and pts1 = "part_pts fs" and pst1 = "part_pst (length fs) fs"
+  and pts2 = "part_pts ts" and pst2 = "part_pst (length fs) ts"
+  by (rule mi_inst)
 
 lemma is_max_matching:
   assumes "m.is_max X"
@@ -309,27 +313,13 @@ theorem matching_imp_correct:
    <\<lambda> Xi. \<exists>\<^sub>A X. xset_assn (length fs) X Xi * Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * true * 
               \<up>(max_card_matching ((\<lambda> i. {fs ! i, ts ! i}) ` {0..<length fs}) 
                                    ((\<lambda> i. {fs ! i, ts ! i}) ` X))>"
-proof-
-  let ?B = "blocks_assn (length fs) nv fs Fa * blocks_assn (length fs) nv ts Ta"
-  have len: "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts> Array.len Fa <\<lambda> r. ?B * \<up>(r = length fs)>"
-    unfolding blocks_in by (sep_auto simp: blocks_assn_def)
-  have h1: "<?B> part_handle_imp (length fs) nv Fa <\<lambda> H1. ?B * part_pst (length fs) fs H1 * true>"
-    by (sep_auto heap: part_handle_rule)
-  have h2: "<?B * part_pst (length fs) fs H1 * true> part_handle_imp (length fs) nv Ta 
-            <\<lambda> H2. ?B * part_pst (length fs) fs H1 * part_pst (length fs) ts H2 * true>" for H1
-    by (sep_auto heap: part_handle_rule)
-  show ?thesis
-    unfolding matching_imp_def
-    apply (rule ht_bind[OF len], rule ht_pure_pre, simp only:)
-    apply (rule ht_bind[OF h1], rule ht_bind[OF h2])
-    apply (rule alloc_bind[OF xset_assn_new], rule alloc_bind[OF cnt_assn_new[of _ fs]], 
-           rule alloc_bind[OF cnt_assn_new[of _ ts]])
-    apply (rule ht_bind[OF ht_frame_ac[OF handles_correct, where R = true]])
-      prefer 3 apply (rule ht_return_wp)
-     apply (simp only: star_aci, rule ent_refl)
-    apply (sep_auto simp: blocks_assn_def)
-    done
-qed
+  unfolding matching_imp_def
+  apply (rule ht_cons_pre[OF _ bm_setup_rule[where F = emp]], simp)
+  apply (rule ht_bind[OF ht_frame_ac[OF handles_correct, where R = true]])
+    prefer 3 apply (rule ht_return_wp)
+   apply (simp only: star_aci, rule ent_refl)
+  apply (sep_auto simp: blocks_assn_def)
+  done
 
 end
 

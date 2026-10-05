@@ -1,6 +1,6 @@
 theory Imp_Bool_Set
   imports Imp_Range_Iteration
-begin                       
+begin
 
 section \<open>Sets of Nats below a Bound as Boolean Arrays\<close>
 
@@ -11,6 +11,20 @@ definition xset_assn :: "nat \<Rightarrow> nat set \<Rightarrow> bool array \<Ri
 
 lemma xset_assn_new: "<emp> Array.new n False <xset_assn n {}>"
   unfolding xset_assn_def by (sep_auto simp: map_replicate_const)
+
+text \<open>Binding a freshly allocated object to a continuation.\<close>
+
+lemma alloc_bind:
+  assumes "<emp> c <Q>" "\<And> x. <Fm * Q x> f x <Qp>"
+  shows "<Fm> c \<bind> f <Qp>"
+proof-
+  have "<emp * Fm> c <\<lambda> x. Q x * Fm>"
+    by (rule ht_frame[OF assms(1)])
+  then have "<Fm> c <\<lambda> x. Fm * Q x>"
+    by (simp only: assn_one_left mult.commute[of "Q _" Fm])
+  then show ?thesis
+    by (rule ht_bind) (rule assms(2))
+qed
 
 lemma xset_of_list_rule:
   "<\<up>(xs = map (\<lambda> i. i \<in> X) [0..<n] \<and> X \<subseteq> {..<n})> Array.of_list xs <xset_assn n X>"
@@ -59,6 +73,19 @@ text \<open>The interface through which the algorithms see a solution: a members
   insertion and deletion, which are idempotent. The handle may carry further data that its
   operations keep up to date (e.g. for oracles).\<close>
 
+(* NEW (weighted extension): locale imp_nat_set_spec (with the text before it) *)
+text \<open>Copying the set into a Boolean array, in place.\<close>
+
+locale imp_nat_set_spec =
+  fixes n :: nat
+    and smemb_imp :: "nat \<Rightarrow> 'si \<Rightarrow> bool Heap"
+begin
+
+(* NEW (weighted extension): definition bcopy_imp *)
+definition "bcopy_imp Si Bi = copy_range_imp (\<lambda> i. smemb_imp i Si) n Bi"
+
+end
+
 locale imp_nat_set =
   fixes n :: nat
     and sol_assn :: "nat set \<Rightarrow> 'si \<Rightarrow> assn"
@@ -69,5 +96,27 @@ locale imp_nat_set =
     and smemb_rule: "<sol_assn X Si * \<up>(x < n)> smemb_imp x Si <\<lambda> r. sol_assn X Si * \<up>(r = (x \<in> X))>"
     and sins_rule: "<sol_assn X Si * \<up>(x < n)> sins_imp x Si <\<lambda> _. sol_assn (insert x X) Si>"
     and sdel_rule: "<sol_assn X Si * \<up>(x < n)> sdel_imp x Si <\<lambda> _. sol_assn (X - {x}) Si>"
+begin
+
+sublocale imp_nat_set_spec n smemb_imp .
+
+lemma bcopy_rule: "<sol_assn X Si * len_assn n Bi> bcopy_imp Si Bi <\<lambda> _. sol_assn X Si * xset_assn n X Bi>"
+proof-
+  have m: "<sol_assn X Si> smemb_imp i Si <\<lambda> r. sol_assn X Si * \<up>(r = (i \<in> X))>" if "i < n" for i
+    using smemb_rule[of X Si i] that by simp
+  have c: "<Bi \<mapsto>\<^sub>a l * sol_assn X Si * \<up>(length l = n)> bcopy_imp Si Bi
+           <\<lambda> _. Bi \<mapsto>\<^sub>a map (\<lambda> i. i \<in> X) [0..<n] * sol_assn X Si>" for l
+    unfolding bcopy_imp_def by (rule copy_range_imp_rule[OF m])
+  have e: "Bi \<mapsto>\<^sub>a map (\<lambda> i. i \<in> X) [0..<n] * sol_assn X Si \<Longrightarrow>\<^sub>A sol_assn X Si * xset_assn n X Bi"
+    by (rule ent_trans[OF ent_star_mono[OF ent_refl sol_bound]]) (sep_auto simp: xset_assn_def)
+  have c': "<Bi \<mapsto>\<^sub>a l * sol_assn X Si * \<up>(length l = n)> bcopy_imp Si Bi
+            <\<lambda> _. sol_assn X Si * xset_assn n X Bi>" for l
+    by (rule ht_cons_post[OF c], rule ent_true_drop(2), rule e)
+  show ?thesis
+    unfolding len_assn_def
+    by (sep_auto heap: c')
+qed
+
+end
 
 end

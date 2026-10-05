@@ -289,6 +289,39 @@ proof-
     by (rule ht_cons_post[OF ht_cons_pre[OF _ run]]) (sep_auto dest: fin)+
 qed
 
+text \<open>Overwriting an array of length \<open>n\<close> with the results of a computation that keeps \<open>F\<close>.\<close>
+
+definition "copy_range_imp P n a = foldr_range_imp (\<lambda> i _. do { x \<leftarrow> P i; Array.upd i x a; return () }) n ()"
+
+lemma foldr_upd_range:
+  "k \<le> length l \<Longrightarrow> foldr (\<lambda> j l. list_update l j (p j)) [0..<k] l = map p [0..<k] @ drop k l"
+proof(induction k arbitrary: l)
+  case (Suc k)
+  have "drop k (list_update l k (p k)) = p k # drop (Suc k) l"
+    using Suc.prems
+    by (simp only: drop_update_swap[of k k] order_refl, subst Cons_nth_drop_Suc[symmetric]) simp_all
+  thus ?case
+    using Suc by simp
+qed simp
+
+lemma copy_range_imp_rule:
+  assumes P: "\<And> i. i < n \<Longrightarrow> <F> P i <\<lambda> r. F * \<up>(r = p i)>"
+  shows "<a \<mapsto>\<^sub>a l * F * \<up>(length l = n)> copy_range_imp P n a <\<lambda> _. a \<mapsto>\<^sub>a map p [0..<n] * F>"
+proof(rule ht_pure_pre)
+  assume l: "length l = n"
+  have step: "<a \<mapsto>\<^sub>a l' * \<up>(length l' = n) * F> do { x \<leftarrow> P j; Array.upd j x a; return () }
+              <\<lambda> _. a \<mapsto>\<^sub>a list_update l' j (p j) * \<up>(length (list_update l' j (p j)) = n) * F>"
+    if "j < n" for j l'
+    using that by (sep_auto heap: P[OF that])
+  have r: "<a \<mapsto>\<^sub>a l * \<up>(length l = n) * F> copy_range_imp P n a
+           <\<lambda> _. a \<mapsto>\<^sub>a foldr (\<lambda> j l. list_update l j (p j)) [0..<n] l *
+                 \<up>(length (foldr (\<lambda> j l. list_update l j (p j)) [0..<n] l) = n) * F>"
+    unfolding copy_range_imp_def
+    by (rule foldr_range_imp_rule[where A = "\<lambda> l _. a \<mapsto>\<^sub>a l * \<up>(length l = n)"], rule step)
+  show "<a \<mapsto>\<^sub>a l * F> copy_range_imp P n a <\<lambda> _. a \<mapsto>\<^sub>a map p [0..<n] * F>"
+    by (rule ht_cons_pre[OF _ ht_cons_post[OF r]]) (use l in \<open>sep_auto simp: foldr_upd_range\<close>)+
+qed
+
 text \<open>Writing the indices below \<open>n\<close> satisfying a predicate, in increasing order, into the
   first cells of an array of length at least \<open>n\<close>; the result is their number.\<close>
 
