@@ -30,8 +30,8 @@ lemma opt_in_matroids_imp_opt_in_intersection:
   fixes c1 c2 :: "'a \<Rightarrow> 'b"
   assumes "\<And> e. e \<in> carrier \<Longrightarrow> c e = c1 e + c2 e"
     "indep1 X" "indep2 X" "k = card X"
-    "\<And> Y. indep1 Y \<Longrightarrow> card Y = k \<Longrightarrow> sum c1 Y \<le> sum c1 X"
-    "\<And> Y. indep2 Y \<Longrightarrow> card Y = k \<Longrightarrow> sum c2 Y \<le> sum c2 X"
+    "\<And> Y. \<lbrakk>indep1 Y; card Y = k\<rbrakk> \<Longrightarrow> sum c1 Y \<le> sum c1 X"
+    "\<And> Y. \<lbrakk>indep2 Y; card Y = k\<rbrakk> \<Longrightarrow> sum c2 Y \<le> sum c2 X"
     "indep1 Z" "indep2 Z" "card Z = k"
   shows "sum c Z \<le> sum c X"
 proof-

@@ -111,6 +111,80 @@ next
     by sep_auto
 qed
 
+partial_function (heap) iter_find ::
+"('it \<Rightarrow> bool Heap) \<Rightarrow> ('it \<Rightarrow> ('a \<times> 'it) Heap) \<Rightarrow> ('a \<Rightarrow> 'b option Heap) \<Rightarrow>
+'it \<Rightarrow> ('a \<times> 'b) option Heap" where
+"iter_find has_next next f it =
+do { b \<leftarrow> has_next it;
+if b then do { (x, it') \<leftarrow> next it;
+r \<leftarrow> f x;
+(case r of None \<Rightarrow> iter_find has_next next f it'
+| Some y \<Rightarrow> return (Some (x, y))) }
+else return None }"
+
+lemma iter_find_rule_gen:
+assumes has_next: "\<And>xs it. <I xs it> has_next it <\<lambda>r. I xs it * \<up>(r \<longleftrightarrow> xs \<noteq> [])>"
+and nxt: "\<And>x xs it. <I (x # xs) it> next it <\<lambda>(y, it'). I xs it' * \<up>(y = x)>"
+and quit: "\<And>xs it. I xs it \<Longrightarrow>\<^sub>A Q"
+and step: "\<And>x s. \<lbrakk>x \<in> set xs; P s\<rbrakk> \<Longrightarrow>
+<A s> f x <\<lambda>r. A (fst (g s x)) * \<up>(rel_option Rel r (snd (g s x)))>"
+and inv: "\<And>x s. \<lbrakk>x \<in> set xs; P s\<rbrakk> \<Longrightarrow> P (fst (g s x))"
+and pre: "P s"
+shows "<I xs it * A s> iter_find has_next next f it
+<\<lambda>r. Q * A (fst (foldl (\<lambda>(s, r) x. case r of
+None \<Rightarrow> (case g s x of (s', y) \<Rightarrow> (s', map_option (Pair x) y))
+| Some _ \<Rightarrow> (s, r)) (s, None) xs)) *
+\<up>(rel_option (rel_prod (=) Rel) r
+(snd (foldl (\<lambda>(s, r) x. case r of
+None \<Rightarrow> (case g s x of (s', y) \<Rightarrow> (s', map_option (Pair x) y))
+| Some _ \<Rightarrow> (s, r)) (s, None) xs)))>"
+using step inv pre
+proof(induction xs arbitrary: it s)
+case Nil
+show ?case
+supply [sep_heap_rules] = has_next
+apply(subst iter_find.simps)
+apply sep_auto
+apply(sep_frame_fwd rule: quit)
+by sep_auto
+next
+case (Cons x xs)
+obtain s' y where g: "g s x = (s', y)" by fastforce
+have st: "<A s> f x <\<lambda>r. A s' * \<up>(rel_option Rel r y)>"
+using Cons.prems(1)[of x s] Cons.prems(3) g by simp
+have P': "P s'" using Cons.prems(2)[of x s] Cons.prems(3) g by simp
+have keep: "\<And>a. foldl (\<lambda>(s, r) x. case r of
+None \<Rightarrow> (case g s x of (s', y) \<Rightarrow> (s', map_option (Pair x) y))
+| Some _ \<Rightarrow> (s, r)) (s', Some a) xs = (s', Some a)"
+by (induction xs) simp_all
+note IH = Cons.IH[OF _ _ P']
+show ?case
+proof(cases y)
+case None
+have IH': "<I xs it' * A s'> iter_find has_next next f it'
+<\<lambda>r. Q * A (fst (foldl (\<lambda>(s, r) x. case r of
+None \<Rightarrow> (case g s x of (s', y) \<Rightarrow> (s', map_option (Pair x) y))
+| Some _ \<Rightarrow> (s, r)) (s', None) xs)) *
+\<up>(rel_option (rel_prod (=) Rel) r
+(snd (foldl (\<lambda>(s, r) x. case r of
+None \<Rightarrow> (case g s x of (s', y) \<Rightarrow> (s', map_option (Pair x) y))
+| Some _ \<Rightarrow> (s, r)) (s', None) xs)))>" for it'
+by (rule IH) (auto intro: Cons.prems(1,2))
+show ?thesis
+supply [sep_heap_rules] = has_next nxt st IH'
+apply(subst iter_find.simps)
+by (sep_auto simp: g None)
+next
+case (Some z)
+show ?thesis
+supply [sep_heap_rules] = has_next nxt st
+apply(subst iter_find.simps)
+apply(sep_auto simp: g Some keep split: option.splits)
+apply(sep_frame_fwd rule: quit)
+by sep_auto
+qed
+qed
+
 context imp_set_ordered_iterate
 begin
 

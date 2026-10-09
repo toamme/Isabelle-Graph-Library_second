@@ -86,6 +86,35 @@ theorem augment_imp_rule:
   using augment_loop_rule[of k xs M Bi Ra 0]
   by simp
 
+subsection \<open>Matchings with a Cached Cardinality\<close>
+
+text \<open>A buddy map together with a reference to the cardinality of the matching. Augmentation
+      increments the reference, hence the cardinality is read in constant time.\<close>
+
+definition counted_assn :: "'buddy \<Rightarrow> 'bi \<times> nat ref \<Rightarrow> assn" where
+  "counted_assn M = (\<lambda>(Bi, Ki). buddy_assn M Bi * Ki \<mapsto>\<^sub>r card (\<M> M))"
+
+lemma counted_assn_pair: "counted_assn M (Bi, Ki) = buddy_assn M Bi * Ki \<mapsto>\<^sub>r card (\<M> M)"
+  by (simp add: counted_assn_def)
+
+definition "augment_counted_imp = (\<lambda>(Bi, Ki) Ra k. do {
+   Bi' \<leftarrow> augment_imp Bi Ra k;
+   c \<leftarrow> !Ki;
+   Ki := Suc c;
+   return (Bi', Ki) })"
+
+definition "matching_card_imp = (\<lambda>(Bi, Ki). !Ki)"
+
+lemma matching_card_imp_rule:
+  "<counted_assn M Mi> matching_card_imp Mi <\<lambda>c. counted_assn M Mi * \<up>(c = card (\<M> M))>"
+  by (cases Mi) (sep_auto simp: counted_assn_pair matching_card_imp_def)
+
+theorem augment_counted_imp_rule:
+  "\<lbrakk>k \<le> length xs; card (\<M> (augment_impl M (take k xs))) = Suc (card (\<M> M))\<rbrakk> \<Longrightarrow>
+   <counted_assn M Mi * Ra \<mapsto>\<^sub>a xs> augment_counted_imp Mi Ra k
+   <\<lambda>Mi'. counted_assn (augment_impl M (take k xs)) Mi' * Ra \<mapsto>\<^sub>a xs>"
+  by (cases Mi) (sep_auto heap: augment_imp_rule simp: counted_assn_pair augment_counted_imp_def)
+
 end
 
 end

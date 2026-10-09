@@ -28,7 +28,10 @@ theories
 	Hungarian_Method_Top_Loop
 	Hungarian_Method_Instantiation
 	WBP_Matching_Exec
-	Hungarian_Example	
+	Hungarian_Example
+	Path_Search_Shortcut
+	Neighbourhood_Best_Scan
+		
 	Matching_Certificate_Spec
 	"Refinements/Init_Potential_Collection"
 	"Refinements/Init_Potential_Imperative"
@@ -40,6 +43,8 @@ theories
 	"Refinements/Matching_Certificate_Imperative"
 	"Refinements/Matching_Certificate_Arrays"
 	"Refinements/Matching_Certificate_Example"
+	"Refinements/Path_Search_Shortcut_Imperative"
+	"Refinements/Neighbourhood_Best_Scan_Imperative"
 
 document_files
   "root.tex"

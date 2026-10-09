@@ -636,8 +636,9 @@ lemma sgn_w_simps [simp]: "sgn_w False w = w" "sgn_w True w = - w"
 text \<open>The weight of an edge of the original graph is @{term "min 0 w"} for its (possibly negated)
       weight @{term w}, the weight of every other edge is @{term 0}.\<close>
 
-locale hungarian_csr_mw = hungarian_csr_completion h n fs ts ws ls rs 0 "\<lambda>w. min 0 (sgn_w neg w)"
+locale hungarian_csr_mw = hungarian_csr_completion \<theta> h n fs ts ws ls rs 0 "\<lambda>w. min 0 (sgn_w neg w)"
   for h :: "'n::{linordered_idom, heap} \<Rightarrow> real" and n fs ts ws ls rs and neg :: bool
+  and \<theta>::nat
 begin
 
 theorem mw_correct:
@@ -683,9 +684,10 @@ text \<open>The weight of an edge of the original graph is its (possibly negated
       every other edge is twice the penalty of
       @{theory Basic_Matching.Weighted_Matchings_Reductions}.\<close>
 
-locale hungarian_csr_mwmc = hungarian_csr_completion h n fs ts ws ls rs
+locale hungarian_csr_mwmc = hungarian_csr_completion \<theta> h n fs ts ws ls rs
     "2 + of_nat (length ls + length rs) * max_abs_weight ws" "sgn_w neg"
-  for h :: "'n::{linordered_idom, heap} \<Rightarrow> real" and n fs ts ws ls rs and neg :: bool
+    for h :: "'n::{linordered_idom, heap} \<Rightarrow> real" and n fs ts ws ls rs and neg :: bool
+    and \<theta>::nat
 begin
 
 lemma h_abs: "h \<bar>a\<bar> = \<bar>h a\<bar>"
@@ -1156,11 +1158,11 @@ text \<open>The arrays of the completed graph are built, the Hungarian method of
       the original graph is read off.\<close>
 
 definition hungarian_csr_reduced_run ::
-  "'n::{linordered_idom, heap} \<Rightarrow> ('n \<Rightarrow> 'n) \<Rightarrow> ('n \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow>
+  "'n::{linordered_idom, heap} \<Rightarrow> ('n \<Rightarrow> 'n) \<Rightarrow> ('n \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> nat\<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow>
    'n array \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow> nat array_map Heap" where
-  "hungarian_csr_reduced_run dflt cf kp n Fa Ta Wa La Rv = do {
+  "hungarian_csr_reduced_run dflt cf kp n \<theta> Fa Ta Wa La Rv = do {
      (Fa', Ta', Wa', La', Rv', Pa, n', k) \<leftarrow> hungarian_csr_complete dflt cf n Fa Ta Wa La Rv;
-     (r, Mi, Pti) \<leftarrow> hungarian_csr_run n' Fa' Ta' Wa' La' Rv';
+     (r, Mi, Pti) \<leftarrow> hungarian_csr_run n' \<theta> Fa' Ta' Wa' La' Rv';
      extract_imp kp n k La Pa Wa' Mi }"
 
 context hungarian_csr_completion
@@ -1303,10 +1305,10 @@ qed
 
 theorem reduced_run_rule:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
-   hungarian_csr_reduced_run dflt cf kp n Fa Ta Wa La Rv
+   hungarian_csr_reduced_run dflt cf kp n theta Fa Ta Wa La Rv
    <\<lambda>Mo. \<exists>\<^sub>AMb. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
          aug_csr.buddy_assn (extract kp Mb) Mo * true * \<up>(cp.hl.hungarian = Some Mb)>"
-proof -
+proof -                                                         
   obtain Mb where Mb: "cp.hl.hungarian = Some Mb" using cp_hungarian_some by blast
   note ex = extract_imp_rule[OF cp_result(2)[OF Mb]]
   show ?thesis unfolding hungarian_csr_reduced_run_def
@@ -1333,7 +1335,7 @@ qed
 
 theorem mw_run_rule:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
-   hungarian_csr_reduced_run 0 (\<lambda>w. min 0 (sgn_w neg w)) (\<lambda>w. w < 0) n Fa Ta Wa La Rv
+   hungarian_csr_reduced_run 0 (\<lambda>w. min 0 (sgn_w neg w)) (\<lambda>w. w < 0) n \<theta> Fa Ta Wa La Rv
    <\<lambda>Mo. \<exists>\<^sub>AM. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
          aug_csr.buddy_assn M Mo * true *
          \<up>(min_weight_matching G (\<lambda>e. sgn_w neg (wfun e)) {{u, v} | u v. M u = Some v})>"
@@ -1364,7 +1366,7 @@ qed
 theorem mwmc_run_rule:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
    hungarian_csr_reduced_run (2 + of_nat (length ls + length rs) * max_abs_weight ws) (sgn_w neg)
-     (\<lambda>w. w < 2 + of_nat (length ls + length rs) * max_abs_weight ws) n Fa Ta Wa La Rv
+     (\<lambda>w. w < 2 + of_nat (length ls + length rs) * max_abs_weight ws) n \<theta> Fa Ta Wa La Rv
    <\<lambda>Mo. \<exists>\<^sub>AM. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
          aug_csr.buddy_assn M Mo * true *
          \<up>(min_weight_max_card_matching G (\<lambda>e. sgn_w neg (wfun e)) {{u, v} | u v. M u = Some v})>"
@@ -1423,15 +1425,16 @@ proof -
 qed
 
 definition hungarian_csr_mwmc_run ::
-  "bool \<Rightarrow> nat \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow> 'n::{linordered_idom, heap} array \<Rightarrow> nat array \<Rightarrow>
+  "bool \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow> 'n::{linordered_idom, heap} array 
+   \<Rightarrow> nat array \<Rightarrow>
    nat array \<Rightarrow> nat array_map Heap" where
-  "hungarian_csr_mwmc_run neg n Fa Ta Wa La Rv = do {
+  "hungarian_csr_mwmc_run neg n \<theta> Fa Ta Wa La Rv = do {
      m \<leftarrow> Array.len Wa;
      l \<leftarrow> Array.len La;
      r \<leftarrow> Array.len Rv;
      mx \<leftarrow> fold_imp 0 m (max_abs_step Wa) 0;
      hungarian_csr_reduced_run (2 + of_nat (l + r) * mx) (sgn_w neg)
-       (\<lambda>w. w < 2 + of_nat (l + r) * mx) n Fa Ta Wa La Rv }"
+       (\<lambda>w. w < 2 + of_nat (l + r) * mx) n \<theta> Fa Ta Wa La Rv }"
 
 text \<open>Maximum weight perfect matchings, on the negated weights.\<close>
 
@@ -1460,11 +1463,11 @@ proof -
   thus ?thesis using len by (simp add: ys_def)
 qed
 
-definition "hungarian_csr_max_perfect_run n Fa Ta Wa La Rv = do {
+definition "hungarian_csr_max_perfect_run n \<theta> Fa Ta Wa La Rv = do {
      m \<leftarrow> Array.len Wa;
      Wn \<leftarrow> Array.new m 0;
      fold_imp 0 m (neg_step Wa Wn) ();
-     hungarian_csr_run n Fa Ta Wn La Rv }"
+     hungarian_csr_run n \<theta> Fa Ta Wn La Rv }"
 
 subsection \<open>Correctness of the Programs\<close>
 
@@ -1473,7 +1476,7 @@ begin
 
 theorem hungarian_csr_mw_run_rule:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
-   hungarian_csr_mw_run neg n Fa Ta Wa La Rv
+   hungarian_csr_mw_run neg n \<theta> Fa Ta Wa La Rv
    <\<lambda>Mo. \<exists>\<^sub>AM. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
          aug_csr.buddy_assn M Mo * true *
          \<up>(min_weight_matching G (\<lambda>e. sgn_w neg (wfun e)) {{u, v} | u v. M u = Some v})>"
@@ -1484,21 +1487,21 @@ qed
 
 corollary min_weight_matching_run:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
-   hungarian_csr_mw_run False n Fa Ta Wa La Rv
+   hungarian_csr_mw_run False n \<theta> Fa Ta Wa La Rv
    <\<lambda>Mo. \<exists>\<^sub>AM. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
          aug_csr.buddy_assn M Mo * true * \<up>(min_weight_matching G wfun {{u, v} | u v. M u = Some v})>"
   using hungarian_csr_mw_run_rule[of _ _ _ _ _ False] by simp
 
 corollary max_weight_matching_run:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
-   hungarian_csr_mw_run True n Fa Ta Wa La Rv
+   hungarian_csr_mw_run True n \<theta> Fa Ta Wa La Rv
    <\<lambda>Mo. \<exists>\<^sub>AM. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
          aug_csr.buddy_assn M Mo * true * \<up>(max_weight_matching G wfun {{u, v} | u v. M u = Some v})>"
   using hungarian_csr_mw_run_rule[of _ _ _ _ _ True] by (simp add: neg_min_weight_matching)
 
 theorem hungarian_csr_mwmc_run_rule:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
-   hungarian_csr_mwmc_run neg n Fa Ta Wa La Rv
+   hungarian_csr_mwmc_run neg n \<theta> Fa Ta Wa La Rv
    <\<lambda>Mo. \<exists>\<^sub>AM. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
          aug_csr.buddy_assn M Mo * true *
          \<up>(min_weight_max_card_matching G (\<lambda>e. sgn_w neg (wfun e)) {{u, v} | u v. M u = Some v})>"
@@ -1510,7 +1513,7 @@ qed
 
 corollary min_weight_max_card_matching_run:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
-   hungarian_csr_mwmc_run False n Fa Ta Wa La Rv
+   hungarian_csr_mwmc_run False n \<theta> Fa Ta Wa La Rv
    <\<lambda>Mo. \<exists>\<^sub>AM. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
          aug_csr.buddy_assn M Mo * true *
          \<up>(min_weight_max_card_matching G wfun {{u, v} | u v. M u = Some v})>"
@@ -1518,7 +1521,7 @@ corollary min_weight_max_card_matching_run:
 
 corollary max_weight_max_card_matching_run:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
-   hungarian_csr_mwmc_run True n Fa Ta Wa La Rv
+   hungarian_csr_mwmc_run True n \<theta> Fa Ta Wa La Rv
    <\<lambda>Mo. \<exists>\<^sub>AM. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
          aug_csr.buddy_assn M Mo * true *
          \<up>(max_weight_max_card_matching G wfun {{u, v} | u v. M u = Some v})>"
@@ -1531,7 +1534,7 @@ lemma neg_input: "hungarian_csr_input h n fs ts (map uminus ws) ls rs"
 
 theorem max_weight_perfect_matching_run:
   "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
-   hungarian_csr_max_perfect_run n Fa Ta Wa La Rv
+   hungarian_csr_max_perfect_run n theta Fa Ta Wa La Rv
    <\<lambda>(r, Mi, Pti). \<exists>\<^sub>AM \<pi>. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
       aug_csr.buddy_assn M Mi * potm.map_assn \<pi> Pti * true *
       \<up>((r = result.success \<and> max_weight_perfect_matching G wfun (maug.\<M> M)) \<or>
@@ -1554,13 +1557,13 @@ proof -
     thus ?thesis by (simp add: neg_min_weight_perfect_matching)
   qed
   have run: "<Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs>
-   hungarian_csr_max_perfect_run n Fa Ta Wa La Rv
+   hungarian_csr_max_perfect_run n theta Fa Ta Wa La Rv
    <\<lambda>(r, Mi, Pti). \<exists>\<^sub>AM \<pi>. Fa \<mapsto>\<^sub>a fs * Ta \<mapsto>\<^sub>a ts * Wa \<mapsto>\<^sub>a ws * La \<mapsto>\<^sub>a ls * Rv \<mapsto>\<^sub>a rs *
       aug_csr.buddy_assn M Mi * potm.map_assn \<pi> Pti * true *
       \<up>((r = result.success \<and> min_weight_perfect_matching G ng.wfun (maug.\<M> M)) \<or>
         (r = result.failure \<and> (\<nexists>M'. perfect_matching G M')))>"
     unfolding hungarian_csr_max_perfect_run_def
-    by (sep_auto heap: neg_loop_rule ng.hungarian_csr_run_correct)
+    by(sep_auto heap: neg_loop_rule ng.hungarian_csr_run_correct)
   show ?thesis
     apply (rule ht_cons_post_prec[OF run])
     apply (clarsimp split: prod.splits)
@@ -1571,18 +1574,31 @@ qed
 
 end
 
-definition hungarian_csr_mw_run_int :: "bool \<Rightarrow> nat \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow> int array \<Rightarrow>
+definition hungarian_csr_mw_run_int :: "bool \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow> int array \<Rightarrow>
     nat array \<Rightarrow> nat array \<Rightarrow> nat array_map Heap" where
   "hungarian_csr_mw_run_int = hungarian_csr_mw_run"
 
-definition hungarian_csr_mwmc_run_int :: "bool \<Rightarrow> nat \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow> int array \<Rightarrow>
+definition hungarian_csr_mwmc_run_int :: "bool \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow> int array \<Rightarrow>
     nat array \<Rightarrow> nat array \<Rightarrow> nat array_map Heap" where
   "hungarian_csr_mwmc_run_int = hungarian_csr_mwmc_run"
 
-definition hungarian_csr_max_perfect_run_int :: "nat \<Rightarrow> nat array \<Rightarrow> nat array \<Rightarrow> int array \<Rightarrow>
+definition hungarian_csr_max_perfect_run_int :: "nat \<Rightarrow> nat \<Rightarrow>nat array \<Rightarrow> nat array \<Rightarrow> int array \<Rightarrow>
     nat array \<Rightarrow> nat array \<Rightarrow> (result \<times> nat array_map \<times> int array_map) Heap" where
   "hungarian_csr_max_perfect_run_int = hungarian_csr_max_perfect_run"
 
 export_code hungarian_csr_mw_run_int hungarian_csr_mwmc_run_int hungarian_csr_max_perfect_run_int
   checking SML_imp
+
+export_code
+  (*min weight perfect matching*)
+  hungarian_csr_run_int
+  (*max weight perfect matching*)
+  hungarian_csr_max_perfect_run_int
+  (*min/max weight matching*)
+  hungarian_csr_mw_run_int
+  (*min/max weight max cardinality matching*)
+  hungarian_csr_mwmc_run_int
+  (*conversions*)
+  nat_of_integer integer_of_nat int_of_integer integer_of_int
+  in SML_imp module_name Hungarian_CSR_Variants file_prefix Hungarian_CSR_Variants_imperative
 end
