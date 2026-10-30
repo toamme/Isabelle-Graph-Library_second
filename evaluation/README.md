@@ -15,7 +15,7 @@ Each script first runs the setup for its experiment (`setup/setup.sh <mode>`) an
 
 | script | what it does | time |
 |---|---|---|
-| `experiments_smoke.sh` | our SML exports once on the smallest instance of every family of the body's figures, with the code exports shipped in `exports/pregenerated/`; also the hybrid solver for the assignment problem (Tables 35 to 37) | about 20 minutes: downloads and builds about 15 minutes, measurements a few minutes |
+| `experiments_smoke.sh` | our SML exports once on the smallest instance of every family of the body's figures, with the code exports shipped in `exports/pregenerated/`; also the hybrid solver for the assignment problem (Tables 35 to 37) | about 10 minutes, mostly downloads; the measurements take under a minute |
 | `experiments_8h.sh` | downloads Isabelle2025-2 and the AFP entries the library needs, builds the export sessions and generates the code exports anew, then measures imperative SML and the main competitor (LEMON CSR; Sage with our oracle for matroid intersection) on the first family column of every row of Fig. 2 and 3 (Tables 5, 9, 13, 16, 19, 22 and 26), size by size across the seven benchmarks, one instance and one run per size, until 8 hours since the start are used up | 8 hours |
 | `experiments_full.sh` | the Isabelle build as above, then every family, size and instance of the body and every library column | about 18 days of measurements after the setup (below) |
 
