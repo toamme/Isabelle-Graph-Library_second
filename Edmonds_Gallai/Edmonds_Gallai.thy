@@ -156,6 +156,15 @@ lemma inessentialE:
   "inessential G v \<Longrightarrow> \<exists> M. max_card_matching G M \<and> v \<notin> Vs M"
   by(auto simp add: inessential_def)
 
+lemma inessential_outside_vertices:
+  "\<lbrakk>finite G; x \<notin> Vs G\<rbrakk> \<Longrightarrow> inessential G x"
+  by (elim max_card_matching_exists)
+    (blast intro: inessentialI dest: max_card_matchingDs(1) Vs_subset)
+
+lemma inessential_complement_matched:
+  "max_card_matching G M \<Longrightarrow> V - {x \<in> V. inessential G x} \<subseteq> Vs M"
+  by (auto simp: inessential_def)
+
 definition "inessentials G = {v . inessential G v \<and> v \<in> Vs G}"
 
 lemma in_inessentialsE:
@@ -323,6 +332,30 @@ next
   ultimately show ?thesis
     unfolding even_vert_def
     by(intro exI[of _ "rev p"]) auto
+qed
+
+lemma factor_critical_even_path:
+  assumes "graph_invar G" "Vs G \<subseteq> X" "graph_matching G M" "Vs M = X - {r}"
+    "\<And>x. x \<in> X \<Longrightarrow> \<exists>N. graph_matching G N \<and> Vs N = X - {x}"
+    "y \<in> X" "y \<noteq> r"
+  shows "\<exists>p. path G p \<and> distinct p \<and> alt_path M p \<and>
+    odd (length p) \<and> hd p = r \<and> last p = y"
+proof-
+  obtain N where "graph_matching G N" "Vs N = X - {y}"
+    using assms(5,6)
+    by blast
+  hence "max_card_matching G N" "max_card_matching G M"
+    using near_perfect_matching_maximum[OF assms(1)] assms(2-4)
+    by blast+
+  hence "even_vert G M y"
+    using \<open>Vs N = X - {y}\<close> assms(1)
+    by (auto intro: uncovered_by_a_max_matching_even_in_other_max_matching)
+  then obtain p where "odd (length p)" "alt_path M p" "hd p \<notin> Vs M"
+    "last p = y" "distinct p" "path G p \<or> length p = 1"
+    by (auto simp: even_vert_def)
+  thus ?thesis
+    using assms(2,4,6,7) subset_path_Vs[of G p]
+    by (cases p rule: list_cases_hd_and_last) auto
 qed
 
 text \<open>If a vertex is even, it is uncovered by one maximum cardinality matching:
@@ -575,6 +608,23 @@ proof(rule ccontr, goal_cases)
     using x(2) y'(1) by blast
   ultimately show False 
     using M(2) by blast
+qed
+
+lemma factor_critical_crossing_edge:
+  assumes "graph_invar G" "Vs G \<subseteq> X"
+    "\<And>x. x \<in> X \<Longrightarrow> \<exists>M. graph_matching G M \<and> Vs M = X - {x}"
+    "r \<in> Y" "Y \<subset> X"
+  shows "\<exists>a y. a \<in> Y \<and> y \<notin> Y \<and> {a,y} \<in> G"
+proof-
+  have "G \<lbrakk>X\<rbrakk> = G" "Delta G X = {}"
+    using assms(2)
+    by (auto simp: graph_inter_Vs_def Delta_def Vs_def)
+  hence "connected_component G r = X"
+    using assms factor_critical_is_whole_component[of X G r]
+    by auto
+  thus ?thesis
+    using empty_delta_component_confined[of G Y r] assms(1,4,5)
+    by (auto simp: Delta_def)
 qed
 
 lemma factor_critical_is_odd:
@@ -1427,6 +1477,32 @@ definition "adj_inessentials G = Neighbourhood G (inessentials G)"
 abbreviation "\<oo>\<cc> \<equiv> odd_comps_in_diff"
 abbreviation "\<A> \<equiv> adj_inessentials"
 abbreviation "\<I> \<equiv> inessentials"
+
+lemma inessentials_in_universe:
+  "\<lbrakk>finite G; Vs G \<subseteq> V\<rbrakk> \<Longrightarrow>
+    {x \<in> V. inessential G x} = \<I> G \<union> (V - Vs G)"
+  by (auto simp: inessentials_def intro: inessential_outside_vertices)
+
+lemma adj_inessentials_in_universe:
+  "Vs G \<subseteq> V \<Longrightarrow>
+    Neighbourhood G {x \<in> V. inessential G x} = \<A> G"
+  by (auto simp: adj_inessentials_def Neighbourhood_def inessentials_def;
+    blast dest: edges_are_Vs edges_are_Vs_2)
+
+lemma edmonds_gallai_remainder_in_universe:
+  "\<lbrakk>finite G; Vs G \<subseteq> V\<rbrakk> \<Longrightarrow>
+    V - {x \<in> V. inessential G x} - \<A> G = Vs G - \<I> G - \<A> G"
+  by (auto simp: inessentials_in_universe inessentials_def)
+
+lemma adj_inessentials_disjoint:
+  "\<A> G \<inter> \<I> G = {}"
+  by (auto simp: adj_inessentials_def dest: self_not_in_Neighbourhood)
+
+lemma inessential_region_graph_in_universe:
+  "\<lbrakk>H \<subseteq> G; Vs G \<subseteq> V\<rbrakk> \<Longrightarrow>
+    (H \<lbrakk>({x \<in> V. inessential G x} \<inter> L) \<union> X\<rbrakk>) =
+    (H \<lbrakk>(\<I> G \<inter> L) \<union> X\<rbrakk>)"
+  by (auto simp: graph_inter_Vs_def inessentials_def Vs_def; blast)
 
 theorem edmonds_gallai_decomposition_all:
   assumes "graph_invar G" "max_card_matching G M"

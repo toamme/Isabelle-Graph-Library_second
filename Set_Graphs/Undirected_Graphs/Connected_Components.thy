@@ -807,6 +807,13 @@ proof(goal_cases)
     by (simp add: "1"(3) in_connected_componentI z)
 qed
 
+lemma subgraph_component_vertices:
+  assumes "dblton_graph G" "H \<subseteq> G" "D \<in> connected_components' V G"
+  shows "Vs (H \<lbrakk>D\<rbrakk>) = Vs H \<inter> D"
+  using assms
+  by (fastforce simp: connected_components'_aux_def comps_def Vs_def graph_inter_Vs_def
+    dest: whole_edge_in_comp[where G = G])
+
 lemma Vs_of_graph_inter_component_is_component:
   "\<lbrakk>y \<in> Vs G; dblton_graph G\<rbrakk> \<Longrightarrow> Vs (G\<lbrakk>connected_component G y\<rbrakk>) = connected_component G y"
 proof(rule, all \<open>rule\<close>, goal_cases)

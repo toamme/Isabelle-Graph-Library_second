@@ -1451,6 +1451,11 @@ next
     by (cases p1'; auto simp add: v_in_edge_in_path)
 qed
 
+lemma path_edges_disjoint_from_old_graph:
+  "\<lbrakk>set q \<inter> Vs H = {}; q \<noteq> []\<rbrakk> \<Longrightarrow>
+    set (edges_of_path (a # q @ [b])) \<inter> H = {}"
+  by (induction q arbitrary: a) (auto simp: vs_member, case_tac q, auto simp: vs_member)
+
 lemma edges_of_path_nempty_edges:
   "e \<in> set (edges_of_path p) \<Longrightarrow> e \<noteq> {}"
   using in_edges_of_path_split

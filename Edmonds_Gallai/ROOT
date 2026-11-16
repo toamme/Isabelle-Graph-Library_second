@@ -7,4 +7,6 @@ session "Edmonds_Gallai_Decomposition" = "HOL" +
     Edmonds_Gallai_Preps
     Edmonds_Gallai_Blossoms
     Edmonds_Gallai_Computation
-    Edmonds_Gallai 
+    Edmonds_Gallai
+    Dulmage_Mendelsohn
+    Ear_Decomposition

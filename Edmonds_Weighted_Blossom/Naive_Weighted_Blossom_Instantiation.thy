@@ -57,7 +57,7 @@ interpretation pedg: find_aug_path_pedg
   where empty = empty and delete = delete and lookup = lookup and update = update
     and adjmap_inv = adjmap_inv and insert = insert and isin = isin and t_set = t_set
     and sel = sel and vset_empty = vset_empty and vset_delete = vset_delete and vset_inv = vset_inv
-    and K = K and mate_empty = buddy_empty
+    and K = K and nil = nil and mate_empty = buddy_empty
     and matching_invar_abs = Matching.invar_matching and matching_abs = "Matching.\<M>"
     and mate_lookup = Matching.buddy_lookup and mate_partner = Matching.get_partner
     and mate_augment = Matching.augment_impl and mate_contract = Matching.contract_path
@@ -86,7 +86,7 @@ interpretation max_matching: Find_Max_Matching
   where empty = empty and delete = delete and lookup = lookup and update = update
     and adjmap_inv = adjmap_inv and insert = insert and isin = isin and t_set = t_set
     and sel = sel and vset_empty = vset_empty and vset_delete = vset_delete and vset_inv = vset_inv
-    and K = K and mate_empty = buddy_empty
+    and K = K and nil = nil and mate_empty = buddy_empty
     and matching_invar_abs = Matching.invar_matching and matching_abs = "Matching.\<M>"
     and mate_lookup = Matching.buddy_lookup and mate_partner = Matching.get_partner
     and mate_augment = Matching.augment_impl and mate_contract = Matching.contract_path
@@ -120,7 +120,7 @@ proof-
   where empty = empty and delete = delete and lookup = lookup and update = update
     and adjmap_inv = adjmap_inv and insert = insert and isin = isin and t_set = t_set
     and sel = sel and vset_empty = vset_empty and vset_delete = vset_delete and vset_inv = vset_inv
-    and K = K and mate_empty = buddy_empty
+    and K = K and nil = nil and mate_empty = buddy_empty
     and matching_invar_abs = Matching.invar_matching and matching_abs = "Matching.\<M>"
     and mate_lookup = Matching.buddy_lookup and mate_partner = Matching.get_partner
     and mate_augment = Matching.augment_impl and mate_contract = Matching.contract_path

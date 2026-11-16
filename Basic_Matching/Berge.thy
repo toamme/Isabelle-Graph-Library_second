@@ -779,6 +779,18 @@ next
     by auto
 qed
 
+lemma near_perfect_matching_maximum:
+  assumes "graph_invar G" "graph_matching G M" "Vs G \<subseteq> X" "Vs M = X - {r}"
+  shows "max_card_matching G M"
+proof-
+  have False if "matching_augmenting_path M p" "path G p" "distinct p" for p
+    using assms(3,4) that subset_path_Vs[of G p]
+    by (cases p rule: list_cases_hd_and_last) (auto simp: matching_augmenting_path_def)
+  thus ?thesis
+    using Berge[of M G] assms graph_invar_finite[of G] finite_subset[of M G]
+    by (auto simp: max_card_matching_def intro!: leI)
+qed
+
 lemma laterally_transfer_aug_path':
   assumes "card M = card M'"
   assumes matching: "graph_matching G M'" "finite M'"

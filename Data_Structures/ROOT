@@ -26,6 +26,7 @@ session "Data_Structures" = "HOL-Data_Structures" +
     Bounded_Stack_Specs
     Fixed_Univ_Buckets_Specs
     Fixed_Univ_List_Specs
+    UnionFind_Representative_Specs
     
     Fixed_Univ_Set_Specs_Imp
     Fixed_Univ_Map_Specs_Imp

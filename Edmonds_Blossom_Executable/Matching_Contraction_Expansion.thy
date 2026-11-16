@@ -2,6 +2,8 @@ theory Matching_Contraction_Expansion
   imports Graph_Quotient Basic_Matching.Matching_Augmentation_Executable
 begin
 
+provenance human
+
 locale blossom_matching_spec =
   fixes K::"'v set"
    and empty_matching::'matching
@@ -70,9 +72,12 @@ and  add_alternatingly_precondI:
 end
 
 locale blossom_matching =
-blossom_matching_spec +
-assumes matching:
-  "\<And> M G. matching_invar G M \<Longrightarrow> graph_matching G (matching_abstract M)"
+  blossom_matching_spec K empty_matching matching_invar lookup_partner get_partner augment
+    matching_abstract contract_path expand_path_at_matched add_alternatingly +
+  Read: Matching_Specs K nil matching_invar matching_abstract get_partner
+  for K empty_matching matching_invar lookup_partner get_partner augment matching_abstract
+    contract_path expand_path_at_matched add_alternatingly nil +
+assumes matching_operations:
   "\<And> G. Vs G \<subseteq> K \<Longrightarrow> matching_invar G empty_matching"
   "matching_abstract empty_matching = {}"
   "\<And> M G G'. \<lbrakk>matching_invar G M; G \<subseteq> G'; Vs G' \<subseteq> K\<rbrakk> \<Longrightarrow> matching_invar G' M"
@@ -114,6 +119,12 @@ and add_alternatingly:
 and lookup_partner:
   "\<And>G M x y. matching_invar G M \<Longrightarrow>
    lookup_partner M x = Some y \<longleftrightarrow> {x, y} \<in> matching_abstract M"
+
+begin
+
+lemmas matching = Read.matching matching_operations
+
+end
 
 context
   Matching_Augmentation_Specs
@@ -971,81 +982,29 @@ interpretation blossom_matching_here:
   blossom_matching
   where K = K and empty_matching = buddy_empty
   and matching_invar = invar_matching
-  and augment =augment_impl
+  and augment = augment_impl
   and matching_abstract = \<M>
   and contract_path = contract_path
   and lookup_partner = buddy_lookup
   and expand_path_at_matched = expand_path_at_matched
-  and get_partner = get_partner
+  and get_partner = get_partner and nil = nil
   and add_alternatingly = add_alternatingly
-proof(rule blossom_matching.intro, goal_cases)
-  case (1 M G)
-  then show ?case
-    using invar_matchingD(4) by auto
-next
-  case (2 G)
-  then show ?case
-    by (simp add: empty_matching_props)
-next
-  case 3
-  then show ?case
-   by (simp add: empty_matching_props)
-next
-  case (4 M G G')
-  thus ?case
-    using extend_graph by blast
-next
-  case (5 M G x)
-  thus ?case
-    using get_partner_correct by blast
-next
-  case (6 G M p)
-  then show ?case
-    by (simp add: augmentation_correct(1))
-next
-  case (7 G M p)
-  then show ?case
-    by (simp add: augmentation_correct(2))
-next
-  case (8 G M p new_vert contr)
-  then show ?case
-    by(elim blossom_matching_spec_here.contract_path_precondE,
-       intro contract_path_correct)
-next
-  case (9 G M p new_vert contr)
-  then show ?case
-  by(elim blossom_matching_spec_here.contract_path_precondE,
-       intro contract_path_correct)
-next
-  case (10 G M old_vert mo new_vert p)
-  thus ?case
-    by(elim blossom_matching_spec_here.expand_path_at_matched_precondE,
-       intro expand_path_at_matched_correct)
-       auto
-next
-  case (11 G M old_vert mo new_vert p)
-  thus ?case
-    by(elim blossom_matching_spec_here.expand_path_at_matched_precondE,
-       intro expand_path_at_matched_correct)
-       auto
-next
-  case (12 G M p)
-  thus ?case
-    by(elim blossom_matching_spec_here.add_alternatingly_precondE,
-       intro add_alternatingly_correct)
-       auto
-next
-  case (13 G M p)
-  thus ?case
-    by(elim blossom_matching_spec_here.add_alternatingly_precondE,
-       intro add_alternatingly_correct)
-       auto
+proof(intro blossom_matching.intro blossom_matching_axioms.intro, goal_cases)
+  case 1
+  show ?case
+    unfolding get_partner_def
+    by(rule matching.Matching_Specs_axioms)
 next
   case (14 G M x y)
-  then show ?case
-    by (auto simp: \<M>_def' doubleton_eq_iff
-             dest: symmetric_buddiesD[OF invar_matchingD(2)])
-qed
+  thus ?case
+    using matching.get_partner[of G M x y]
+    by(auto simp: buddy_lookup_def split: if_splits)
+qed(((elim blossom_matching_spec_here.contract_path_precondE
+      blossom_matching_spec_here.expand_path_at_matched_precondE
+      blossom_matching_spec_here.add_alternatingly_precondE)?;
+    rule empty_matching_props get_partner_correct augmentation_correct contract_path_correct
+      expand_path_at_matched_correct add_alternatingly_correct extend_graph;
+    auto)+)
 
 lemmas blossom_matching_spec_satisfied = blossom_matching_here.blossom_matching_axioms
 

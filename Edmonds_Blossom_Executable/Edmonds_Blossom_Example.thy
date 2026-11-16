@@ -156,7 +156,7 @@ global_interpretation gm: Graph_Matching_Specs
   where empty = map_empty and delete = RBT_Map.delete and lookup = lookup and insert = vset_insert
     and isin = isin and t_set = t_set and sel = sel and update = update and adjmap_inv = adj_inv
     and vset_empty = vset_empty and vset_delete = vset_delete and vset_inv = vset_inv
-    and K = "{..<nil}" and mate_empty = Leaf
+    and K = "{..<nil}" and nil = nil and mate_empty = Leaf
     and matching_invar_abs = "matching_invar_abs_rbt nil" and matching_abs = "matching_abs_rbt nil"
     and mate_lookup = "matching_lookup_rbt nil" and mate_partner = "matching_partner_rbt nil"
     and mate_augment = augment_rbt and mate_contract = "contract_path_rbt nil"
@@ -178,7 +178,7 @@ proof(rule Graph_Matching_Specs.intro)
     by (simp add: RBT_Set.empty_def adj_inv_def map_empty_def)
   show "blossom_matching {..<nil} Leaf (matching_invar_abs_rbt nil) (matching_lookup_rbt nil)
     (matching_partner_rbt nil) augment_rbt (matching_abs_rbt nil) (contract_path_rbt nil)
-    (expand_path_rbt nil) add_alternatingly_rbt"
+    (expand_path_rbt nil) add_alternatingly_rbt nil"
     by (rule blossom_matching_rbt)
   show "Graph_Matching_Specs_axioms t_set vset_inv Tree2.inorder"
     by (rule Graph_Matching_Specs_axioms.intro) simp
@@ -216,7 +216,7 @@ global_interpretation compute_alt_path: Compute_Alt_Path
   where empty = map_empty and delete = RBT_Map.delete and lookup = lookup and insert = vset_insert
     and isin = isin and t_set = t_set and sel = sel and update = update and adjmap_inv = adj_inv
     and vset_empty = vset_empty and vset_delete = vset_delete and vset_inv = vset_inv
-    and K = "{..<nil}" and mate_empty = Leaf
+    and K = "{..<nil}" and nil = nil and mate_empty = Leaf
     and matching_invar_abs = "matching_invar_abs_rbt nil" and matching_abs = "matching_abs_rbt nil"
     and mate_lookup = "matching_lookup_rbt nil" and mate_partner = "matching_partner_rbt nil"
     and mate_augment = augment_rbt and mate_contract = "contract_path_rbt nil"
@@ -258,7 +258,7 @@ global_interpretation find_aug_path_subprocedures: Find_Aug_Path_subprocedures
   where empty = map_empty and delete = RBT_Map.delete and lookup = lookup and insert = vset_insert
     and isin = isin and t_set = t_set and sel = sel and update = update and adjmap_inv = adj_inv
     and vset_empty = vset_empty and vset_delete = vset_delete and vset_inv = vset_inv
-    and K = "{..<nil}" and mate_empty = Leaf
+    and K = "{..<nil}" and nil = nil and mate_empty = Leaf
     and matching_invar_abs = "matching_invar_abs_rbt nil" and matching_abs = "matching_abs_rbt nil"
     and mate_lookup = "matching_lookup_rbt nil" and mate_partner = "matching_partner_rbt nil"
     and mate_augment = augment_rbt and mate_contract = "contract_path_rbt nil"
@@ -278,7 +278,7 @@ global_interpretation find_aug_path: Find_Aug_Path
   where empty = map_empty and delete = RBT_Map.delete and lookup = lookup and insert = vset_insert
     and isin = isin and t_set = t_set and sel = sel and update = update and adjmap_inv = adj_inv
     and vset_empty = vset_empty and vset_delete = vset_delete and vset_inv = vset_inv
-    and K = "{..<nil}" and mate_empty = Leaf
+    and K = "{..<nil}" and nil = nil and mate_empty = Leaf
     and matching_invar_abs = "matching_invar_abs_rbt nil" and matching_abs = "matching_abs_rbt nil"
     and mate_lookup = "matching_lookup_rbt nil" and mate_partner = "matching_partner_rbt nil"
     and mate_augment = augment_rbt and mate_contract = "contract_path_rbt nil"
@@ -320,7 +320,7 @@ global_interpretation find_max_matching: Find_Max_Matching
   where empty = map_empty and delete = RBT_Map.delete and lookup = lookup and insert = vset_insert
     and isin = isin and t_set = t_set and sel = sel and update = update and adjmap_inv = adj_inv
     and vset_empty = vset_empty and vset_delete = vset_delete and vset_inv = vset_inv
-    and K = "{..<nil}" and mate_empty = Leaf
+    and K = "{..<nil}" and nil = nil and mate_empty = Leaf
     and matching_invar_abs = "matching_invar_abs_rbt nil" and matching_abs = "matching_abs_rbt nil"
     and mate_lookup = "matching_lookup_rbt nil" and mate_partner = "matching_partner_rbt nil"
     and mate_augment = augment_rbt and mate_contract = "contract_path_rbt nil"
@@ -350,7 +350,7 @@ interpretation find_max_matching_proofs: Find_Max_Matching_thms
   where empty = map_empty and delete = RBT_Map.delete and lookup = lookup and insert = vset_insert
     and isin = isin and t_set = t_set and sel = sel and update = update and adjmap_inv = adj_inv
     and vset_empty = vset_empty and vset_delete = vset_delete and vset_inv = vset_inv
-    and K = "{..<nil}" and mate_empty = Leaf
+    and K = "{..<nil}" and nil = nil and mate_empty = Leaf
     and matching_invar_abs = "matching_invar_abs_rbt nil" and matching_abs = "matching_abs_rbt nil"
     and mate_lookup = "matching_lookup_rbt nil" and mate_partner = "matching_partner_rbt nil"
     and mate_augment = augment_rbt and mate_contract = "contract_path_rbt nil"

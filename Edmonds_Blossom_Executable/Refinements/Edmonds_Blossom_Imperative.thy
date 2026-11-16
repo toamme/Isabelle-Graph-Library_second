@@ -18,9 +18,10 @@ text \<open>The imperative layers are put together as the functional ones are: t
   The locale below fixes the functional data structures, the imperative ADTs (the queue of the
   forest search and the stack of contractions as bounded stacks, the sets of the forest search,
   the alternating forest and the matching, both with paths as arrays), the operations on graphs
-  and the creation of a vertex with their Hoare triples, and the input. The functional and the
-  imperative layers are composed by sublocales; the lower layers are instantiated for every graph,
-  vertex list and matching they are called with.\<close>
+  and the creation of a vertex with their Hoare triples, the input, and the vertex that the forest
+  search starts with before it scans any vertex. The functional and the imperative layers are
+  composed by sublocales; the lower layers are instantiated for every graph, vertex list and
+  matching they are called with.›
 
 locale Edmonds_Blossom_Imperative =
   Graph_Matching_Specs where lookup = lookup and mate_empty = mate_empty +
@@ -69,6 +70,7 @@ locale Edmonds_Blossom_Imperative =
     and create_vert :: "'v list \<Rightarrow> 'v"
     and create_vert_imp :: "'v array \<Rightarrow> 'v Heap"
     and G :: 'adjmap and vs :: "'v list"
+    and dummy_vert :: 'v
   assumes g_empty_rule: "<emp> g_empty_imp <\<lambda>Hi. graph_assn empty Hi>"
     and g_add_edge_rule:
       "\<And>H Hi a b. <graph_assn H Hi> g_add_edge_imp Hi a b
@@ -132,7 +134,7 @@ subsection \<open>The imperative algorithm\<close>
 
 sublocale cap_imp: Compute_Alt_Path_Imperative_spec q_empty_imp q_push_imp q_pop_imp q_top_imp
   q_is_empty_imp fset_empty_imp fset_insert_imp empty_forest_imp evens_isin_imp odds_isin_imp
-  extend_forest_even_unclassified_imp get_path_imp lookup_partner_imp neighbours_imp .
+  extend_forest_even_unclassified_imp get_path_imp lookup_partner_imp neighbours_imp dummy_vert .
 
 sublocale fsub_imp: Find_Aug_Path_Subprocedures_Imperative_spec cap_imp.Compute_Alt_Path_run_imp .
 

@@ -7,8 +7,6 @@ session "Edmonds_Weighted_Blossom" = "HOL" +
     Blossom_Executable
     Edmonds_Gallai_Decomposition
   theories
-    Blossom_Forest_Spec
-    Blossom_Forest
     Naive_Weighted_Blossom
     Pre_Edmonds_Gallai
     Naive_Weighted_Blossom_Instantiation

@@ -8,6 +8,7 @@ session Blossom_Executable = Basic_Matching +
     Directed_Set_Graphs
     Undirected_Set_Graphs
     Graph_Algorithms_Dev
+    Laminar_Family
     Imperative
     Separation_Logic_Imperative_HOL_Partial
 
@@ -21,6 +22,8 @@ session Blossom_Executable = Basic_Matching +
     Alternating_Forest_Contraction
     Alternating_Forest_Expansion
     Matching_Contraction_Expansion
+    Blossom_Forest_Spec
+    Blossom_Forest
     Graph_Quotient_Lifting
     Blossom_Prefixes
     Compute_Alt_Path_Invars
@@ -30,6 +33,9 @@ session Blossom_Executable = Basic_Matching +
     Find_Aug_Path
     Find_Aug_Path_Subprocedures
     Edmonds_Blossom_Example
+    Quadratic_Blossom_Search
+    Quadratic_Blossom_Search_Preservation
+    Cubic_Blossom_Example
     "Refinements/Alternating_Forest_Specs_Imp"
     "Refinements/Blossom_Matching_Specs_Imp"
     "Refinements/Compute_Alt_Path_Imperative"
@@ -38,3 +44,12 @@ session Blossom_Executable = Basic_Matching +
     "Refinements/Find_Aug_Path_Imperative"
     "Refinements/Find_Max_Matching_Imperative"
     "Refinements/Edmonds_Blossom_Imperative"
+    "Refinements/Alternating_Forest_Contraction_Imperative"
+    "Refinements/Quadratic_Blossom_Search_Imperative"
+    "Refinements/Cubic_Blossom_Imperative"
+    "Refinements/Cubic_Blossom_Instantiation"
+    "Refinements/Cubic_Blossom_Concrete"
+    "Refinements/Cubic_Blossom_Input"
+    "Refinements/Cubic_Blossom_Pipeline"
+    "Refinements/Edmonds_Blossom_Imperative_Instantiation"
+    "Refinements/Edmonds_Blossom_Code_Export"

@@ -20,7 +20,9 @@ text \<open>The imperative program mirrors @{const Compute_Alt_Path.Compute_Alt_
   is an imperative alternating forest (@{locale alternating_forest_imp}), the matching an
   imperative matching (@{locale blossom_matching_imp}), and the roots are collected in an
   imperative set (@{locale fixed_univ_set_imp}). The neighbours of a vertex are read off the graph
-  by an operation that returns them in an array. All operations are parameters; their Hoare
+  by an operation that returns them in an array. Before the first vertex is taken from the queue,
+  the vertex being scanned is the parameter @{term dummy_vert}, which is never read; a concrete
+  value keeps the generated code free of @{const undefined}. All operations are parameters; their Hoare
   triples, stated against the functional operations, are the assumptions of the refinement
   locale.\<close>
 
@@ -45,8 +47,9 @@ locale \<^marker>\<open>provenance ai_human\<close> Compute_Alt_Path_Imperative_
     and odds_isin_imp :: "'fi \<Rightarrow> 'v \<Rightarrow> bool Heap"
     and extend_forest_even_unclassified_imp :: "'fi \<Rightarrow> 'v \<Rightarrow> 'v \<Rightarrow> 'v \<Rightarrow> unit Heap"
     and get_path_imp :: "'fi \<Rightarrow> 'v \<Rightarrow> 'pathi Heap"
-    and lookup_partner_imp :: "'mi \<Rightarrow> 'v \<Rightarrow> 'v option Heap"
-    and neighbours_imp :: "'gi \<Rightarrow> 'v \<Rightarrow> 'v array Heap"
+    and lookup_partner_imp :: "'mi ⇒ 'v ⇒ 'v option Heap"
+    and neighbours_imp :: "'gi ⇒ 'v ⇒ 'v array Heap"
+    and dummy_vert :: 'v
 begin
 
 subsection \<open>The loop\<close>
@@ -110,7 +113,7 @@ definition \<^marker>\<open>provenance ai_human\<close> "initial_state_imp Gi Mi
        Si \<leftarrow> array_foldr Vi n (push_if_free_imp Gi Mi) Si;
        Fi \<leftarrow> empty_forest_imp Ri;
        A \<leftarrow> Array.of_list [];
-       return \<lparr>i_queue = Si, i_cur = undefined, i_nbs = A, i_pos = 0, i_len = 0, i_forest = Fi\<rparr> }"
+       return \<lparr>i_queue = Si, i_cur = dummy_vert, i_nbs = A, i_pos = 0, i_len = 0, i_forest = Fi\<rparr> }"
 
 definition \<^marker>\<open>provenance ai_human\<close> "alternating_paths_imp s =
   (if i_pos s < i_len s then

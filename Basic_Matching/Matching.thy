@@ -393,6 +393,13 @@ lemma remove_matching_edges_Vs:
   by(intro remove_disjoint_edges_equality)
     (auto simp add: Vs_def dest: matching_unique_match)
 
+lemma matching_submatching_no_cross:
+  assumes "matching M" "N \<subseteq> M" "Vs N = Y - {r}" "r \<notin> Vs M"
+    "u \<in> Y" "v \<notin> Y"
+  shows "{u,v} \<notin> M"
+  using remove_matching_edges_Vs[OF assms(1,2)] assms(3-6)
+  by (auto simp: Vs_def)
+
 lemma remove_matching_edge_Vs:
   assumes "matching M" "e \<in> M"
   shows "Vs (M - {e}) = Vs M - e"
@@ -1662,6 +1669,14 @@ proof(rule matchingI, goal_cases)
       by (auto simp add: nth_append_left nth_eq_iff_index_eq)
   qed
 
+lemma even_path_matching:
+  "\<lbrakk>path G p; distinct p; even (length p)\<rbrakk> \<Longrightarrow>
+    \<exists>M. graph_matching G M \<and> Vs M = set p"
+  using even_edges_of_distinct_path_are_matching[of p] verts_of_even_edges[of p]
+    path_edges_subset[of G p]
+  by (intro exI[of _ "{edges_of_path p ! i | i. i < length p - 1 \<and> even i}"])
+    (auto simp: edges_of_path_length less_diff_conv)
+
 lemma odd_edges_of_distinct_path_are_matching:
   assumes "distinct p"
   shows "matching {edges_of_path p ! i | i. Suc i < length p \<and> odd i}"
@@ -1871,6 +1886,12 @@ next
     by (auto intro!: alternating_list_even_index[OF assms(2)] 
            simp add: edges_of_path_length)
 qed
+
+lemma rev_alt_path_matching_vertices:
+  "\<lbrakk>matching M; rev_alt_path M q; even (length q)\<rbrakk> \<Longrightarrow>
+    Vs (M \<inter> set (edges_of_path q)) = set q"
+  using rev_alt_path_intersected_with_matching[of M q] verts_of_even_edges[of q]
+  by (auto simp: less_diff_conv)
 
 lemma graph_augmenting_path_rev_iff:
   "graph_augmenting_path G M (rev p) = graph_augmenting_path G M p"
@@ -2288,6 +2309,66 @@ next
   qed
 qed
 
+lemma max_card_matching_restrict:
+  assumes "finite G" "max_card_matching G M" "Vs (M \<lbrakk>D\<rbrakk>) = Vs M \<inter> D"
+  shows "max_card_matching (G \<lbrakk>D\<rbrakk>) (M \<lbrakk>D\<rbrakk>)"
+proof-
+  let ?P = "M \<lbrakk>D\<rbrakk>"
+  have "matching M" "M \<subseteq> G" "finite M" "finite ?P"
+    using assms(1,2)
+    by (auto simp: graph_inter_Vs_def dest: max_card_matchingDs(1,2) intro: finite_subset)
+  have "card N \<le> card ?P" if "graph_matching (G \<lbrakk>D\<rbrakk>) N" for N
+  proof-
+    have "N \<subseteq> G" "Vs N \<subseteq> D" "matching N" "finite N" "(M - ?P) \<inter> N = {}"
+      using that assms(1)
+      by (auto simp: graph_inter_Vs_def Vs_def intro: finite_subset)
+    have "graph_matching G ((M - ?P) \<union> N)"
+      using \<open>matching M\<close> \<open>M \<subseteq> G\<close> \<open>N \<subseteq> G\<close> \<open>matching N\<close> \<open>Vs N \<subseteq> D\<close> assms(3)
+        remove_matching_edges_Vs[of M ?P] graph_inter_Vs_subset(1)[of M D]
+      by (intro graph_matching_union) (auto intro: matching_subgraph)
+    hence "card ((M - ?P) \<union> N) \<le> card M"
+      using assms(2)
+      by (blast dest: max_card_matchingDs(3))
+    thus ?thesis
+      using \<open>finite M\<close> \<open>finite N\<close> \<open>finite ?P\<close> \<open>(M - ?P) \<inter> N = {}\<close>
+        graph_inter_Vs_subset(1)[of M D] card_mono[of M ?P]
+      by (simp add: card_Un_disjoint card_Diff_subset; arith)
+  qed
+  thus ?thesis
+    using \<open>matching M\<close> \<open>M \<subseteq> G\<close>
+    by (intro max_card_matchingI)
+      (auto simp: graph_inter_Vs_def intro: matching_subgraph)
+qed
+
+lemma max_card_matching_exchange:
+  assumes "finite G" "max_card_matching G M" "Vs (M \<lbrakk>D\<rbrakk>) = Vs M \<inter> D"
+    "max_card_matching (G \<lbrakk>D\<rbrakk>) N"
+  shows "max_card_matching G ((M - (M \<lbrakk>D\<rbrakk>)) \<union> N)"
+proof-
+  let ?P = "M \<lbrakk>D\<rbrakk>"
+  have "graph_matching G M" "graph_matching (G \<lbrakk>D\<rbrakk>) N"
+    using assms(2,4)
+    by (auto dest: max_card_matchingDs(1,2))
+  hence "graph_matching G N" "Vs N \<subseteq> D" "(M - ?P) \<inter> N = {}"
+    by (auto simp: graph_inter_Vs_def Vs_def)
+  have "finite M" "finite N" "finite ?P"
+    using assms(1,2,4)
+    by (auto simp: graph_inter_Vs_def dest: max_card_matchingDs(1) intro: finite_subset)
+  have "graph_matching G ((M - ?P) \<union> N)"
+    using \<open>graph_matching G M\<close> \<open>graph_matching G N\<close> \<open>Vs N \<subseteq> D\<close> assms(3)
+      remove_matching_edges_Vs[of M ?P] graph_inter_Vs_subset(1)[of M D]
+    by (intro graph_matching_union) (auto intro: matching_subgraph)
+  moreover have "card ?P = card N"
+    using assms max_card_matching_restrict[of G M D]
+    by (auto intro: max_card_matchings_same_size)
+  hence "card ((M - ?P) \<union> N) = card M"
+    using \<open>finite M\<close> \<open>finite N\<close> \<open>finite ?P\<close> \<open>(M - ?P) \<inter> N = {}\<close>
+      graph_inter_Vs_subset(1)[of M D] card_mono[of M ?P]
+    by (simp add: card_Un_disjoint card_Diff_subset)
+  ultimately show ?thesis
+    by (intro max_matching_if_same_card[OF assms(2)]) auto
+qed
+
 lemma max_card_matching_remove_vertices:
   assumes "max_card_matching G M"
   assumes "X \<subseteq> Vs G - Vs M"
@@ -2477,6 +2558,45 @@ lemma max_card_matching_exists:
   apply(rule  maximiser_of_function_nempty_finite[of "Collect (graph_matching G)" card])
   using finite_number_of_matchings[OF assms(1)] 
   by(auto intro!: exI[of _ "{}"] simp add: max_card_matching_def)
+
+definition possible_max_matching_edges where
+  "possible_max_matching_edges G = \<Union>{M. max_card_matching G M}"
+
+lemma possible_max_matching_edges_iff:
+  "e \<in> possible_max_matching_edges G \<longleftrightarrow>
+    (\<exists>M. max_card_matching G M \<and> e \<in> M)"
+  by (auto simp: possible_max_matching_edges_def)
+
+lemma possible_max_matching_edges_subset:
+  "possible_max_matching_edges G \<subseteq> G"
+  by (auto simp: possible_max_matching_edges_def dest: max_card_matchingDs(1))
+
+lemma max_matching_subset_possible_edges:
+  "max_card_matching G M \<Longrightarrow> M \<subseteq> possible_max_matching_edges G"
+  by (auto simp: possible_max_matching_edges_def)
+
+lemma max_matching_in_possible_edges:
+  "max_card_matching G M \<Longrightarrow> max_card_matching (possible_max_matching_edges G) M"
+  using possible_max_matching_edges_subset[of G] max_matching_subset_possible_edges[of G M]
+  by (auto simp: max_card_matching_def intro: max_matching_subset_possible_edges)
+
+lemma max_matching_possible_edges_iff:
+  assumes "finite G"
+  shows "max_card_matching (possible_max_matching_edges G) M \<longleftrightarrow> max_card_matching G M"
+  using assms
+  by (elim max_card_matching_exists;
+    use possible_max_matching_edges_subset[of G] in
+      \<open>blast intro: max_matching_if_same_card
+        dest: max_matching_in_possible_edges max_card_matchings_same_size max_card_matchingDs(1,2)\<close>)
+
+lemma possible_max_matching_edges_empty:
+  "possible_max_matching_edges {} = {}"
+  by (intro equalityI empty_subsetI possible_max_matching_edges_subset)
+
+lemma possible_max_matching_edges_idempotent:
+  "finite G \<Longrightarrow>
+    possible_max_matching_edges (possible_max_matching_edges G) = possible_max_matching_edges G"
+  by (auto simp: possible_max_matching_edges_iff max_matching_possible_edges_iff)
 
 definition "\<nu> G = Max {card M | M. graph_matching G M}"
 
