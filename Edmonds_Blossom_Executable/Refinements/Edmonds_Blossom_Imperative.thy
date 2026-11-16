@@ -21,7 +21,7 @@ text \<open>The imperative layers are put together as the functional ones are: t
   and the creation of a vertex with their Hoare triples, the input, and the vertex that the forest
   search starts with before it scans any vertex. The functional and the imperative layers are
   composed by sublocales; the lower layers are instantiated for every graph, vertex list and
-  matching they are called with.›
+  matching they are called with.\<close>
 
 locale Edmonds_Blossom_Imperative =
   Graph_Matching_Specs where lookup = lookup and mate_empty = mate_empty +

@@ -47,8 +47,8 @@ locale \<^marker>\<open>provenance ai_human\<close> Compute_Alt_Path_Imperative_
     and odds_isin_imp :: "'fi \<Rightarrow> 'v \<Rightarrow> bool Heap"
     and extend_forest_even_unclassified_imp :: "'fi \<Rightarrow> 'v \<Rightarrow> 'v \<Rightarrow> 'v \<Rightarrow> unit Heap"
     and get_path_imp :: "'fi \<Rightarrow> 'v \<Rightarrow> 'pathi Heap"
-    and lookup_partner_imp :: "'mi ⇒ 'v ⇒ 'v option Heap"
-    and neighbours_imp :: "'gi ⇒ 'v ⇒ 'v array Heap"
+    and lookup_partner_imp :: "'mi \<Rightarrow> 'v \<Rightarrow> 'v option Heap"
+    and neighbours_imp :: "'gi \<Rightarrow> 'v \<Rightarrow> 'v array Heap"
     and dummy_vert :: 'v
 begin
 
