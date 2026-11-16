@@ -2,7 +2,7 @@
 
 This artefact is the Isabelle/HOL formal development accompanying the paper. It contains the full library of verified graph algorithms, the code exported from it, and a machine-checked index that links every listing in the paper to its formal counterpart.
 
-The artefact is archived at [DOI to be added]. The paths in this file are relative to the top directory of that archive. For the contents of the library, the publications it builds on, and how to install Isabelle and the Archive of Formal Proofs and register this development as a component, see `README.md` in that directory. For the index, see `Paper_Index/README.md`. For the experimental evaluation, see `evaluation/README.md`.
+The artefact is archived at [DOI to be added]. The paths in this file are relative to the top directory of that archive. For the contents of the library, the publications it builds on, and how to install Isabelle and the Archive of Formal Proofs and register this development as a component, see `README.md` in that directory. For the index, see `Paper_Index/README.md`.
 
 ## Badges
 
@@ -16,15 +16,7 @@ The artefact needs no proprietary software and no particular hardware, but a bui
 
 Run each of the following commands from this directory. Each build command checks every proof in the sessions it selects, and it succeeds if Isabelle reports every session as finished and returns exit code 0. We measured the times below with the default settings of Isabelle, with which it builds one session at a time using 8 threads, on a machine with two AMD EPYC 7343 processors, which have 16 cores each and run at up to 3.9 GHz, 378 GiB of memory, and Ubuntu 22.04 on x86_64. Since a build uses at most 8 threads, the times depend more on the speed of a core than on the number of cores beyond 8.
 
-### Smoke test
-
-```
-bash evaluation/experiments_smoke.sh
-```
-
-This runs the Standard ML code exported from the library once on the smallest instance of every family of benchmarks in the paper. To browse the library in Isabelle/jEdit from the index of the paper, run `bash evaluation/browse_library_jedit.sh`. For both scripts, how long they take, and how to check their results, see `evaluation/README.md`.
-
-### Experiments within 8 hours
+### Library proofs
 
 ```
 isabelle build -D . -X paper_index
@@ -32,14 +24,10 @@ isabelle build -D . -X paper_index
 
 This builds every session of the library, leaving out the index. On that machine, starting from an installation in which only the sessions that come with Isabelle had been built, it took 2 hours and 13 minutes, that is 11 hours and 44 minutes of CPU time; this includes the sessions of Isabelle and of the Archive of Formal Proofs on which the library depends.
 
-The experimental evaluation for this run is `bash evaluation/experiments_8h.sh`; see `evaluation/README.md`.
-
 ### Full run
 
 ```
 isabelle build -D .
 ```
 
-This builds every session listed in `ROOTS`, which comprises the whole library and every section of the index. Each section of the index checks again the theories of the library that it imports, so this run takes longer than the previous one. On the same machine it took 3 hours and 5 minutes, that is 16 hours and 48 minutes of CPU time, of which the index took 52 minutes, that is 5 hours and 4 minutes of CPU time. After the run within 8 hours, the sessions of the library are not built again, and this run only adds the time of the index.
-
-The experimental evaluation for this run is `bash evaluation/experiments_full.sh`; see `evaluation/README.md`.
+This builds every session listed in `ROOTS`, which comprises the whole library and every section of the index. Each section of the index checks again the theories of the library that it imports, so this run takes longer than the previous one. On the same machine it took 3 hours and 5 minutes, that is 16 hours and 48 minutes of CPU time, of which the index took 52 minutes, that is 5 hours and 4 minutes of CPU time. After checking the library proofs, the sessions of the library are not built again, and this run only adds the time of the index.
